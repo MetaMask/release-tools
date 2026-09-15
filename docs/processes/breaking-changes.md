@@ -45,14 +45,14 @@ For example:
 ```markdown
 ### Changed
 
-- **BREAKING:** Add a required `source` argument to `getTransactions` ([#1111](https://github.com/MetaMask/metamask-monorepo-template/pull/1111))
-- **BREAKING:** Rename `Prices` to `PricesResponse` ([#2222](https://github.com/MetaMask/metamask-monorepo-template/pull/2222))
-- **BREAKING:** `destroy` is now async ([#3333](https://github.com/MetaMask/metamask-monorepo-template/pull/3333))
-- Widen the type of `getNetworkClientId` to return `string` ([#4444](https://github.com/MetaMask/metamask-monorepo-template/pull/4444))
+- **BREAKING:** Add a required `source` argument to `getTransactions` ([#1111](https://github.com/MetaMask/release-tools/pull/1111))
+- **BREAKING:** Rename `Prices` to `PricesResponse` ([#2222](https://github.com/MetaMask/release-tools/pull/2222))
+- **BREAKING:** `destroy` is now async ([#3333](https://github.com/MetaMask/release-tools/pull/3333))
+- Widen the type of `getNetworkClientId` to return `string` ([#4444](https://github.com/MetaMask/release-tools/pull/4444))
 
 ### Removed
 
-- **BREAKING:** Remove `fetchGasPrices` from `GasPricesController` ([#5555](https://github.com/MetaMask/metamask-monorepo-template/pull/5555))
+- **BREAKING:** Remove `fetchGasPrices` from `GasPricesController` ([#5555](https://github.com/MetaMask/release-tools/pull/5555))
   - Please use `GasPriceService` instead.
 ```
 

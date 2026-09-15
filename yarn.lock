@@ -855,9 +855,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@metamask/metamask-monorepo-template@workspace:.":
+"@metamask/release-tools@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@metamask/metamask-monorepo-template@workspace:."
+  resolution: "@metamask/release-tools@workspace:."
   dependencies:
     "@lavamoat/allow-scripts": "npm:^3.0.4"
     "@lavamoat/preinstall-always-fail": "npm:^2.1.0"
