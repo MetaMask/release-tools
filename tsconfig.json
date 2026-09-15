@@ -1,0 +1,17 @@
+{
+  /**
+   * This configuration is used by editors such as VSCode for TypeScript-related features, and is
+   * extended by `tsconfig.lint.json`.
+   */
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "references": [
+    { "path": "./packages/greetings" },
+    { "path": "./packages/letter-crafter" },
+    { "path": "./packages/signatures" }
+  ],
+  "files": [],
+  "include": ["./scripts", "./tests", "./knip.config.mts"]
+}

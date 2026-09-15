@@ -1,0 +1,107 @@
+{
+  "name": "@metamask/metamask-monorepo-template",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MetaMask Monorepo Template",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MetaMask/metamask-monorepo-template.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "files": [],
+  "type": "module",
+  "scripts": {
+    "build": "yarn tsc --build tsconfig.build.json --verbose",
+    "build:clean": "yarn build:only-clean && yarn build",
+    "build:docs": "yarn build:only-clean && yarn build && yarn workspaces foreach --all --no-private --parallel --interlaced --verbose run build:docs",
+    "build:only-clean": "rimraf -g 'packages/*/dist' 'packages/*/tsconfig.build.tsbuildinfo' '.tsc-lint-cache' 'packages/*/.tsc-lint-cache'",
+    "changelog:update": "yarn workspaces foreach --all --no-private --parallel --interlaced --verbose run changelog:update",
+    "changelog:validate": "yarn workspaces foreach --all --no-private --parallel --interlaced --verbose run changelog:validate",
+    "create-package": "tsx scripts/create-package",
+    "create-release-branch": "create-release-branch --formatter oxfmt",
+    "lint": "yarn lint:tsc && yarn lint:eslint && echo && yarn lint:misc --check && yarn constraints && yarn lint:dependencies && yarn readme-content:check",
+    "lint:dependencies": "knip --config knip.config.mts --dependencies && yarn dedupe --check",
+    "lint:dependencies:fix": "knip --config knip.config.mts --dependencies && yarn dedupe",
+    "lint:eslint": "yarn build:only-clean && yarn eslint",
+    "lint:fix": "yarn lint:eslint --fix && echo && yarn lint:misc --write && yarn constraints --fix && yarn lint:dependencies:fix && yarn readme-content:update",
+    "lint:misc": "oxfmt --ignore-path .gitignore",
+    "lint:misc:check": "yarn lint:misc --check",
+    "lint:tsc": "tsc --build tsconfig.lint.json",
+    "prepack": "./scripts/prepack.sh",
+    "readme-content:check": "tsx scripts/update-readme-content.ts --check",
+    "readme-content:update": "tsx scripts/update-readme-content.ts",
+    "setup": "yarn install && yarn simple-git-hooks",
+    "test": "yarn test:scripts --silent --coverage.enabled=false && yarn test:scripts:shell && yarn test:packages",
+    "test:clean": "yarn workspaces foreach --all --no-private --parallel --verbose run test:clean && yarn test",
+    "test:packages": "yarn test:verbose --silent --coverage.enabled=false",
+    "test:scripts": "vitest --config ./vitest.config.scripts.mjs",
+    "test:scripts:shell": "node_modules/bats/bin/bats scripts/*.bats",
+    "test:verbose": "yarn workspaces foreach --all --no-private --parallel --verbose run test:verbose",
+    "workspaces:list-versions": "./scripts/list-workspace-versions.sh"
+  },
+  "devDependencies": {
+    "@lavamoat/allow-scripts": "^3.0.4",
+    "@lavamoat/preinstall-always-fail": "^2.1.0",
+    "@metamask/create-release-branch": "^4.2.2",
+    "@metamask/eslint-config": "^15.0.0",
+    "@metamask/eslint-config-nodejs": "^15.0.0",
+    "@metamask/eslint-config-typescript": "^15.0.0",
+    "@metamask/eslint-config-vitest": "^15.0.0",
+    "@metamask/utils": "^11.12.0",
+    "@types/lodash": "^4.14.191",
+    "@types/node": "^22.13.14",
+    "@types/semver": "^7",
+    "@types/yargs": "^17.0.33",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-istanbul": "^4.1.11",
+    "@vitest/eslint-plugin": "^1.1.4",
+    "@yarnpkg/types": "^4.0.0",
+    "bats": "^1.13.0",
+    "comment-json": "^4.5.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-import-x": "^4.3.0",
+    "eslint-plugin-jsdoc": "^50.2.4",
+    "eslint-plugin-n": "^17.10.3",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-promise": "^7.1.0",
+    "execa": "^5.0.0",
+    "knip": "^6.23.0",
+    "lodash": "^4.17.21",
+    "oxfmt": "^0.45.0",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.5",
+    "semver": "^7.6.3",
+    "simple-git-hooks": "^2.8.0",
+    "tsx": "^4.20.5",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.1.11",
+    "yargs": "^17.7.2"
+  },
+  "resolutions": {
+    "@typescript/old": "patch:typescript@npm%3A6.0.3#~/.yarn/patches/typescript-npm-6.0.3-585eecd158.patch"
+  },
+  "simple-git-hooks": {
+    "pre-push": "yarn lint"
+  },
+  "engines": {
+    "node": "^22.14.0 || ^24"
+  },
+  "packageManager": "yarn@4.17.1+sha256.471ffb15e0523663865bbf46a69e7d157ecf532412eb436c48dfab6e3f2abe88",
+  "lavamoat": {
+    "allowScripts": {
+      "$root$": true,
+      "@lavamoat/preinstall-always-fail": false,
+      "babel-runtime>core-js": false,
+      "eslint-plugin-import-x>unrs-resolver": false,
+      "simple-git-hooks": false,
+      "tsx>esbuild": false
+    }
+  }
+}

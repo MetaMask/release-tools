@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "references": [{ "path": "../greetings" }, { "path": "../signatures" }],
+  "include": ["./src"]
+}

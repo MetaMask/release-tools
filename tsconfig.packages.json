@@ -1,0 +1,22 @@
+{
+  /**
+   * This configuration is extended by the `tsconfig.json` configuration in each package.
+   */
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    /**
+     * Here we ensure that TypeScript resolves `@metamask/*` imports to the
+     * uncompiled source code for packages that live in this repo.
+     *
+     * Vitest applies these same paths through the `resolve.tsconfigPaths`
+     * option in `vitest.config.packages.mjs`, so there is nothing to keep in
+     * sync by hand.
+     *
+     * `${configDir}` is the directory of the package itself.
+     */
+    "paths": {
+      "@metamask/*": ["${configDir}/../*/src/index.ts"]
+    }
+  }
+}

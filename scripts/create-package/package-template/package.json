@@ -1,0 +1,60 @@
+{
+  "name": "PACKAGE_NAME",
+  "version": "0.0.0",
+  "description": "PACKAGE_DESCRIPTION",
+  "keywords": [
+    "Ethereum",
+    "MetaMask"
+  ],
+  "homepage": "https://github.com/MetaMask/metamask-monorepo-template/tree/main/packages/PACKAGE_DIRECTORY_NAME#readme",
+  "bugs": {
+    "url": "https://github.com/MetaMask/metamask-monorepo-template/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MetaMask/metamask-monorepo-template.git"
+  },
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "build:all": "tsc --build tsconfig.build.json --verbose",
+    "build:clean": "yarn build:only-clean && yarn build",
+    "build:docs": "typedoc",
+    "build:only-clean": "rimraf './dist' './tsconfig.build.tsbuildinfo'",
+    "changelog:update": "../../scripts/update-changelog.sh PACKAGE_NAME",
+    "changelog:validate": "../../scripts/validate-changelog.sh PACKAGE_NAME",
+    "since-latest-release": "../../scripts/since-latest-release.sh",
+    "test": "vitest",
+    "test:clean": "vitest --clearCache",
+    "test:verbose": "vitest --reporter=verbose",
+    "test:watch": "vitest --watch"
+  },
+  "devDependencies": {
+    "@metamask/auto-changelog": "^6.1.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-istanbul": "^4.1.11",
+    "rimraf": "^5.0.5",
+    "typedoc": "^0.25.13",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "NODE_VERSIONS"
+  }
+}
