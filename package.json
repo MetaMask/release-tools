@@ -1,11 +1,11 @@
 {
-  "name": "@metamask/metamask-monorepo-template",
+  "name": "@metamask/release-tools",
   "version": "0.0.0",
   "private": true,
-  "description": "MetaMask Monorepo Template",
+  "description": "Tools for releasing MetaMask packages",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/metamask-monorepo-template.git"
+    "url": "https://github.com/MetaMask/release-tools.git"
   },
   "workspaces": [
     "packages/*"

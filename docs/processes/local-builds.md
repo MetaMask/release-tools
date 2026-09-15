@@ -36,5 +36,5 @@ If you are unable to use [preview builds](./preview-builds.md) for testing, you 
 > with:
 >
 > ```json
-> "@metamask/greetings@^1.1.4": "file:../metamask-monorepo-template/packages/greetings"
+> "@metamask/greetings@^1.1.4": "file:../release-tools/packages/greetings"
 > ```
