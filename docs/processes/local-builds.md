@@ -23,18 +23,18 @@ If you are unable to use [preview builds](./preview-builds.md) for testing, you 
 >
 > Given:
 >
-> - You have changes to `@metamask/greetings` you want to test
-> - `@metamask/greetings` is listed at `^1.1.4`
+> - You have changes to `@metamask/apply-release-plan` you want to test
+> - `@metamask/apply-release-plan` is listed at `^1.1.4`
 > - You've cloned this repo next to the project
 >
 > In this case, you would go to `dependencies` and replace the line:
 >
 > ```json
-> "@metamask/greetings": "^1.1.4"
+> "@metamask/apply-release-plan": "^1.1.4"
 > ```
 >
 > with:
 >
 > ```json
-> "@metamask/greetings@^1.1.4": "file:../release-tools/packages/greetings"
+> "@metamask/apply-release-plan@^1.1.4": "file:../release-tools/packages/apply-release-plan"
 > ```

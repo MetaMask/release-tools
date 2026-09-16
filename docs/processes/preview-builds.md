@@ -39,10 +39,10 @@ To use a preview build for a package within a project, you need to override the 
 
    > **Example:**
    >
-   > If your project uses Yarn, `@metamask/greetings` is listed in dependencies at `^1.1.4`, and you want to use the preview version `1.2.3-preview-e2df9b4`, add the following to `resolutions`:
+   > If your project uses Yarn, `@metamask/apply-release-plan` is listed in dependencies at `^1.1.4`, and you want to use the preview version `1.2.3-preview-e2df9b4`, add the following to `resolutions`:
    >
    > ```json
-   > "@metamask/greetings@^1.1.4": "npm:@metamask-previews/greetings@1.2.3-preview-e2df9b4"
+   > "@metamask/apply-release-plan@^1.1.4": "npm:@metamask-previews/apply-release-plan@1.2.3-preview-e2df9b4"
    > ```
 
 4. Run `yarn install`.

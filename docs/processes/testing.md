@@ -19,4 +19,4 @@ Every package shares the configuration in `vitest.config.packages.mjs` at the ro
 
 > **Note**
 >
-> `workspaceName` in these commands is the `name` field within a package's `package.json`, e.g., `@metamask/greetings`, not the directory where it is located, e.g., `packages/greetings`.
+> `workspaceName` in these commands is the `name` field within a package's `package.json`, e.g., `@metamask/apply-release-plan`, not the directory where it is located, e.g., `packages/apply-release-plan`.
