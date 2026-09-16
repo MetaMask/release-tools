@@ -1,12 +1,12 @@
 {
-  "name": "@metamask/greetings",
+  "name": "@metamask/apply-release-plan",
   "version": "0.0.0",
-  "description": "Example package containing greeting-based utilities",
+  "description": "Fork of @changesets/apply-release-plan with support for categorized (Keep a Changelog style) changelog sections",
   "keywords": [
     "Ethereum",
     "MetaMask"
   ],
-  "homepage": "https://github.com/MetaMask/release-tools/tree/main/packages/greetings#readme",
+  "homepage": "https://github.com/MetaMask/release-tools/tree/main/packages/apply-release-plan#readme",
   "bugs": {
     "url": "https://github.com/MetaMask/release-tools/issues"
   },
@@ -37,8 +37,8 @@
     "build:clean": "yarn build:only-clean && yarn build",
     "build:docs": "typedoc",
     "build:only-clean": "rimraf './dist' './tsconfig.build.tsbuildinfo'",
-    "changelog:update": "../../scripts/update-changelog.sh @metamask/greetings",
-    "changelog:validate": "../../scripts/validate-changelog.sh @metamask/greetings",
+    "changelog:update": "../../scripts/update-changelog.sh @metamask/apply-release-plan",
+    "changelog:validate": "../../scripts/validate-changelog.sh @metamask/apply-release-plan",
     "since-latest-release": "../../scripts/since-latest-release.sh",
     "test": "vitest",
     "test:clean": "vitest --clearCache",
