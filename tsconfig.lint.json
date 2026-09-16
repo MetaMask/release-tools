@@ -10,13 +10,7 @@
   },
   "references": [
     {
-      "path": "./packages/greetings/tsconfig.lint.json"
-    },
-    {
-      "path": "./packages/letter-crafter/tsconfig.lint.json"
-    },
-    {
-      "path": "./packages/signatures/tsconfig.lint.json"
+      "path": "./packages/apply-release-plan/tsconfig.lint.json"
     }
   ]
 }

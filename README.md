@@ -16,9 +16,7 @@ See the [Contributor Documentation](./docs) for help on:
 
 <!-- start package list -->
 
-- [`@metamask/greetings`](packages/greetings)
-- [`@metamask/letter-crafter`](packages/letter-crafter)
-- [`@metamask/signatures`](packages/signatures)
+- [`@metamask/apply-release-plan`](packages/apply-release-plan)
 
 <!-- end package list -->
 
@@ -28,11 +26,7 @@ See the [Contributor Documentation](./docs) for help on:
 %%{ init: { 'flowchart': { 'curve': 'bumpX' } } }%%
 graph LR;
 linkStyle default opacity:0.5
-  greetings(["@metamask/greetings"]);
-  letter_crafter(["@metamask/letter-crafter"]);
-  signatures(["@metamask/signatures"]);
-  letter_crafter --> greetings;
-  letter_crafter --> signatures;
+  apply_release_plan(["@metamask/apply-release-plan"]);
 ```
 
 <!-- end dependency graph -->

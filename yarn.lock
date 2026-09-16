@@ -708,6 +708,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@metamask/apply-release-plan@workspace:packages/apply-release-plan":
+  version: 0.0.0-use.local
+  resolution: "@metamask/apply-release-plan@workspace:packages/apply-release-plan"
+  dependencies:
+    "@metamask/auto-changelog": "npm:^6.1.0"
+    "@typescript/native": "npm:typescript@^7.0.2"
+    "@vitest/coverage-istanbul": "npm:^4.1.11"
+    rimraf: "npm:^5.0.5"
+    typedoc: "npm:^0.25.13"
+    typescript: "npm:@typescript/typescript6@^6.0.2"
+    vitest: "npm:^4.1.11"
+  languageName: unknown
+  linkType: soft
+
 "@metamask/auto-changelog@npm:^6.1.0, @metamask/auto-changelog@npm:^6.1.1":
   version: 6.2.1
   resolution: "@metamask/auto-changelog@npm:6.2.1"
@@ -825,36 +839,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/greetings@npm:^0.0.0, @metamask/greetings@workspace:packages/greetings":
-  version: 0.0.0-use.local
-  resolution: "@metamask/greetings@workspace:packages/greetings"
-  dependencies:
-    "@metamask/auto-changelog": "npm:^6.1.0"
-    "@typescript/native": "npm:typescript@^7.0.2"
-    "@vitest/coverage-istanbul": "npm:^4.1.11"
-    rimraf: "npm:^5.0.5"
-    typedoc: "npm:^0.25.13"
-    typescript: "npm:@typescript/typescript6@^6.0.2"
-    vitest: "npm:^4.1.11"
-  languageName: unknown
-  linkType: soft
-
-"@metamask/letter-crafter@workspace:packages/letter-crafter":
-  version: 0.0.0-use.local
-  resolution: "@metamask/letter-crafter@workspace:packages/letter-crafter"
-  dependencies:
-    "@metamask/auto-changelog": "npm:^6.1.0"
-    "@metamask/greetings": "npm:^0.0.0"
-    "@metamask/signatures": "npm:^0.0.0"
-    "@typescript/native": "npm:typescript@^7.0.2"
-    "@vitest/coverage-istanbul": "npm:^4.1.11"
-    rimraf: "npm:^5.0.5"
-    typedoc: "npm:^0.25.13"
-    typescript: "npm:@typescript/typescript6@^6.0.2"
-    vitest: "npm:^4.1.11"
-  languageName: unknown
-  linkType: soft
-
 "@metamask/release-tools@workspace:.":
   version: 0.0.0-use.local
   resolution: "@metamask/release-tools@workspace:."
@@ -912,20 +896,6 @@ __metadata:
   checksum: 10/785d75e52f85103af7556c25d3dbba6da52ee9e61c31e95786bfbab0e18b9899a367bf714c71dd311c04161c45ba14354bd6fb4fbeb42cb26b7bd2f35c582f73
   languageName: node
   linkType: hard
-
-"@metamask/signatures@npm:^0.0.0, @metamask/signatures@workspace:packages/signatures":
-  version: 0.0.0-use.local
-  resolution: "@metamask/signatures@workspace:packages/signatures"
-  dependencies:
-    "@metamask/auto-changelog": "npm:^6.1.0"
-    "@typescript/native": "npm:typescript@^7.0.2"
-    "@vitest/coverage-istanbul": "npm:^4.1.11"
-    rimraf: "npm:^5.0.5"
-    typedoc: "npm:^0.25.13"
-    typescript: "npm:@typescript/typescript6@^6.0.2"
-    vitest: "npm:^4.1.11"
-  languageName: unknown
-  linkType: soft
 
 "@metamask/superstruct@npm:^3.1.0":
   version: 3.4.1
