@@ -1,27 +1,26 @@
-import type { ComprehensiveRelease, PackageJSON } from '@changesets/types';
-import SemverRange from 'semver/classes/range.js';
-import semverInc from 'semver/functions/inc.js';
-import semverPrerelease from 'semver/functions/prerelease.js';
-import semverSatisfies from 'semver/functions/satisfies.js';
-import validRange from 'semver/ranges/valid.js';
-
-import type { EditJsonOperation } from './edit-json.js';
-import { shouldUpdateDependencyBasedOnConfig } from './utils.js';
+import type { ComprehensiveRelease, PackageJSON } from "@changesets/types";
+import Range from "semver/classes/range.js";
+import semverInc from "semver/functions/inc.js";
+import semverPrerelease from "semver/functions/prerelease.js";
+import semverSatisfies from "semver/functions/satisfies.js";
+import validRange from "semver/ranges/valid.js";
+import type { EditJsonOperation } from "./edit-json.ts";
+import { shouldUpdateDependencyBasedOnConfig } from "./utils.ts";
 
 const DEPENDENCY_TYPES = [
-  'dependencies',
-  'devDependencies',
-  'peerDependencies',
-  'optionalDependencies',
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
 ] as const;
 
 type VersionToUpdate = ComprehensiveRelease & { dir: string };
 
 export type DependencyUpdateOptions = {
   cwd: string;
-  updateInternalDependencies: 'patch' | 'minor';
+  updateInternalDependencies: "patch" | "minor";
   onlyUpdatePeerDependentsWhenOutOfRange: boolean;
-  bumpVersionsWithWorkspaceProtocolOnly?: boolean | undefined;
+  bumpVersionsWithWorkspaceProtocolOnly?: boolean;
   snapshot?: string | boolean | undefined;
 };
 
@@ -43,19 +42,15 @@ export function getDependencyVersionEdits(
     if (deps) {
       for (const release of versionsToUpdate) {
         const { name, newVersion, type } = release;
-        if (
-          newVersion === null ||
-          newVersion === undefined ||
-          type === 'none'
-        ) {
+        if (newVersion == null || type === "none") {
           continue;
         }
 
         let depCurrentVersion = deps[name];
         if (
           !depCurrentVersion ||
-          depCurrentVersion.startsWith('file:') ||
-          depCurrentVersion.startsWith('link:') ||
+          depCurrentVersion.startsWith("file:") ||
+          depCurrentVersion.startsWith("link:") ||
           !shouldUpdateDependencyBasedOnConfig(
             cwd,
             release,
@@ -71,26 +66,26 @@ export function getDependencyVersionEdits(
         ) {
           continue;
         }
-        const usesWorkspaceRange = depCurrentVersion.startsWith('workspace:');
+        const usesWorkspaceRange = depCurrentVersion.startsWith("workspace:");
 
         if (
           !usesWorkspaceRange &&
           (bumpVersionsWithWorkspaceProtocolOnly ||
-            validRange(depCurrentVersion) === null)
+            validRange(depCurrentVersion) == null)
         ) {
           continue;
         }
 
         if (usesWorkspaceRange) {
           const workspaceDepVersion = depCurrentVersion.replace(
-            /^workspace:/u,
-            '',
+            /^workspace:/,
+            "",
           );
           if (
-            workspaceDepVersion === '*' ||
-            workspaceDepVersion === '^' ||
-            workspaceDepVersion === '~' ||
-            validRange(workspaceDepVersion) === null
+            workspaceDepVersion === "*" ||
+            workspaceDepVersion === "^" ||
+            workspaceDepVersion === "~" ||
+            validRange(workspaceDepVersion) == null
           ) {
             continue;
           }
@@ -101,17 +96,15 @@ export function getDependencyVersionEdits(
           // we don't want to change these versions because they will match
           // any version and if someone makes the range that
           // they probably want it to stay like that...
-          new SemverRange(depCurrentVersion).range !== '' ||
+          new Range(depCurrentVersion).range !== "" ||
           // ...unless the current version of a dependency is a prerelease (which doesn't satisfy x/X/*)
           // leaving those as is would leave the package in a non-installable state (wrong dep versions would get installed)
-          semverPrerelease(newVersion) !== null
+          semverPrerelease(newVersion) != null
         ) {
           let newNewRange = snapshot
             ? newVersion
             : getNewDependencyRange(depCurrentVersion, newVersion, type);
-          if (usesWorkspaceRange) {
-            newNewRange = `workspace:${newNewRange}`;
-          }
+          if (usesWorkspaceRange) newNewRange = `workspace:${newNewRange}`;
           pkgJsonEdits.push({ keys: [depType, name], value: newNewRange });
         }
       }
@@ -124,23 +117,23 @@ export function getDependencyVersionEdits(
 function getNewDependencyRange(
   versionRange: string,
   newVersion: string,
-  releaseType: 'major' | 'minor' | 'patch',
-): string {
-  const comparatorSets = new SemverRange(versionRange).set;
+  releaseType: "major" | "minor" | "patch",
+) {
+  const comparatorSets = new Range(versionRange).set;
   // A union has multiple comparator sets and cannot be rewritten as one bounded range.
   const comparators = comparatorSets.length === 1 ? comparatorSets[0] : [];
 
   if (
     // A bounded range has exactly one lower and one upper comparator.
     comparators.length === 2 &&
-    versionRange.includes('>') &&
-    versionRange.includes('<')
+    versionRange.includes(">") &&
+    versionRange.includes("<")
   ) {
     const lowerBound = comparators.find(({ operator }) =>
-      operator.startsWith('>'),
+      operator.startsWith(">"),
     );
     const upperBound = comparators.find(({ operator }) =>
-      operator.startsWith('<'),
+      operator.startsWith("<"),
     );
 
     if (lowerBound && upperBound) {
@@ -160,21 +153,11 @@ function getNewDependencyRange(
 
 function getVersionRangeType(
   versionRange: string,
-): '^' | '~' | '>=' | '<=' | '>' | '' {
-  if (versionRange.startsWith('^')) {
-    return '^';
-  }
-  if (versionRange.startsWith('~')) {
-    return '~';
-  }
-  if (versionRange.startsWith('>=')) {
-    return '>=';
-  }
-  if (versionRange.startsWith('<=')) {
-    return '<=';
-  }
-  if (versionRange.startsWith('>')) {
-    return '>';
-  }
-  return '';
+): "^" | "~" | ">=" | "<=" | ">" | "" {
+  if (versionRange.charAt(0) === "^") return "^";
+  if (versionRange.charAt(0) === "~") return "~";
+  if (versionRange.startsWith(">=")) return ">=";
+  if (versionRange.startsWith("<=")) return "<=";
+  if (versionRange.charAt(0) === ">") return ">";
+  return "";
 }

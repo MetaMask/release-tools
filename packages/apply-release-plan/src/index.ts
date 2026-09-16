@@ -1,11 +1,14 @@
-import { defaultConfig } from '@changesets/config';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { defaultConfig } from "@changesets/config";
 import {
   defaultDetectOrder,
   detect as detectFormatter,
   format,
-} from '@changesets/format';
-import * as git from '@changesets/git';
-import { shouldSkipPackage } from '@changesets/should-skip-package';
+} from "@changesets/format";
+import * as git from "@changesets/git";
+import { shouldSkipPackage } from "@changesets/should-skip-package";
 import type {
   ChangelogFunctions,
   ComprehensiveRelease,
@@ -14,38 +17,23 @@ import type {
   ModCompWithPackage,
   NewChangeset,
   ReleasePlan,
-} from '@changesets/types';
-import { resolve } from 'import-meta-resolve';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
-import { editJson } from './edit-json.js';
-import type { EditJsonOperation } from './edit-json.js';
+} from "@changesets/types";
+import { resolve } from "import-meta-resolve";
+import { editJson, type EditJsonOperation } from "./edit-json.ts";
+import { getChangelogEntry } from "./get-changelog-entry.ts";
 import {
-  getChangelogEntry,
-  isCategorizedChangelogFunctions,
-} from './get-changelog-entry.js';
-import type { CategorizedChangelogFunctions } from './types.js';
-import { getDependencyVersionEdits } from './version-package.js';
-import type { DependencyUpdateOptions } from './version-package.js';
+  getDependencyVersionEdits,
+  type DependencyUpdateOptions,
+} from "./version-package.ts";
 
-export { isCategorizedChangelogFunctions } from './get-changelog-entry.js';
-export type {
-  CategorizedChangelogFunctions,
-  CategorizedReleaseLine,
-  GetCategorizedDependencyReleaseLines,
-  GetCategorizedReleaseLines,
-} from './types.js';
-
-function importResolveFromDir(specifier: string, dir: string): string {
-  return resolve(specifier, pathToFileURL(path.join(dir, 'x.mjs')).toString());
+function importResolveFromDir(specifier: string, dir: string) {
+  return resolve(specifier, pathToFileURL(path.join(dir, "x.mjs")).toString());
 }
 
 async function getCommitsThatAddChangesets(
   changesetIds: string[],
   cwd: string,
-): Promise<(string | undefined)[]> {
+) {
   const paths = changesetIds.map((id) => `.changeset/${id}.md`);
   const commits = await git.getCommitsThatAddFiles(paths, { cwd });
 
@@ -53,40 +41,33 @@ async function getCommitsThatAddChangesets(
 }
 
 async function getFormatter(
-  config: Config['format'],
+  config: Config["format"],
   cwd: string,
 ): Promise<(patterns: string[]) => Promise<void>> {
-  if (config === false) {
-    return async () => undefined;
-  }
+  if (config === false) return async () => {};
 
   const formatter =
-    config === 'auto'
+    config === "auto"
       ? await detectFormatter({
           cwd,
           // Biome doesn't support formatting markdown files
-          order: defaultDetectOrder.filter((name) => name !== 'biome'),
+          order: defaultDetectOrder.filter((f) => f !== "biome"),
         })
       : config;
-  if (!formatter) {
-    return async () => undefined;
-  }
+  if (!formatter) return async () => {};
 
   return async (patterns: string[]) => {
     await format(patterns, { cwd, formatter });
   };
 }
 
-async function updatePackageJson(
-  dir: string,
-  edits: EditJsonOperation[],
-): Promise<string | undefined> {
+async function updatePackageJson(dir: string, edits: EditJsonOperation[]) {
   if (edits.length === 0) {
-    return undefined;
+    return;
   }
 
-  const pkgJsonPath = path.resolve(dir, 'package.json');
-  const pkgRaw = await fs.readFile(pkgJsonPath, 'utf8');
+  const pkgJsonPath = path.resolve(dir, "package.json");
+  const pkgRaw = await fs.readFile(pkgJsonPath, "utf8");
   const pkgUpdated = editJson(pkgRaw, edits);
   await fs.writeFile(pkgJsonPath, pkgUpdated);
   return pkgJsonPath;
@@ -98,24 +79,23 @@ export async function applyReleasePlan(
   config: Config = defaultConfig,
   snapshot?: string | boolean,
   contextDir = import.meta.dirname,
-): Promise<string[]> {
+) {
   const cwd = packages.rootDir;
 
   const touchedFiles: string[] = [];
 
   const packagesByName = new Map(
-    packages.packages.map((pkg) => [pkg.packageJson.name, pkg]),
+    packages.packages.map((x) => [x.packageJson.name, x]),
   );
 
   const { releases, changesets } = releasePlan;
 
   const releasesWithPackage = releases.map((release) => {
     const pkg = packagesByName.get(release.name);
-    if (!pkg) {
+    if (!pkg)
       throw new Error(
         `Could not find matching package for release of: ${release.name}`,
       );
-    }
     return {
       ...release,
       ...pkg,
@@ -123,36 +103,27 @@ export async function applyReleasePlan(
   });
 
   // I think this might be the wrong place to do this, but gotta do it somewhere -  add changelog entries to releases
-  const { releasesWithChangelogs: releaseWithChangelogs, categorized } =
-    await getNewChangelogEntry(
-      releasesWithPackage,
-      changesets,
-      config,
-      cwd,
-      contextDir,
-    );
+  const releaseWithChangelogs = await getNewChangelogEntry(
+    releasesWithPackage,
+    changesets,
+    config,
+    cwd,
+    contextDir,
+  );
 
-  if (
-    releasePlan.preState?.mode === 'exit' &&
-    (snapshot === null || snapshot === undefined)
-  ) {
-    await fs.rm(path.join(cwd, '.changeset', 'pre.json'), {
+  if (releasePlan.preState?.mode === "exit" && snapshot == null) {
+    await fs.rm(path.join(cwd, ".changeset", "pre.json"), {
       recursive: true,
       force: true,
     });
-    touchedFiles.push(path.join(cwd, '.changeset', 'pre.json'));
+    touchedFiles.push(path.join(cwd, ".changeset", "pre.json"));
   }
 
   const versionsToUpdate = releases.map(
-    (release): ComprehensiveRelease & { dir: string } => {
-      const pkg = packagesByName.get(release.name);
-      if (!pkg) {
-        throw new Error(
-          `Could not find matching package for release of: ${release.name}`,
-        );
-      }
-      return { ...release, dir: pkg.dir };
-    },
+    (release): ComprehensiveRelease & { dir: string } => ({
+      ...release,
+      dir: packagesByName.get(release.name)!.dir,
+    }),
   );
 
   const dependencyUpdateOptions: DependencyUpdateOptions = {
@@ -174,8 +145,8 @@ export async function applyReleasePlan(
       versionsToUpdate,
       dependencyUpdateOptions,
     );
-    if (newVersion !== null && newVersion !== undefined) {
-      pkgJsonEdits.push({ keys: ['version'], value: newVersion });
+    if (newVersion != null) {
+      pkgJsonEdits.push({ keys: ["version"], value: newVersion });
     }
     const pkgJsonPath = await updatePackageJson(dir, pkgJsonEdits);
     if (pkgJsonPath) {
@@ -183,8 +154,8 @@ export async function applyReleasePlan(
     }
 
     if (changelog && changelog.length > 0) {
-      const changelogPath = path.resolve(dir, 'CHANGELOG.md');
-      await updateChangelog(changelogPath, changelog, name, categorized);
+      const changelogPath = path.resolve(dir, "CHANGELOG.md");
+      await updateChangelog(changelogPath, changelog, name);
       touchedFiles.push(changelogPath);
       filesToFormat.push(changelogPath);
     }
@@ -211,16 +182,16 @@ export async function applyReleasePlan(
     await formatter(filesToFormat);
   }
 
-  const isPreChangesets = releasePlan.preState?.mode === 'pre';
+  const isPreChangesets = releasePlan.preState?.mode === "pre";
   if (isPreChangesets && changesets.length > 0) {
-    await fs.mkdir(path.resolve(cwd, '.changeset', 'pre'), { recursive: true });
+    await fs.mkdir(path.resolve(cwd, ".changeset", "pre"), { recursive: true });
   }
 
   await Promise.all(
     changesets.map(async (changeset) => {
       const changesetPath = path.resolve(
         cwd,
-        '.changeset',
+        ".changeset",
         `${changeset.id}.md`,
       );
       if (
@@ -235,24 +206,18 @@ export async function applyReleasePlan(
         // so we just check if any skipped package exists in this changeset, and only remove it if none exists
         // options to skip packages were added in v2, so we don't need to do it for v1 changesets
         if (
-          !changeset.releases.some((release) => {
-            const pkg = packagesByName.get(release.name);
-            if (!pkg) {
-              throw new Error(
-                `Could not find matching package for release of: ${release.name}`,
-              );
-            }
-            return shouldSkipPackage(pkg, {
+          !changeset.releases.some((release) =>
+            shouldSkipPackage(packagesByName.get(release.name)!, {
               ignore: config.ignore,
               allowPrivatePackages: config.privatePackages.version,
-            });
-          })
+            }),
+          )
         ) {
           if (isPreChangesets) {
             const newChangesetPath = path.resolve(
               cwd,
-              '.changeset',
-              'pre',
+              ".changeset",
+              "pre",
               `${changeset.id}.md`,
             );
             await fs.rename(changesetPath, newChangesetPath);
@@ -276,27 +241,23 @@ async function getNewChangelogEntry(
   config: Config,
   cwd: string,
   contextDir: string,
-): Promise<{
-  releasesWithChangelogs: (ModCompWithPackage & { changelog: string | null })[];
-  categorized: boolean;
-}> {
+) {
   if (!config.changelog) {
-    return {
-      releasesWithChangelogs: releasesWithPackage.map((release) => ({
+    return Promise.resolve(
+      releasesWithPackage.map((release) => ({
         ...release,
         changelog: null,
       })),
-      categorized: false,
-    };
+    );
   }
 
   let getChangelogFuncs: ChangelogFunctions = {
-    getReleaseLine: async () => Promise.resolve(''),
-    getDependencyReleaseLine: async () => Promise.resolve(''),
+    getReleaseLine: () => Promise.resolve(""),
+    getDependencyReleaseLine: () => Promise.resolve(""),
   };
 
   const changelogOpts = config.changelog[1];
-  const changesetPath = path.join(cwd, '.changeset');
+  const changesetPath = path.join(cwd, ".changeset");
   let changelogPath;
 
   try {
@@ -315,39 +276,24 @@ async function getNewChangelogEntry(
     }
   }
   if (
-    typeof possibleChangelogFunc.getReleaseLine === 'function' &&
-    typeof possibleChangelogFunc.getDependencyReleaseLine === 'function'
+    typeof possibleChangelogFunc.getReleaseLine === "function" &&
+    typeof possibleChangelogFunc.getDependencyReleaseLine === "function"
   ) {
     getChangelogFuncs = possibleChangelogFunc;
   } else {
-    throw new Error('Could not resolve changelog generation functions');
-  }
-
-  const categorized = isCategorizedChangelogFunctions(getChangelogFuncs);
-  if (categorized) {
-    const categorizedFuncs = getChangelogFuncs as CategorizedChangelogFunctions;
-    if (
-      typeof categorizedFuncs.getCategorizedDependencyReleaseLines !==
-        'function' ||
-      !Array.isArray(categorizedFuncs.categories) ||
-      categorizedFuncs.categories.length === 0
-    ) {
-      throw new Error(
-        'Changelog modules exporting `getCategorizedReleaseLines` must also export `getCategorizedDependencyReleaseLines` and a non-empty `categories` array',
-      );
-    }
+    throw new Error("Could not resolve changelog generation functions");
   }
 
   const commits = await getCommitsThatAddChangesets(
     changesets.map((cs) => cs.id),
     cwd,
   );
-  const moddedChangesets = changesets.map((changeset, index) => {
-    const commit = commits[index];
-    return commit === undefined ? { ...changeset } : { ...changeset, commit };
-  });
+  const moddedChangesets = changesets.map((cs, i) => ({
+    ...cs,
+    commit: commits[i],
+  }));
 
-  const releasesWithChangelogs = await Promise.all(
+  return Promise.all(
     releasesWithPackage.map(async (release) => {
       const changelog = await getChangelogEntry(
         cwd,
@@ -369,33 +315,30 @@ async function getNewChangelogEntry(
         changelog,
       };
     }),
-  ).catch((error) => {
+  ).catch((e) => {
     console.error(
-      'The following error was encountered while generating changelog entries',
+      "The following error was encountered while generating changelog entries",
     );
     console.error(
-      'We have escaped applying the changesets, and no files should have been affected',
+      "We have escaped applying the changesets, and no files should have been affected",
     );
-    throw error;
+    throw e;
   });
-
-  return { releasesWithChangelogs, categorized };
 }
 
 async function updateChangelog(
   changelogPath: string,
   changelog: string,
   name: string,
-  categorized: boolean,
-): Promise<void> {
+) {
   const templateString = `\n\n${changelog.trim()}\n`;
   let fileData;
 
   try {
     fileData = (await fs.readFile(changelogPath)).toString();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException | null)?.code !== 'ENOENT') {
-      throw error;
+  } catch (err: any) {
+    if (err?.code !== "ENOENT") {
+      throw err;
     }
     await fs.writeFile(changelogPath, `# ${name}${templateString}`);
     return;
@@ -411,23 +354,15 @@ async function updateChangelog(
   // Require just 2 version numbers here, assuming `## 1.1` is a valid version heading.
   // Our version headings start with ##, we are more permissive here though.
   // Note: we also need to handle prerelease versions here but that's already covered by the regex.
-  // In categorized mode version headings are bracketed, Keep a Changelog
-  // style (`## [1.2.3]`), so allow an optional `[` before the version.
-  const firstVersionHeaderIndex = fileData.search(
-    categorized ? /^#{1,6}\s+\[?\d+\.\d+/mu : /^#{1,6}\s+\d+\.\d+/mu,
-  );
+  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/m);
 
   let newChangelog: string;
   if (firstVersionHeaderIndex >= 0) {
     const prefix = fileData.slice(0, firstVersionHeaderIndex);
     const suffix = fileData.slice(firstVersionHeaderIndex);
-    newChangelog = `${prefix + templateString.trimStart()}\n${suffix}`;
-  } else if (categorized) {
-    // No release section yet: append after the title and preamble rather than
-    // splicing the entry after the first line, keeping any prose intact.
-    newChangelog = fileData.trimEnd() + templateString;
+    newChangelog = prefix + templateString.trimStart() + "\n" + suffix;
   } else {
-    const index = fileData.indexOf('\n');
+    const index = fileData.indexOf("\n");
     newChangelog =
       index === -1
         ? fileData + templateString // treat the whole file as header
