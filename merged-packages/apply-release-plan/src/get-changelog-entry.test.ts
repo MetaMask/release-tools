@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateMarkdownForVersionType } from "./get-changelog-entry.ts";
+import { generateMarkdownForVersionType } from "./get-changelog-entry.js";
 
 describe("generateMarkdownForVersionType", () => {
   it("returns undefined when there are empty lines", () => {

@@ -4,8 +4,8 @@ import semverInc from "semver/functions/inc.js";
 import semverPrerelease from "semver/functions/prerelease.js";
 import semverSatisfies from "semver/functions/satisfies.js";
 import validRange from "semver/ranges/valid.js";
-import type { EditJsonOperation } from "./edit-json.ts";
-import { shouldUpdateDependencyBasedOnConfig } from "./utils.ts";
+import type { EditJsonOperation } from "./edit-json.js";
+import { shouldUpdateDependencyBasedOnConfig } from "./utils.js";
 
 const DEPENDENCY_TYPES = [
   "dependencies",
@@ -20,7 +20,7 @@ export type DependencyUpdateOptions = {
   cwd: string;
   updateInternalDependencies: "patch" | "minor";
   onlyUpdatePeerDependentsWhenOutOfRange: boolean;
-  bumpVersionsWithWorkspaceProtocolOnly?: boolean;
+  bumpVersionsWithWorkspaceProtocolOnly?: boolean | undefined;
   snapshot?: string | boolean | undefined;
 };
 
