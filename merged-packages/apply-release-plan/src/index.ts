@@ -19,12 +19,12 @@ import type {
   ReleasePlan,
 } from "@changesets/types";
 import { resolve } from "import-meta-resolve";
-import { editJson, type EditJsonOperation } from "./edit-json.ts";
-import { getChangelogEntry } from "./get-changelog-entry.ts";
+import { editJson, type EditJsonOperation } from "./edit-json.js";
+import { getChangelogEntry } from "./get-changelog-entry.js";
 import {
   getDependencyVersionEdits,
   type DependencyUpdateOptions,
-} from "./version-package.ts";
+} from "./version-package.js";
 
 function importResolveFromDir(specifier: string, dir: string) {
   return resolve(specifier, pathToFileURL(path.join(dir, "x.mjs")).toString());
@@ -288,10 +288,10 @@ async function getNewChangelogEntry(
     changesets.map((cs) => cs.id),
     cwd,
   );
-  const moddedChangesets = changesets.map((cs, i) => ({
-    ...cs,
-    commit: commits[i],
-  }));
+  const moddedChangesets = changesets.map((cs, i) => {
+    const commit = commits[i];
+    return commit === undefined ? { ...cs } : { ...cs, commit };
+  });
 
   return Promise.all(
     releasesWithPackage.map(async (release) => {
