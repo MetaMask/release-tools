@@ -4,7 +4,7 @@ import type {
   NewChangesetWithCommit,
 } from "@changesets/types";
 import validRange from "semver/ranges/valid.js";
-import { capitalize, shouldUpdateDependencyBasedOnConfig } from "./utils.ts";
+import { capitalize, shouldUpdateDependencyBasedOnConfig } from "./utils.js";
 
 type ChangelogLines = {
   major: Array<Promise<string>>;
