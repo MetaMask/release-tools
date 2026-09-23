@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { editJson } from "./edit-json.ts";
+import { editJson } from "./edit-json.js";
 
 it("updates a direct value", () => {
   const json = `{"name":"pkg-a","version":"1.0.0"}`;

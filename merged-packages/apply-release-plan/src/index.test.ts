@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defaultConfig } from "@changesets/config";
 import * as git from "@changesets/git";
 import {
@@ -8,7 +9,7 @@ import {
   outputFile,
   temporarilySilenceLogs,
   testdir,
-} from "@changesets/test-utils";
+} from "./test-utils/index.js";
 import type {
   ComprehensiveRelease,
   Config,
@@ -19,15 +20,15 @@ import type {
 import { getPackages } from "@manypkg/get-packages";
 import { exec } from "tinyexec";
 import { describe, expect, it, test } from "vitest";
-import { applyReleasePlan } from "./index.ts";
+import { applyReleasePlan } from "./index.js";
 
-const changesetsCliChangelogPath = path.resolve(
-  import.meta.dirname,
-  "../../cli/dist/changelog.mjs",
+// The upstream repository resolves these from its own `cli` workspace; here we
+// resolve them from the published `@changesets/cli` package instead.
+const changesetsCliChangelogPath = fileURLToPath(
+  import.meta.resolve("@changesets/cli/changelog"),
 );
-const changesetsCliCommitPath = path.resolve(
-  import.meta.dirname,
-  "../../cli/dist/commit.mjs",
+const changesetsCliCommitPath = fileURLToPath(
+  import.meta.resolve("@changesets/cli/commit"),
 );
 
 class FakeReleasePlan {
