@@ -126,10 +126,10 @@ export async function getChangelogEntry(
 export function generateMarkdownForVersionType(
   type: keyof ChangelogLines,
   lines: string[],
-): string {
+): string | undefined {
   const releaseLines = lines.filter((line) => line);
   if (!releaseLines.length) {
-    return '';
+    return undefined;
   }
 
   let content = `### ${capitalize(type)} Changes`;
