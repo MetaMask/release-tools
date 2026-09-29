@@ -1,5 +1,4 @@
 import { defaultConfig } from '@changesets/config';
-import * as git from '@changesets/git';
 import type {
   ComprehensiveRelease,
   Config,
@@ -16,6 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { applyReleasePlan } from './index.js';
 import {
+  initGitRepo,
   outputFile,
   temporarilySilenceLogs,
   testdir,
@@ -126,9 +126,7 @@ async function testSetup(
   }
 
   if (resolvedConfig.commit) {
-    await exec('git', ['init'], { nodeOptions: { cwd: tempDir } });
-    await git.add('.', tempDir);
-    await git.commit('first commit', tempDir);
+    await initGitRepo(tempDir);
   }
 
   const packages = await getPackages(tempDir);
@@ -3273,10 +3271,7 @@ describe('apply release plan', () => {
         }),
       });
 
-      await exec('git', ['init'], { nodeOptions: { cwd: tempDir } });
-
-      await git.add('.', tempDir);
-      await git.commit('first commit', tempDir);
+      await initGitRepo(tempDir);
 
       try {
         const packages = await getPackages(tempDir);
@@ -3327,10 +3322,7 @@ describe('apply release plan', () => {
           }),
         });
 
-        await exec('git', ['init'], { nodeOptions: { cwd: tempDir } });
-
-        await git.add('.', tempDir);
-        await git.commit('first commit', tempDir);
+        await initGitRepo(tempDir);
 
         try {
           const packages = await getPackages(tempDir);

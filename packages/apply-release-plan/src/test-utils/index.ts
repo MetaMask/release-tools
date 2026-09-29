@@ -2,11 +2,13 @@
 // `@changesets/test-utils` workspace package, at the
 // `@changesets/apply-release-plan@8.1.1` tag (scripts/test-utils/src/index.ts).
 // Only the helpers used by this package's tests are kept.
+import * as git from '@changesets/git';
 import { createFixture } from 'fs-fixture';
 import type { FileTree } from 'fs-fixture';
 import type fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { exec } from 'tinyexec';
 import { onTestFinished, vi } from 'vitest';
 
 type LogSilencer = {
@@ -84,4 +86,20 @@ export async function outputFile(
 ): Promise<void> {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, content, encoding);
+}
+
+// Initialize a git repository with a first commit. CI runners may not have a
+// global git identity configured, which would cause `git commit` to silently
+// fail and leave the repo without any commits, so we set a local identity
+// before committing.
+export async function initGitRepo(dir: string): Promise<void> {
+  await exec('git', ['init'], { nodeOptions: { cwd: dir } });
+  await exec('git', ['config', 'user.email', 'test@example.com'], {
+    nodeOptions: { cwd: dir },
+  });
+  await exec('git', ['config', 'user.name', 'test'], {
+    nodeOptions: { cwd: dir },
+  });
+  await git.add('.', dir);
+  await git.commit('first commit', dir);
 }
