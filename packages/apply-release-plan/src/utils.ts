@@ -1,15 +1,15 @@
-import path from "node:path";
-import type { ComprehensiveRelease, VersionType } from "@changesets/types";
+import type { ComprehensiveRelease, VersionType } from '@changesets/types';
+import path from 'node:path';
 /**
  * Shared utility functions and business logic
  */
-import semverSatisfies from "semver/functions/satisfies.js";
-import validRange from "semver/ranges/valid.js";
+import semverSatisfies from 'semver/functions/satisfies.js';
+import validRange from 'semver/ranges/valid.js';
 
-const bumpTypes = ["none", "patch", "minor", "major"];
+const bumpTypes = ['none', 'patch', 'minor', 'major'];
 
 /* Converts a bump type into a numeric level to indicate order */
-function getBumpLevel(type: VersionType) {
+function getBumpLevel(type: VersionType): number {
   const level = bumpTypes.indexOf(type);
   if (level < 0) {
     throw new Error(`Unrecognised bump type ${type}`);
@@ -26,45 +26,46 @@ export function shouldUpdateDependencyBasedOnConfig(
   }: {
     depVersionRange: string;
     depType:
-      | "dependencies"
-      | "devDependencies"
-      | "peerDependencies"
-      | "optionalDependencies";
+      | 'dependencies'
+      | 'devDependencies'
+      | 'peerDependencies'
+      | 'optionalDependencies';
   },
   {
     minReleaseType,
     onlyUpdatePeerDependentsWhenOutOfRange,
   }: {
-    minReleaseType: "patch" | "minor";
+    minReleaseType: 'patch' | 'minor';
     onlyUpdatePeerDependentsWhenOutOfRange: boolean;
   },
 ): boolean {
-  if (release.newVersion == null) {
+  if (release.newVersion === null || release.newVersion === undefined) {
     return false;
   }
-  const usesWorkspaceRange = depVersionRange.startsWith("workspace:");
+  let versionRange = depVersionRange;
+  const usesWorkspaceRange = versionRange.startsWith('workspace:');
   if (usesWorkspaceRange) {
-    depVersionRange = depVersionRange.replace(/^workspace:/, "");
-    switch (depVersionRange) {
-      case "*":
+    versionRange = versionRange.replace(/^workspace:/u, '');
+    switch (versionRange) {
+      case '*':
         // given the old range was exact, we can short circuit and return true
         return true;
-      case "^":
-      case "~":
-        depVersionRange = `${depVersionRange}${release.oldVersion}`;
+      case '^':
+      case '~':
+        versionRange = `${versionRange}${release.oldVersion}`;
         break;
       default: {
-        if (!validRange(depVersionRange)) {
+        if (!validRange(versionRange)) {
           return (
-            path.posix.normalize(depVersionRange) ===
-            path.relative(cwd, release.dir).replace(/\\/g, "/")
+            path.posix.normalize(versionRange) ===
+            path.relative(cwd, release.dir).replace(/\\/gu, '/')
           );
         }
         // fallthrough
       }
     }
   }
-  if (!semverSatisfies(release.newVersion, depVersionRange)) {
+  if (!semverSatisfies(release.newVersion, versionRange)) {
     // Dependencies leaving semver range should always be updated
     return true;
   }
@@ -72,12 +73,12 @@ export function shouldUpdateDependencyBasedOnConfig(
   const minLevel = getBumpLevel(minReleaseType);
   let shouldUpdate = getBumpLevel(release.type) >= minLevel;
 
-  if (depType === "peerDependencies") {
+  if (depType === 'peerDependencies') {
     shouldUpdate = !onlyUpdatePeerDependentsWhenOutOfRange;
   }
   return shouldUpdate;
 }
 
-export function capitalize(str: string) {
+export function capitalize(str: string): string {
   return str[0].toUpperCase() + str.slice(1);
 }

@@ -7,11 +7,7 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "references": [
-    { "path": "./packages/greetings" },
-    { "path": "./packages/letter-crafter" },
-    { "path": "./packages/signatures" }
-  ],
+  "references": [{ "path": "./packages/apply-release-plan" }],
   "files": [],
   "include": ["./scripts", "./tests", "./knip.config.mts"]
 }
