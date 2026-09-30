@@ -1,14 +1,11 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { defaultConfig } from "@changesets/config";
+import { defaultConfig } from '@changesets/config';
 import {
   defaultDetectOrder,
   detect as detectFormatter,
   format,
-} from "@changesets/format";
-import * as git from "@changesets/git";
-import { shouldSkipPackage } from "@changesets/should-skip-package";
+} from '@changesets/format';
+import * as git from '@changesets/git';
+import { shouldSkipPackage } from '@changesets/should-skip-package';
 import type {
   ChangelogFunctions,
   ComprehensiveRelease,
@@ -17,23 +14,26 @@ import type {
   ModCompWithPackage,
   NewChangeset,
   ReleasePlan,
-} from "@changesets/types";
-import { resolve } from "import-meta-resolve";
-import { editJson, type EditJsonOperation } from "./edit-json.js";
-import { getChangelogEntry } from "./get-changelog-entry.js";
-import {
-  getDependencyVersionEdits,
-  type DependencyUpdateOptions,
-} from "./version-package.js";
+} from '@changesets/types';
+import { resolve } from 'import-meta-resolve';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-function importResolveFromDir(specifier: string, dir: string) {
-  return resolve(specifier, pathToFileURL(path.join(dir, "x.mjs")).toString());
+import { editJson } from './edit-json.js';
+import type { EditJsonOperation } from './edit-json.js';
+import { getChangelogEntry } from './get-changelog-entry.js';
+import { getDependencyVersionEdits } from './version-package.js';
+import type { DependencyUpdateOptions } from './version-package.js';
+
+function importResolveFromDir(specifier: string, dir: string): string {
+  return resolve(specifier, pathToFileURL(path.join(dir, 'x.mjs')).toString());
 }
 
 async function getCommitsThatAddChangesets(
   changesetIds: string[],
   cwd: string,
-) {
+): Promise<(string | undefined)[]> {
   const paths = changesetIds.map((id) => `.changeset/${id}.md`);
   const commits = await git.getCommitsThatAddFiles(paths, { cwd });
 
@@ -41,33 +41,44 @@ async function getCommitsThatAddChangesets(
 }
 
 async function getFormatter(
-  config: Config["format"],
+  config: Config['format'],
   cwd: string,
 ): Promise<(patterns: string[]) => Promise<void>> {
-  if (config === false) return async () => {};
+  if (config === false) {
+    return async () => {
+      // No-op formatter when formatting is disabled.
+    };
+  }
 
   const formatter =
-    config === "auto"
+    config === 'auto'
       ? await detectFormatter({
           cwd,
           // Biome doesn't support formatting markdown files
-          order: defaultDetectOrder.filter((f) => f !== "biome"),
+          order: defaultDetectOrder.filter((name) => name !== 'biome'),
         })
       : config;
-  if (!formatter) return async () => {};
+  if (!formatter) {
+    return async () => {
+      // No-op formatter when no formatter could be detected.
+    };
+  }
 
   return async (patterns: string[]) => {
     await format(patterns, { cwd, formatter });
   };
 }
 
-async function updatePackageJson(dir: string, edits: EditJsonOperation[]) {
+async function updatePackageJson(
+  dir: string,
+  edits: EditJsonOperation[],
+): Promise<string | undefined> {
   if (edits.length === 0) {
-    return;
+    return undefined;
   }
 
-  const pkgJsonPath = path.resolve(dir, "package.json");
-  const pkgRaw = await fs.readFile(pkgJsonPath, "utf8");
+  const pkgJsonPath = path.resolve(dir, 'package.json');
+  const pkgRaw = await fs.readFile(pkgJsonPath, 'utf8');
   const pkgUpdated = editJson(pkgRaw, edits);
   await fs.writeFile(pkgJsonPath, pkgUpdated);
   return pkgJsonPath;
@@ -79,23 +90,24 @@ export async function applyReleasePlan(
   config: Config = defaultConfig,
   snapshot?: string | boolean,
   contextDir = import.meta.dirname,
-) {
+): Promise<string[]> {
   const cwd = packages.rootDir;
 
   const touchedFiles: string[] = [];
 
   const packagesByName = new Map(
-    packages.packages.map((x) => [x.packageJson.name, x]),
+    packages.packages.map((pkg) => [pkg.packageJson.name, pkg]),
   );
 
   const { releases, changesets } = releasePlan;
 
   const releasesWithPackage = releases.map((release) => {
     const pkg = packagesByName.get(release.name);
-    if (!pkg)
+    if (!pkg) {
       throw new Error(
         `Could not find matching package for release of: ${release.name}`,
       );
+    }
     return {
       ...release,
       ...pkg,
@@ -111,19 +123,27 @@ export async function applyReleasePlan(
     contextDir,
   );
 
-  if (releasePlan.preState?.mode === "exit" && snapshot == null) {
-    await fs.rm(path.join(cwd, ".changeset", "pre.json"), {
+  if (releasePlan.preState?.mode === 'exit' && snapshot === undefined) {
+    await fs.rm(path.join(cwd, '.changeset', 'pre.json'), {
       recursive: true,
       force: true,
     });
-    touchedFiles.push(path.join(cwd, ".changeset", "pre.json"));
+    touchedFiles.push(path.join(cwd, '.changeset', 'pre.json'));
   }
 
   const versionsToUpdate = releases.map(
-    (release): ComprehensiveRelease & { dir: string } => ({
-      ...release,
-      dir: packagesByName.get(release.name)!.dir,
-    }),
+    (release): ComprehensiveRelease & { dir: string } => {
+      const pkg = packagesByName.get(release.name);
+      if (!pkg) {
+        throw new Error(
+          `Could not find matching package for release of: ${release.name}`,
+        );
+      }
+      return {
+        ...release,
+        dir: pkg.dir,
+      };
+    },
   );
 
   const dependencyUpdateOptions: DependencyUpdateOptions = {
@@ -145,8 +165,8 @@ export async function applyReleasePlan(
       versionsToUpdate,
       dependencyUpdateOptions,
     );
-    if (newVersion != null) {
-      pkgJsonEdits.push({ keys: ["version"], value: newVersion });
+    if (newVersion !== null && newVersion !== undefined) {
+      pkgJsonEdits.push({ keys: ['version'], value: newVersion });
     }
     const pkgJsonPath = await updatePackageJson(dir, pkgJsonEdits);
     if (pkgJsonPath) {
@@ -154,7 +174,7 @@ export async function applyReleasePlan(
     }
 
     if (changelog && changelog.length > 0) {
-      const changelogPath = path.resolve(dir, "CHANGELOG.md");
+      const changelogPath = path.resolve(dir, 'CHANGELOG.md');
       await updateChangelog(changelogPath, changelog, name);
       touchedFiles.push(changelogPath);
       filesToFormat.push(changelogPath);
@@ -182,16 +202,16 @@ export async function applyReleasePlan(
     await formatter(filesToFormat);
   }
 
-  const isPreChangesets = releasePlan.preState?.mode === "pre";
+  const isPreChangesets = releasePlan.preState?.mode === 'pre';
   if (isPreChangesets && changesets.length > 0) {
-    await fs.mkdir(path.resolve(cwd, ".changeset", "pre"), { recursive: true });
+    await fs.mkdir(path.resolve(cwd, '.changeset', 'pre'), { recursive: true });
   }
 
   await Promise.all(
     changesets.map(async (changeset) => {
       const changesetPath = path.resolve(
         cwd,
-        ".changeset",
+        '.changeset',
         `${changeset.id}.md`,
       );
       if (
@@ -206,18 +226,24 @@ export async function applyReleasePlan(
         // so we just check if any skipped package exists in this changeset, and only remove it if none exists
         // options to skip packages were added in v2, so we don't need to do it for v1 changesets
         if (
-          !changeset.releases.some((release) =>
-            shouldSkipPackage(packagesByName.get(release.name)!, {
+          !changeset.releases.some((release) => {
+            const pkg = packagesByName.get(release.name);
+            if (!pkg) {
+              throw new Error(
+                `Could not find matching package for release of: ${release.name}`,
+              );
+            }
+            return shouldSkipPackage(pkg, {
               ignore: config.ignore,
               allowPrivatePackages: config.privatePackages.version,
-            }),
-          )
+            });
+          })
         ) {
           if (isPreChangesets) {
             const newChangesetPath = path.resolve(
               cwd,
-              ".changeset",
-              "pre",
+              '.changeset',
+              'pre',
               `${changeset.id}.md`,
             );
             await fs.rename(changesetPath, newChangesetPath);
@@ -241,7 +267,7 @@ async function getNewChangelogEntry(
   config: Config,
   cwd: string,
   contextDir: string,
-) {
+): Promise<(ModCompWithPackage & { changelog: string | null })[]> {
   if (!config.changelog) {
     return Promise.resolve(
       releasesWithPackage.map((release) => ({
@@ -252,12 +278,12 @@ async function getNewChangelogEntry(
   }
 
   let getChangelogFuncs: ChangelogFunctions = {
-    getReleaseLine: () => Promise.resolve(""),
-    getDependencyReleaseLine: () => Promise.resolve(""),
+    getReleaseLine: async () => Promise.resolve(''),
+    getDependencyReleaseLine: async () => Promise.resolve(''),
   };
 
   const changelogOpts = config.changelog[1];
-  const changesetPath = path.join(cwd, ".changeset");
+  const changesetPath = path.join(cwd, '.changeset');
   let changelogPath;
 
   try {
@@ -276,12 +302,12 @@ async function getNewChangelogEntry(
     }
   }
   if (
-    typeof possibleChangelogFunc.getReleaseLine === "function" &&
-    typeof possibleChangelogFunc.getDependencyReleaseLine === "function"
+    typeof possibleChangelogFunc.getReleaseLine === 'function' &&
+    typeof possibleChangelogFunc.getDependencyReleaseLine === 'function'
   ) {
     getChangelogFuncs = possibleChangelogFunc;
   } else {
-    throw new Error("Could not resolve changelog generation functions");
+    throw new Error('Could not resolve changelog generation functions');
   }
 
   const commits = await getCommitsThatAddChangesets(
@@ -315,14 +341,14 @@ async function getNewChangelogEntry(
         changelog,
       };
     }),
-  ).catch((e) => {
+  ).catch((error) => {
     console.error(
-      "The following error was encountered while generating changelog entries",
+      'The following error was encountered while generating changelog entries',
     );
     console.error(
-      "We have escaped applying the changesets, and no files should have been affected",
+      'We have escaped applying the changesets, and no files should have been affected',
     );
-    throw e;
+    throw error;
   });
 }
 
@@ -330,15 +356,15 @@ async function updateChangelog(
   changelogPath: string,
   changelog: string,
   name: string,
-) {
+): Promise<void> {
   const templateString = `\n\n${changelog.trim()}\n`;
   let fileData;
 
   try {
     fileData = (await fs.readFile(changelogPath)).toString();
-  } catch (err: any) {
-    if (err?.code !== "ENOENT") {
-      throw err;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+      throw error;
     }
     await fs.writeFile(changelogPath, `# ${name}${templateString}`);
     return;
@@ -354,15 +380,15 @@ async function updateChangelog(
   // Require just 2 version numbers here, assuming `## 1.1` is a valid version heading.
   // Our version headings start with ##, we are more permissive here though.
   // Note: we also need to handle prerelease versions here but that's already covered by the regex.
-  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/m);
+  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/mu);
 
   let newChangelog: string;
   if (firstVersionHeaderIndex >= 0) {
     const prefix = fileData.slice(0, firstVersionHeaderIndex);
     const suffix = fileData.slice(firstVersionHeaderIndex);
-    newChangelog = prefix + templateString.trimStart() + "\n" + suffix;
+    newChangelog = `${prefix + templateString.trimStart()}\n${suffix}`;
   } else {
-    const index = fileData.indexOf("\n");
+    const index = fileData.indexOf('\n');
     newChangelog =
       index === -1
         ? fileData + templateString // treat the whole file as header

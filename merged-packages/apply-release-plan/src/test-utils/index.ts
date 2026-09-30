@@ -1,20 +1,28 @@
 // Vendored (trimmed) from the changesets repository's private
-// `@changesets/test-utils` workspace package (scripts/test-utils/src/index.ts).
+// `@changesets/test-utils` workspace package, at the
+// `@changesets/apply-release-plan@8.1.1` tag (scripts/test-utils/src/index.ts).
 // Only the helpers used by this package's tests are kept.
-import type fs from "node:fs";
-import fsp from "node:fs/promises";
-import path from "node:path";
-import { createFixture, type FileTree } from "fs-fixture";
-import { onTestFinished, vi } from "vitest";
+import * as git from '@changesets/git';
+import { createFixture } from 'fs-fixture';
+import type { FileTree } from 'fs-fixture';
+import type fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+import { exec } from 'tinyexec';
+import { onTestFinished, vi } from 'vitest';
 
-const createLogSilencer = () => {
+type LogSilencer = {
+  setup(): () => void;
+};
+
+const createLogSilencer = (): LogSilencer => {
   const originalConsoleError = console.error;
   const originalConsoleInfo = console.info;
   const originalConsoleLog = console.log;
   const originalConsoleWarn = console.warn;
 
-  const originalStdoutWrite = process.stdout.write;
-  const originalStderrWrite = process.stderr.write;
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+  const originalStderrWrite = process.stderr.write.bind(process.stderr);
 
   return {
     setup() {
@@ -40,7 +48,7 @@ const createLogSilencer = () => {
 };
 
 export const temporarilySilenceLogs =
-  (testFn: () => Promise<void> | void) => async () => {
+  (testFn: () => Promise<void> | void) => async (): Promise<void> => {
     const silencer = createLogSilencer();
     const dispose = silencer.setup();
     try {
@@ -52,12 +60,12 @@ export const temporarilySilenceLogs =
 
 export type Fixture = FileTree;
 
-export async function testdir(dir?: Fixture) {
+export async function testdir(dir?: Fixture): Promise<string> {
   const fixture = await createFixture(dir, {
     fs: {
       ...fsp,
-      rm: (path, options) => {
-        return fsp.rm(path, {
+      rm: async (rmPath, options) => {
+        return fsp.rm(rmPath, {
           // make it more forgiving to fs contention
           // especially on Windows, given CI flakes we experienced caused by "EBUSY: resource busy or locked"
           maxRetries: 3,
@@ -67,15 +75,31 @@ export async function testdir(dir?: Fixture) {
       },
     },
   });
-  onTestFinished(() => fixture.rm());
+  onTestFinished(async () => fixture.rm());
   return fixture.path;
 }
 
 export async function outputFile(
   filePath: string,
   content: string,
-  encoding = "utf8" as fs.ObjectEncodingOptions,
-) {
+  encoding = 'utf8' as fs.ObjectEncodingOptions,
+): Promise<void> {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, content, encoding);
+}
+
+// Initialize a git repository with a first commit. CI runners may not have a
+// global git identity configured, which would cause `git commit` to silently
+// fail and leave the repo without any commits, so we set a local identity
+// before committing.
+export async function initGitRepo(dir: string): Promise<void> {
+  await exec('git', ['init'], { nodeOptions: { cwd: dir } });
+  await exec('git', ['config', 'user.email', 'test@example.com'], {
+    nodeOptions: { cwd: dir },
+  });
+  await exec('git', ['config', 'user.name', 'test'], {
+    nodeOptions: { cwd: dir },
+  });
+  await git.add('.', dir);
+  await git.commit('first commit', dir);
 }
