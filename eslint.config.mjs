@@ -50,6 +50,7 @@ const config = createConfig([
       // Configuration files at the root, such as the Vitest and knip configs.
       '*.mts',
       'scripts/**/*.{ts,mts}',
+      'packages/apply-release-plan/**',
     ],
     ignores: ['scripts/create-package/package-template/**/*.ts'],
     extends: [nodejs],
