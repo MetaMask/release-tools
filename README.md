@@ -17,9 +17,6 @@ See the [Contributor Documentation](./docs) for help on:
 <!-- start package list -->
 
 - [`@metamask/apply-release-plan`](packages/apply-release-plan)
-- [`@metamask/greetings`](packages/greetings)
-- [`@metamask/letter-crafter`](packages/letter-crafter)
-- [`@metamask/signatures`](packages/signatures)
 
 <!-- end package list -->
 
@@ -30,11 +27,6 @@ See the [Contributor Documentation](./docs) for help on:
 graph LR;
 linkStyle default opacity:0.5
   apply_release_plan(["@metamask/apply-release-plan"]);
-  greetings(["@metamask/greetings"]);
-  letter_crafter(["@metamask/letter-crafter"]);
-  signatures(["@metamask/signatures"]);
-  letter_crafter --> greetings;
-  letter_crafter --> signatures;
 ```
 
 <!-- end dependency graph -->
