@@ -1,20 +1,18 @@
-import {
-  applyEdits,
-  parseTree,
-  printParseErrorCode,
-  type EditResult,
-  type Node,
-  type ParseError,
-} from "jsonc-parser";
+import { applyEdits, parseTree, printParseErrorCode } from 'jsonc-parser';
+import type { EditResult, Node as JsonNode, ParseError } from 'jsonc-parser';
 
-export interface EditJsonOperation {
+export type EditJsonOperation = {
   keys: string[];
   value: unknown;
-}
+};
 
 /**
- * A simple JSON editing utility that preserves formatting. They specified operation keys
+ * A simple JSON editing utility that preserves formatting. The specified operation keys
  * must exist in the JSON for this implementation.
+ *
+ * @param json - The JSON document to edit.
+ * @param operations - The edits to apply, each addressing a value by its key path.
+ * @returns The edited JSON document, with formatting preserved.
  */
 export function editJson(
   json: string,
@@ -28,7 +26,7 @@ export function editJson(
   });
 
   if (!parsed) {
-    throw new Error("Failed to parse JSON");
+    throw new Error('Failed to parse JSON');
   }
   if (errors.length > 0) {
     // Since the first error could cause subsequent errors, we only report the first one
@@ -41,7 +39,7 @@ export function editJson(
   const edits: EditResult = operations.map((op) => {
     const valueNode = getValueNode(parsed, op.keys);
     if (!valueNode) {
-      throw new Error(`Key path "${op.keys.join(".")}" not found in JSON`);
+      throw new Error(`Key path "${op.keys.join('.')}" not found in JSON`);
     }
     return {
       content: JSON.stringify(op.value),
@@ -53,19 +51,23 @@ export function editJson(
   return applyEdits(json, edits);
 }
 
-function getValueNode(root: Node, keys: string[]): Node | null {
+function getValueNode(root: JsonNode, keys: string[]): JsonNode | null {
   let node = root;
   for (const key of keys) {
-    if (node.type !== "object") return null;
+    if (node.type !== 'object') {
+      return null;
+    }
     const property = node.children?.find(
       (child) =>
-        child.type === "property" &&
+        child.type === 'property' &&
         child.children?.length === 2 &&
         child.children[0].value === key,
     );
-    if (!property) return null;
-    // We've checked above that `children[1]` exists
-    node = property.children![1];
+    const valueNode = property?.children?.[1];
+    if (!valueNode) {
+      return null;
+    }
+    node = valueNode;
   }
   return node;
 }

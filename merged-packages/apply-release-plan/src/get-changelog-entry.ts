@@ -2,14 +2,15 @@ import type {
   ChangelogFunctions,
   ModCompWithPackage,
   NewChangesetWithCommit,
-} from "@changesets/types";
-import validRange from "semver/ranges/valid.js";
-import { capitalize, shouldUpdateDependencyBasedOnConfig } from "./utils.js";
+} from '@changesets/types';
+import validRange from 'semver/ranges/valid.js';
+
+import { capitalize, shouldUpdateDependencyBasedOnConfig } from './utils.js';
 
 type ChangelogLines = {
-  major: Array<Promise<string>>;
-  minor: Array<Promise<string>>;
-  patch: Array<Promise<string>>;
+  major: Promise<string>[];
+  minor: Promise<string>[];
+  patch: Promise<string>[];
 };
 
 // release is the package and version we are releasing
@@ -24,11 +25,13 @@ export async function getChangelogEntry(
     updateInternalDependencies,
     onlyUpdatePeerDependentsWhenOutOfRange,
   }: {
-    updateInternalDependencies: "patch" | "minor";
+    updateInternalDependencies: 'patch' | 'minor';
     onlyUpdatePeerDependentsWhenOutOfRange: boolean;
   },
-) {
-  if (release.type === "none") return null;
+): Promise<string | null> {
+  if (release.type === 'none') {
+    return null;
+  }
 
   const changelogLines: ChangelogLines = {
     major: [],
@@ -41,8 +44,10 @@ export async function getChangelogEntry(
   // release in the changeset, I don't know if we can
   // We can filter here, but that just adds another iteration over this list
   changesets.forEach((cs) => {
-    const rls = cs.releases.find((r) => r.name === release.name);
-    if (rls && rls.type !== "none") {
+    const rls = cs.releases.find(
+      (releaseInChangeset) => releaseInChangeset.name === release.name,
+    );
+    if (rls && rls.type !== 'none') {
       changelogLines[rls.type].push(
         Promise.resolve(
           changelogFuncs.getReleaseLine(cs, rls.type, changelogOpts),
@@ -55,17 +60,17 @@ export async function getChangelogEntry(
     const peerDependencyVersionRange =
       release.packageJson.peerDependencies?.[rel.name];
 
-    const versionRange = dependencyVersionRange || peerDependencyVersionRange;
-    const usesWorkspaceRange = versionRange?.startsWith("workspace:");
+    const versionRange = dependencyVersionRange ?? peerDependencyVersionRange;
+    const usesWorkspaceRange = versionRange?.startsWith('workspace:');
     return (
       versionRange &&
-      (usesWorkspaceRange || validRange(versionRange) != null) &&
+      (usesWorkspaceRange === true || validRange(versionRange) !== null) &&
       shouldUpdateDependencyBasedOnConfig(
         cwd,
         rel,
         {
           depVersionRange: versionRange,
-          depType: dependencyVersionRange ? "dependencies" : "peerDependencies",
+          depType: dependencyVersionRange ? 'dependencies' : 'peerDependencies',
         },
         {
           minReleaseType: updateInternalDependencies,
@@ -105,25 +110,27 @@ export async function getChangelogEntry(
 
   const renderedLines = [
     `## ${release.newVersion}`,
-    generateMarkdownForVersionType("major", resolvedChangelogLines.major),
-    generateMarkdownForVersionType("minor", resolvedChangelogLines.minor),
-    generateMarkdownForVersionType("patch", resolvedChangelogLines.patch),
+    generateMarkdownForVersionType('major', resolvedChangelogLines.major),
+    generateMarkdownForVersionType('minor', resolvedChangelogLines.minor),
+    generateMarkdownForVersionType('patch', resolvedChangelogLines.patch),
   ].filter((line) => line);
 
   if (renderedLines.length === 1) {
-    renderedLines.push("No changes in this release.");
+    renderedLines.push('No changes in this release.');
   }
 
-  return renderedLines.join("\n\n");
+  return renderedLines.join('\n\n');
 }
 
 // Exported for test only
 export function generateMarkdownForVersionType(
   type: keyof ChangelogLines,
-  lines: Array<string>,
-) {
-  const releaseLines = lines.filter((l) => l);
-  if (!releaseLines.length) return;
+  lines: string[],
+): string | undefined {
+  const releaseLines = lines.filter((line) => line);
+  if (!releaseLines.length) {
+    return undefined;
+  }
 
   let content = `### ${capitalize(type)} Changes`;
   // Track the new lines to be added between release lines. Start with two as we
@@ -132,15 +139,15 @@ export function generateMarkdownForVersionType(
 
   for (const line of releaseLines) {
     // Factor in the starting new lines preferred by the release line
-    const startNewLinesCount = line.match(/^\n*/)?.[0].length ?? 0;
+    const startNewLinesCount = line.match(/^\n*/u)?.[0].length ?? 0;
     newLines += startNewLinesCount;
 
     // Ensure a minimum of one new line and maximum of two new lines between release lines
-    const newLinesContent = "\n".repeat(Math.min(Math.max(newLines, 1), 2));
+    const newLinesContent = '\n'.repeat(Math.min(Math.max(newLines, 1), 2));
     content += newLinesContent + line.trim();
 
     // Count the ending new lines preferred by the release line for the next run
-    const endNewLinesCount = line.match(/\n*$/)?.[0].length ?? 0;
+    const endNewLinesCount = line.match(/\n*$/u)?.[0].length ?? 0;
     newLines = endNewLinesCount;
   }
 
