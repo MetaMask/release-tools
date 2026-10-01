@@ -235,7 +235,7 @@ module.exports = defineConfig({
       }
 
       // All packages must specify a minimum Node.js version of 22.
-      expectWorkspaceField(workspace, 'engines.node', '^22.14.0 || ^24');
+      expectWorkspaceField(workspace, 'engines.node', '^22.16.0 || ^24');
 
       // All non-root public packages should be published to the NPM registry;
       // all non-root private packages should not.
@@ -401,15 +401,16 @@ async function workspaceFileExists(workspace, path) {
  * @param {string} fieldName - The field to check.
  * @param {unknown} [expectedValue] - The value to check.
  */
-function expectWorkspaceField(workspace, fieldName, expectedValue = undefined) {
+function expectWorkspaceField(workspace, fieldName, expectedValue) {
   const fieldValue = get(workspace.manifest, fieldName);
+  const hasExpectedValue = arguments.length === 3;
 
-  if (expectedValue !== undefined && expectedValue !== null) {
+  if (hasExpectedValue && expectedValue !== null) {
     workspace.set(fieldName, expectedValue);
   } else if (expectedValue === null) {
     workspace.unset(fieldName);
   } else if (
-    expectedValue === undefined &&
+    !hasExpectedValue &&
     (fieldValue === undefined || fieldValue === null)
   ) {
     workspace.error(`Missing required field "${fieldName}".`);
@@ -426,11 +427,7 @@ function expectWorkspaceField(workspace, fieldName, expectedValue = undefined) {
  * @param {string} fieldName - The field to check.
  * @param {unknown} expectedValue - The value that should be contained in the array.
  */
-function expectWorkspaceArrayField(
-  workspace,
-  fieldName,
-  expectedValue = undefined,
-) {
+function expectWorkspaceArrayField(workspace, fieldName, expectedValue) {
   let fieldValue = get(workspace.manifest, fieldName);
 
   if (expectedValue) {
