@@ -2,8 +2,6 @@ import { vi } from 'vitest';
 import { withMonorepoProjectEnvironment } from '../tests/functional/helpers/with.js';
 import { buildChangelog } from '../tests/helpers.js';
 
-vi.setConfig({ testTimeout: 30_000 });
-
 describe('create-release-branch (functional)', () => {
   describe('against a monorepo with independent versions', () => {
     it('bumps the ordinary part of the root package and updates the versions of the specified packages according to the release spec', async () => {
