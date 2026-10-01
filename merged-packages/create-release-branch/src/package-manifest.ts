@@ -1,10 +1,11 @@
-import path from 'path';
 import {
   ManifestFieldNames as PackageManifestFieldNames,
   ManifestDependencyFieldNames as PackageManifestDependenciesFieldNames,
 } from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
+import path from 'path';
 import validateNPMPackageName from 'validate-npm-package-name';
+
 import { readJsonObjectFile } from './fs.js';
 import { isTruthyString } from './misc-utils.js';
 import { semver, SemVer } from './semver.js';

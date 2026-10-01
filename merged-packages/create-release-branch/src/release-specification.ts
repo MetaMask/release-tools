@@ -1,6 +1,7 @@
 import fs, { WriteStream } from 'fs';
-import YAML from 'yaml';
 import { diff } from 'semver';
+import YAML from 'yaml';
+
 import { Editor } from './editor.js';
 import { readFile } from './fs.js';
 import {
@@ -10,9 +11,9 @@ import {
   isObject,
   runCommand,
 } from './misc-utils.js';
+import { Package } from './package.js';
 import { Project } from './project.js';
 import { isValidSemver, semver, SemVer } from './semver.js';
-import { Package } from './package.js';
 
 /**
  * The SemVer-compatible parts of a version string that can be bumped by this

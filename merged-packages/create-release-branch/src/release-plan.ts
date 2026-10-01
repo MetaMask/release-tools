@@ -1,10 +1,11 @@
 import { WriteStream } from 'fs';
 import { SemVer } from 'semver';
+
+import { Formatter } from './initial-parameters.js';
 import { debug } from './misc-utils.js';
 import { Package, updatePackage } from './package.js';
 import { Project } from './project.js';
 import { ReleaseSpecification } from './release-specification.js';
-import { Formatter } from './initial-parameters.js';
 
 /**
  * Instructions for how to update the project in order to prepare it for a new

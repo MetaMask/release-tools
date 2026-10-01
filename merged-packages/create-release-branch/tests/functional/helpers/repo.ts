@@ -1,7 +1,8 @@
+import deepmerge from 'deepmerge';
+import { execa, ExecaChildProcess, Options as ExecaOptions } from 'execa';
 import fs from 'fs';
 import path from 'path';
-import { execa, ExecaChildProcess, Options as ExecaOptions } from 'execa';
-import deepmerge from 'deepmerge';
+
 import { isErrorWithCode } from '../../helpers.js';
 import { debug, sleepFor } from './utils.js';
 

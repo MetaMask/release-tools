@@ -1,8 +1,9 @@
 import { SemVer } from 'semver';
-import { Markdown } from './Markdown.js';
-import { VersionSelector } from './VersionSelector.js';
+
 import { DependencyErrorSection } from './DependencyErrorSection.js';
+import { Markdown } from './Markdown.js';
 import { Package, ReleaseType } from './types.js';
+import { VersionSelector } from './VersionSelector.js';
 
 type PackageItemProps = {
   pkg: Package;

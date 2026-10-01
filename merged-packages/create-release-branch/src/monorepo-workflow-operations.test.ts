@@ -1,20 +1,21 @@
 import fs from 'fs';
-import path from 'path';
 import { when } from 'jest-when';
+import path from 'path';
 import { MockWritable } from 'stdio-mock';
+
 import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
 import { buildMockProject, Require } from '../tests/unit/helpers.js';
-import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
 import * as editorModule from './editor.js';
 import type { Editor } from './editor.js';
-import * as releaseSpecificationModule from './release-specification.js';
-import type { ReleaseSpecification } from './release-specification.js';
+import { Formatter } from './initial-parameters.js';
+import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
 import * as releasePlanModule from './release-plan.js';
 import type { ReleasePlan } from './release-plan.js';
+import * as releaseSpecificationModule from './release-specification.js';
+import type { ReleaseSpecification } from './release-specification.js';
 import * as repoModule from './repo.js';
-import * as yarnCommands from './yarn-commands.js';
 import * as workflowOperations from './workflow-operations.js';
-import { Formatter } from './initial-parameters.js';
+import * as yarnCommands from './yarn-commands.js';
 
 jest.mock('./editor');
 jest.mock('./release-plan');

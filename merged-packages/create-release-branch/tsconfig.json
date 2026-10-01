@@ -1,18 +1,9 @@
 {
+  "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
-    "esModuleInterop": true,
-    "exactOptionalPropertyTypes": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "noEmit": true,
-    "noErrorTruncation": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "ES2017",
     "jsx": "react-jsx",
-    "types": ["react", "react-dom"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "react", "react-dom"]
   },
-  "exclude": ["./dist/**/*", "node_modules"]
+  "include": ["./src"]
 }

@@ -1,8 +1,9 @@
+import * as actionUtils from '@metamask/action-utils';
 import fs from 'fs';
+import { when } from 'jest-when';
 import path from 'path';
 import { rimraf } from 'rimraf';
-import { when } from 'jest-when';
-import * as actionUtils from '@metamask/action-utils';
+
 import { withSandbox } from '../tests/helpers.js';
 import {
   readFile,

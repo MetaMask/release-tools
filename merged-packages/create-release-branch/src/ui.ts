@@ -1,14 +1,18 @@
-import type { WriteStream } from 'fs';
-import { join } from 'path';
 import express from 'express';
+import type { WriteStream } from 'fs';
 import open from 'open';
+import { join } from 'path';
 
+import { getCurrentDirectoryPath } from './dirname.js';
+import { readFile } from './fs.js';
+import { Formatter } from './initial-parameters.js';
+import { Package } from './package.js';
 import {
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
   type Project,
 } from './project.js';
-import { Package } from './package.js';
+import { executeReleasePlan, planRelease } from './release-plan.js';
 import {
   findWorkspaceDependentNamesOfType,
   findCandidateDependencies,
@@ -17,18 +21,14 @@ import {
   ReleaseSpecification,
   validateAllPackageEntries,
 } from './release-specification.js';
-import { createReleaseBranch } from './workflow-operations.js';
 import { commitAllChanges } from './repo.js';
 import { SemVer, semver } from './semver.js';
-import { executeReleasePlan, planRelease } from './release-plan.js';
+import { createReleaseBranch } from './workflow-operations.js';
 import {
   deduplicateDependencies,
   fixConstraints,
   updateYarnLockfile,
 } from './yarn-commands.js';
-import { readFile } from './fs.js';
-import { getCurrentDirectoryPath } from './dirname.js';
-import { Formatter } from './initial-parameters.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 

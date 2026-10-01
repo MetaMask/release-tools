@@ -1,26 +1,27 @@
-import { WriteStream } from 'fs';
-import { resolve } from 'path';
 import { getWorkspaceLocations } from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
+import { WriteStream } from 'fs';
+import { resolve } from 'path';
+
 import { WriteStreamLike, fileExists } from './fs.js';
+import { Formatter } from './initial-parameters.js';
+import {
+  convertToHttpsGitHubRepositoryUrl,
+  getStdoutFromCommand,
+} from './misc-utils.js';
+import {
+  PackageManifestFieldNames,
+  UnvalidatedPackageManifest,
+} from './package-manifest.js';
 import {
   Package,
   readMonorepoRootPackage,
   readMonorepoWorkspacePackage,
   updatePackageChangelog,
 } from './package.js';
+import { ReleaseSpecification } from './release-specification.js';
 import { getTagNames, restoreFiles } from './repo.js';
 import { SemVer } from './semver.js';
-import {
-  PackageManifestFieldNames,
-  UnvalidatedPackageManifest,
-} from './package-manifest.js';
-import { ReleaseSpecification } from './release-specification.js';
-import {
-  convertToHttpsGitHubRepositoryUrl,
-  getStdoutFromCommand,
-} from './misc-utils.js';
-import { Formatter } from './initial-parameters.js';
 
 /**
  * The release version of the root package of a monorepo extracted from its

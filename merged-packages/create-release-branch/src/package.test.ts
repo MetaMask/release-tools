@@ -1,9 +1,10 @@
-import fs from 'fs';
-import path from 'path';
-import { when } from 'jest-when';
 import * as autoChangelog from '@metamask/auto-changelog';
+import fs from 'fs';
+import { when } from 'jest-when';
+import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
+
 import {
   buildChangelog,
   normalizeMultilineString,
@@ -15,6 +16,8 @@ import {
   buildMockManifest,
   createNoopWriteStream,
 } from '../tests/unit/helpers.js';
+import * as fsModule from './fs.js';
+import * as packageManifestModule from './package-manifest.js';
 import {
   getFormatter,
   readMonorepoRootPackage,
@@ -22,8 +25,6 @@ import {
   updatePackage,
   updatePackageChangelog,
 } from './package.js';
-import * as fsModule from './fs.js';
-import * as packageManifestModule from './package-manifest.js';
 import * as repoModule from './repo.js';
 
 jest.mock('./package-manifest');

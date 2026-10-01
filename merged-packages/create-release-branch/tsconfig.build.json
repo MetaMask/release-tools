@@ -1,13 +1,12 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "../../tsconfig.packages.build.json",
   "compilerOptions": {
-    "declaration": true,
-    "inlineSources": true,
-    "noEmit": false,
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "react", "react-dom"]
   },
-  "include": ["./src/**/*.ts", "./src/**/*.tsx"],
-  "exclude": ["./src/**/*.test.ts", "./src/**/*.test.tsx"]
+  "include": ["./src"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }

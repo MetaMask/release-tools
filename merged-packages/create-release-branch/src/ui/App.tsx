@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SemVer } from 'semver';
+
 import { ErrorMessage } from './ErrorMessage.js';
 import { PackageItem } from './PackageItem.js';
 import { Package, RELEASE_TYPE_OPTIONS, ReleaseType } from './types.js';
-
 // This file doesn't export anything, it is used to load Tailwind.
 // eslint-disable-next-line import/no-unassigned-import
 import './style.css';

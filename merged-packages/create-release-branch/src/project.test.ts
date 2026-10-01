@@ -1,25 +1,26 @@
-import { mkdir } from 'fs/promises';
-import path from 'path';
-import { when } from 'jest-when';
-import { SemVer } from 'semver';
 import * as actionUtils from '@metamask/action-utils';
+import { mkdir } from 'fs/promises';
+import { when } from 'jest-when';
+import path from 'path';
+import { SemVer } from 'semver';
+
 import { withProtectedProcessEnv, withSandbox } from '../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
   createNoopWriteStream,
 } from '../tests/unit/helpers.js';
+import * as fs from './fs.js';
 import * as miscUtils from './misc-utils.js';
+import * as packageModule from './package.js';
 import {
   getValidRepositoryUrl,
   readProject,
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
 } from './project.js';
-import * as packageModule from './package.js';
-import * as repoModule from './repo.js';
-import * as fs from './fs.js';
 import { IncrementableVersionParts } from './release-specification.js';
+import * as repoModule from './repo.js';
 
 jest.mock('./package');
 jest.mock('./repo');
