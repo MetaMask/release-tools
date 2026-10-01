@@ -1,5 +1,6 @@
+import { vi } from 'vitest';
 import fs from 'fs';
-import { when } from 'jest-when';
+import { when } from 'vitest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
@@ -14,10 +15,10 @@ import {
   validateReleaseSpecification,
 } from './release-specification.js';
 
-jest.mock('./misc-utils', () => {
+vi.mock('./misc-utils', async () => {
   return {
-    ...jest.requireActual('./misc-utils'),
-    runCommand: jest.fn(),
+    ...(await vi.importActual('./misc-utils')),
+    runCommand: vi.fn(),
   };
 });
 
@@ -167,7 +168,7 @@ packages:
         path: '/path/to/editor',
         args: ['arg1', 'arg2'],
       };
-      when(jest.spyOn(miscUtils, 'runCommand'))
+      when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],
@@ -176,7 +177,7 @@ packages:
             shell: true,
           },
         )
-        .mockResolvedValue();
+        .thenResolve();
 
       expect(
         await waitForUserToEditReleaseSpecification(
@@ -190,7 +191,7 @@ packages:
       const releaseSpecificationPath = '/path/to/release-spec';
       const editor = { path: '/path/to/editor', args: [] };
       const stdout = new MockWritable();
-      when(jest.spyOn(miscUtils, 'runCommand')).mockResolvedValue();
+      vi.spyOn(miscUtils, 'runCommand').mockResolvedValue();
 
       await waitForUserToEditReleaseSpecification(
         releaseSpecificationPath,
@@ -211,7 +212,7 @@ packages:
         args: ['arg1', 'arg2'],
       };
       const stdout = new MockWritable();
-      when(jest.spyOn(miscUtils, 'runCommand'))
+      when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],
@@ -220,7 +221,7 @@ packages:
             shell: true,
           },
         )
-        .mockRejectedValue(new Error('oops'));
+        .thenReject(new Error('oops'));
 
       try {
         await waitForUserToEditReleaseSpecification(
@@ -245,7 +246,7 @@ packages:
         args: ['arg1', 'arg2'],
       };
       const error = new Error('oops');
-      when(jest.spyOn(miscUtils, 'runCommand'))
+      when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],
@@ -254,7 +255,7 @@ packages:
             shell: true,
           },
         )
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(
         waitForUserToEditReleaseSpecification(releaseSpecificationPath, editor),

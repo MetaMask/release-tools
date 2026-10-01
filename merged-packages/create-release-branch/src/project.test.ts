@@ -1,6 +1,7 @@
+import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import { mkdir } from 'fs/promises';
-import { when } from 'jest-when';
+import { when } from 'vitest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 
@@ -22,11 +23,11 @@ import {
 import { IncrementableVersionParts } from './release-specification.js';
 import * as repoModule from './repo.js';
 
-jest.mock('./package');
-jest.mock('./repo');
-jest.mock('@metamask/action-utils', () => ({
-  ...jest.requireActual('@metamask/action-utils'),
-  getWorkspaceLocations: jest.fn(),
+vi.mock('./package');
+vi.mock('./repo');
+vi.mock('@metamask/action-utils', async () => ({
+  ...(await vi.importActual('@metamask/action-utils')),
+  getWorkspaceLocations: vi.fn(),
 }));
 
 describe('project', () => {
@@ -67,20 +68,28 @@ describe('project', () => {
         };
         const projectTagNames = ['tag1', 'tag2', 'tag3'];
         const stderr = createNoopWriteStream();
-        when(jest.spyOn(repoModule, 'getTagNames'))
+        when(vi.spyOn(repoModule, 'getTagNames'))
           .calledWith(projectDirectoryPath)
-          .mockResolvedValue(projectTagNames);
-        when(jest.spyOn(packageModule, 'readMonorepoRootPackage'))
+          .thenResolve(projectTagNames);
+        when(vi.spyOn(packageModule, 'readMonorepoRootPackage'))
           .calledWith({
             packageDirectoryPath: projectDirectoryPath,
             projectDirectoryPath,
             projectTagNames,
           })
-          .mockResolvedValue(rootPackage);
-        when(
-          jest.spyOn(actionUtils, 'getWorkspaceLocations'),
-        ).mockResolvedValue(['packages/a', 'packages/subpackages/b']);
-        when(jest.spyOn(packageModule, 'readMonorepoWorkspacePackage'))
+          .thenResolve(rootPackage);
+        when(vi.spyOn(actionUtils, 'getWorkspaceLocations'))
+          .calledWith(
+            rootPackage.validatedManifest.workspaces,
+            projectDirectoryPath,
+            true,
+          )
+          .thenResolve(['packages/a', 'packages/subpackages/b']);
+        const readMonorepoWorkspacePackageMock = vi.spyOn(
+          packageModule,
+          'readMonorepoWorkspacePackage',
+        );
+        when(readMonorepoWorkspacePackageMock)
           .calledWith({
             packageDirectoryPath: path.join(
               projectDirectoryPath,
@@ -93,7 +102,8 @@ describe('project', () => {
             projectTagNames,
             stderr,
           })
-          .mockResolvedValue(workspacePackages.a)
+          .thenResolve(workspacePackages.a);
+        when(readMonorepoWorkspacePackageMock)
           .calledWith({
             packageDirectoryPath: path.join(
               projectDirectoryPath,
@@ -107,7 +117,7 @@ describe('project', () => {
             projectTagNames,
             stderr,
           })
-          .mockResolvedValue(workspacePackages.b);
+          .thenResolve(workspacePackages.b);
         await mkdir(path.join(projectDirectoryPath, 'packages'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'a'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'subpackages'));
@@ -183,11 +193,11 @@ describe('project', () => {
       it('returns the HTTPS version of this URL', async () => {
         const packageManifest = {};
         const repositoryDirectoryPath = '/path/to/project';
-        when(jest.spyOn(miscUtils, 'getStdoutFromCommand'))
+        when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
           .calledWith('git', ['config', '--get', 'remote.origin.url'], {
             cwd: repositoryDirectoryPath,
           })
-          .mockResolvedValue('git@github.com:example-org/example-repo.git');
+          .thenResolve('git@github.com:example-org/example-repo.git');
 
         expect(
           await getValidRepositoryUrl(packageManifest, repositoryDirectoryPath),
@@ -213,15 +223,15 @@ describe('project', () => {
         },
       });
 
-      const restoreFilesSpy = jest.spyOn(repoModule, 'restoreFiles');
+      const restoreFilesSpy = vi.spyOn(repoModule, 'restoreFiles');
 
-      when(jest.spyOn(fs, 'fileExists'))
+      when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.b.changelogPath)
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
-      when(jest.spyOn(fs, 'fileExists'))
+      when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.c.changelogPath)
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       await restoreChangelogsForSkippedPackages({
         project,
@@ -254,7 +264,7 @@ describe('project', () => {
         },
       });
 
-      const restoreFilesSpy = jest.spyOn(repoModule, 'restoreFiles');
+      const restoreFilesSpy = vi.spyOn(repoModule, 'restoreFiles');
 
       await restoreChangelogsForSkippedPackages({
         project,
@@ -284,11 +294,11 @@ describe('project', () => {
         },
       });
 
-      when(jest.spyOn(fs, 'fileExists'))
+      when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.a.changelogPath)
-        .mockResolvedValue(false);
+        .thenResolve(false);
 
-      const restoreFilesSpy = jest.spyOn(repoModule, 'restoreFiles');
+      const restoreFilesSpy = vi.spyOn(repoModule, 'restoreFiles');
 
       await restoreChangelogsForSkippedPackages({
         project,
@@ -321,7 +331,7 @@ describe('project', () => {
         },
       });
 
-      const updatePackageChangelogSpy = jest.spyOn(
+      const updatePackageChangelogSpy = vi.spyOn(
         packageModule,
         'updatePackageChangelog',
       );
@@ -358,7 +368,7 @@ describe('project', () => {
         },
       });
 
-      const updatePackageChangelogSpy = jest.spyOn(
+      const updatePackageChangelogSpy = vi.spyOn(
         packageModule,
         'updatePackageChangelog',
       );

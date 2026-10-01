@@ -17,22 +17,15 @@ import { isExecaError } from './helpers.js';
  */
 const STACK_TRACE_SECTION = /^\s+at.+\)$/msu;
 
-declare global {
-  // Using `namespace` here is okay because this is how the Jest types are
-  // defined.
-  /* eslint-disable-next-line @typescript-eslint/no-namespace */
-  namespace jest {
-    // interface is used here to allow for declaration merging
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-    interface Matchers<R> {
-      toResolve(): Promise<R>;
-      toThrowExecaError(
-        message: string,
-        {
-          replacements,
-        }: { replacements: { from: string | RegExp; to: string }[] },
-      ): Promise<R>;
-    }
+import { expect } from 'vitest';
+
+declare module 'vitest' {
+  interface Assertion<T = any> {
+    toResolve(): Promise<T>;
+    toThrowExecaError(
+      message: string,
+      options: { replacements: { from: string | RegExp; to: string }[] },
+    ): Promise<T>;
   }
 }
 
