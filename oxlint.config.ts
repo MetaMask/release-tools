@@ -47,7 +47,6 @@ export default createConfig({
       rules: {
         'node/no-sync': 'off',
         'node/no-process-env': 'off',
-        'n/no-unsupported-features/node-builtins': 'off',
         'unicorn/no-useless-undefined': 'off',
       },
     },
@@ -57,7 +56,6 @@ export default createConfig({
       rules: {
         'node/no-sync': 'off',
         'node/no-process-env': 'off',
-        'n/no-unsupported-features/node-builtins': 'off',
       },
     },
     {
