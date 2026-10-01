@@ -227,6 +227,7 @@ export default abstract class Repo {
     await this.runCommand('git', ['config', 'user.email', 'test@example.com']);
     await this.runCommand('git', ['config', 'user.name', 'Test User']);
     await this.runCommand('git', ['config', 'commit.gpgsign', 'false']);
+    await this.runCommand('git', ['config', 'tag.gpgsign', 'false']);
   }
 
   /**
