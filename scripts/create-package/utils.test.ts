@@ -121,7 +121,9 @@ describe('create-package/utils', () => {
         'mock3.file': 'PACKAGE_DESCRIPTION PACKAGE_DIRECTORY_NAME',
       });
 
-      (prettier.format as Mock).mockImplementation((input) => input);
+      (prettier.format as unknown as Mock).mockImplementation(
+        (input: string) => input,
+      );
 
       await finalizeAndWriteData(packageData, monorepoFileData);
 
@@ -189,10 +191,10 @@ describe('create-package/utils', () => {
       // Postprocessing
       expect(execa).toHaveBeenCalledTimes(2);
       expect(execa).toHaveBeenCalledWith('yarn', ['install'], {
-        cwd: expect.any(String),
+        cwd: expect.any(String) as string,
       });
       expect(execa).toHaveBeenCalledWith('yarn', ['readme-content:update'], {
-        cwd: expect.any(String),
+        cwd: expect.any(String) as string,
       });
     });
 

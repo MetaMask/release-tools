@@ -292,20 +292,32 @@ async function getNewChangelogEntry(
     changelogPath = importResolveFromDir(config.changelog[0], contextDir);
   }
 
-  let possibleChangelogFunc = await import(changelogPath);
-  if (possibleChangelogFunc.default) {
+  let possibleChangelogFunc: unknown = await import(changelogPath);
+  if (
+    typeof possibleChangelogFunc === 'object' &&
+    possibleChangelogFunc !== null &&
+    'default' in possibleChangelogFunc
+  ) {
     possibleChangelogFunc = possibleChangelogFunc.default;
 
     // Check nested default again in case it's CJS with `__esModule` interop
-    if (possibleChangelogFunc.default) {
+    if (
+      typeof possibleChangelogFunc === 'object' &&
+      possibleChangelogFunc !== null &&
+      'default' in possibleChangelogFunc
+    ) {
       possibleChangelogFunc = possibleChangelogFunc.default;
     }
   }
   if (
+    typeof possibleChangelogFunc === 'object' &&
+    possibleChangelogFunc !== null &&
+    'getReleaseLine' in possibleChangelogFunc &&
     typeof possibleChangelogFunc.getReleaseLine === 'function' &&
+    'getDependencyReleaseLine' in possibleChangelogFunc &&
     typeof possibleChangelogFunc.getDependencyReleaseLine === 'function'
   ) {
-    getChangelogFuncs = possibleChangelogFunc;
+    getChangelogFuncs = possibleChangelogFunc as ChangelogFunctions;
   } else {
     throw new Error('Could not resolve changelog generation functions');
   }

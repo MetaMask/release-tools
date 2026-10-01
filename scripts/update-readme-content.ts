@@ -1,5 +1,3 @@
-#!yarn tsx
-
 import execa from 'execa';
 import fs from 'fs';
 import path from 'path';
@@ -87,7 +85,9 @@ async function retrieveWorkspaces(): Promise<Workspace[]> {
     '--verbose',
   ]);
 
-  return stdout.split('\n').map((line) => JSON.parse(line));
+  return stdout
+    .split('\n')
+    .map((line): Workspace => JSON.parse(line) as Workspace);
 }
 
 /**
