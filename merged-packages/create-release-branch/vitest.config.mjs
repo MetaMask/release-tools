@@ -7,7 +7,6 @@ export default mergeConfig(baseConfig, {
   test: {
     name: basename(import.meta.dirname),
     globals: true,
-    testTimeout: 30_000,
     setupFiles: ['./tests/setupAfterEnv.ts'],
     include: ['src/**/*.test.ts'],
     coverage: {
