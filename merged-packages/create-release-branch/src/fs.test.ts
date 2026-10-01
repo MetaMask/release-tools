@@ -1,6 +1,7 @@
+import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import fs from 'fs';
-import { when } from 'jest-when';
+import { when } from 'vitest-when';
 import path from 'path';
 import { rimraf } from 'rimraf';
 
@@ -15,7 +16,7 @@ import {
   removeFile,
 } from './fs.js';
 
-jest.mock('@metamask/action-utils');
+vi.mock('@metamask/action-utils');
 
 describe('fs', () => {
   describe('readFile', () => {
@@ -78,9 +79,9 @@ describe('fs', () => {
   describe('readJsonObjectFile', () => {
     it('uses readJsonObjectFile from @metamask/action-utils to parse the contents of the given JSON file as an object', async () => {
       const filePath = '/some/file';
-      when(jest.spyOn(actionUtils, 'readJsonObjectFile'))
+      when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
         .calledWith(filePath)
-        .mockResolvedValue({ some: 'object' });
+        .thenResolve({ some: 'object' });
 
       expect(await readJsonObjectFile(filePath)).toStrictEqual({
         some: 'object',
@@ -90,9 +91,9 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(jest.spyOn(actionUtils, 'readJsonObjectFile'))
+      when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
         .calledWith(filePath)
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(readJsonObjectFile(filePath)).rejects.toThrow(
         expect.objectContaining({
@@ -106,9 +107,9 @@ describe('fs', () => {
   describe('writeJsonFile', () => {
     it('uses writeJsonFile from @metamask/action-utils to write the given object to the given file as JSON', async () => {
       const filePath = '/some/file';
-      when(jest.spyOn(actionUtils, 'writeJsonFile'))
+      when(vi.spyOn(actionUtils, 'writeJsonFile'))
         .calledWith(filePath, { some: 'object' })
-        .mockResolvedValue(undefined);
+        .thenResolve(undefined);
 
       expect(await writeJsonFile(filePath, { some: 'object' })).toBeUndefined();
     });
@@ -116,9 +117,9 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(jest.spyOn(actionUtils, 'writeJsonFile'))
+      when(vi.spyOn(actionUtils, 'writeJsonFile'))
         .calledWith(filePath, { some: 'object' })
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(writeJsonFile(filePath, { some: 'object' })).rejects.toThrow(
         expect.objectContaining({
@@ -161,9 +162,9 @@ describe('fs', () => {
       const error: any = new Error('oops');
       error.code = 'ESOMETHING';
       error.stack = 'some stack';
-      when(jest.spyOn(fs.promises, 'stat'))
+      when(vi.spyOn(fs.promises, 'stat'))
         .calledWith(entryPath)
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(fileExists(entryPath)).rejects.toThrow(
         expect.objectContaining({
@@ -176,9 +177,9 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const entryPath = '/some/file';
       const error = new Error('oops');
-      when(jest.spyOn(fs.promises, 'stat'))
+      when(vi.spyOn(fs.promises, 'stat'))
         .calledWith(entryPath)
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(fileExists(entryPath)).rejects.toThrow(
         expect.objectContaining({
@@ -236,9 +237,9 @@ describe('fs', () => {
     it('re-throws any error that occurs, assigning it the same code, a wrapped message, and a new stack', async () => {
       const directoryPath = '/some/directory';
       const error = new Error('oops');
-      when(jest.spyOn(fs.promises, 'mkdir'))
+      when(vi.spyOn(fs.promises, 'mkdir'))
         .calledWith(directoryPath, { recursive: true })
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(ensureDirectoryPathExists(directoryPath)).rejects.toThrow(
         expect.objectContaining({
@@ -269,9 +270,9 @@ describe('fs', () => {
     it('re-throws any error that occurs, assigning it the same code, a wrapped message, and a new stack', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(jest.spyOn(fs.promises, 'rm'))
+      when(vi.spyOn(fs.promises, 'rm'))
         .calledWith(filePath, { force: true })
-        .mockRejectedValue(error);
+        .thenReject(error);
 
       await expect(removeFile(filePath)).rejects.toThrow(
         expect.objectContaining({
