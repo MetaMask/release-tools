@@ -1,6 +1,3 @@
-import fs, { WriteStream } from 'fs';
-import path from 'path';
-import { format } from 'util';
 import {
   oxfmt,
   parseChangelog,
@@ -8,7 +5,12 @@ import {
   updateChangelog,
 } from '@metamask/auto-changelog';
 import { assertExhaustive } from '@metamask/utils';
+import fs, { WriteStream } from 'fs';
+import path from 'path';
+import { format } from 'util';
+
 import { WriteStreamLike, readFile, writeFile, writeJsonFile } from './fs.js';
+import { Formatter } from './initial-parameters.js';
 import { isErrorWithCode } from './misc-utils.js';
 import {
   readPackageManifest,
@@ -19,7 +21,6 @@ import { Project } from './project.js';
 import { PackageReleasePlan } from './release-plan.js';
 import { hasChangesInDirectorySinceGitTag } from './repo.js';
 import { SemVer } from './semver.js';
-import { Formatter } from './initial-parameters.js';
 
 const MANIFEST_FILE_NAME = 'package.json';
 const CHANGELOG_FILE_NAME = 'CHANGELOG.md';

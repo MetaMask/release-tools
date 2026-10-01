@@ -6,17 +6,21 @@
     "type": "git",
     "url": "https://github.com/MetaMask/create-release-branch.git"
   },
-  "type": "module",
-  "exports": null,
   "bin": "bin/create-release-branch.js",
   "files": [
     "bin/",
     "dist/"
   ],
+  "type": "module",
+  "exports": null,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "tsc --project tsconfig.build.json && yarn build:ui",
-    "build:ui": "vite build",
     "build:clean": "rimraf dist && yarn build",
+    "build:ui": "vite build",
     "lint": "yarn lint:eslint && yarn lint:misc --check && yarn lint:changelog",
     "lint:changelog": "auto-changelog validate --formatter prettier",
     "lint:eslint": "eslint . --cache --ext cjs,cts,js,mjs,mts,ts,tsx",
@@ -105,14 +109,10 @@
       "optional": true
     }
   },
-  "packageManager": "yarn@4.16.0",
   "engines": {
     "node": "^18.18 || >=20"
   },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
+  "packageManager": "yarn@4.16.0",
   "lavamoat": {
     "allowScripts": {
       "@lavamoat/preinstall-always-fail": false,
