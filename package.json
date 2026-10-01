@@ -57,7 +57,7 @@
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/coverage-istanbul": "^4.1.11",
+    "@vitest/coverage-istanbul": "^5.0.1",
     "@vitest/eslint-plugin": "^1.1.4",
     "@yarnpkg/types": "^4.0.0",
     "bats": "^1.13.0",
@@ -81,7 +81,8 @@
     "tsx": "^4.20.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.48.0",
-    "vitest": "^4.1.11",
+    "vite": "^6.4.0",
+    "vitest": "^5.0.1",
     "yargs": "^17.7.2"
   },
   "resolutions": {
@@ -101,7 +102,8 @@
       "babel-runtime>core-js": false,
       "eslint-plugin-import-x>unrs-resolver": false,
       "simple-git-hooks": false,
-      "tsx>esbuild": false
+      "tsx>esbuild": false,
+      "vite>esbuild": false
     }
   }
 }

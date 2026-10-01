@@ -7,6 +7,7 @@ import type {
   PreState,
 } from '@changesets/types';
 import { getPackages } from '@manypkg/get-packages';
+import { resolve } from 'import-meta-resolve';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,10 +26,10 @@ import type { Fixture } from './test-utils/index.js';
 // The upstream repository resolves these from its own `cli` workspace; here we
 // resolve them from the published `@changesets/cli` package instead.
 const changesetsCliChangelogPath = fileURLToPath(
-  import.meta.resolve('@changesets/cli/changelog'),
+  resolve('@changesets/cli/changelog', import.meta.url),
 );
 const changesetsCliCommitPath = fileURLToPath(
-  import.meta.resolve('@changesets/cli/commit'),
+  resolve('@changesets/cli/commit', import.meta.url),
 );
 
 class FakeReleasePlan {

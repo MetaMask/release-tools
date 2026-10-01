@@ -26,6 +26,8 @@ const config: KnipConfig = {
         // Invoked as `yarn auto-changelog` by the shared changelog scripts in
         // `scripts/`, so knip can't tie it back to this workspace.
         '@metamask/auto-changelog',
+        // Resolved by the apply-release-plan test through import-meta-resolve.
+        '@changesets/cli',
       ],
     },
   },
