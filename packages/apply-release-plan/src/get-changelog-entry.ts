@@ -5,6 +5,11 @@ import type {
 } from '@changesets/types';
 import validRange from 'semver/ranges/valid.js';
 
+import type {
+  CategorizedChangelogFunctions,
+  CategorizedReleaseLine,
+  GetVersionHeader,
+} from './types.js';
 import { capitalize, shouldUpdateDependencyBasedOnConfig } from './utils.js';
 
 type ChangelogLines = {
@@ -12,6 +17,109 @@ type ChangelogLines = {
   minor: Promise<string>[];
   patch: Promise<string>[];
 };
+
+type DependencyUpdateConfig = {
+  updateInternalDependencies: 'patch' | 'minor';
+  onlyUpdatePeerDependentsWhenOutOfRange: boolean;
+};
+
+/**
+ * Renders the heading line that opens a release entry, using the module's
+ * `getVersionHeader` export when present and the default `## <version>`
+ * heading otherwise.
+ *
+ * @param changelogFuncs - The changelog module.
+ * @param release - The release to render a heading for.
+ * @param changelogOpts - The options configured for the changelog module.
+ * @returns The version heading line.
+ */
+async function getVersionHeaderLine(
+  changelogFuncs: ChangelogFunctions & { getVersionHeader?: GetVersionHeader },
+  release: ModCompWithPackage,
+  changelogOpts: null | Record<string, unknown>,
+): Promise<string> {
+  if (changelogFuncs.getVersionHeader) {
+    return await changelogFuncs.getVersionHeader(release, changelogOpts);
+  }
+  return `## ${release.newVersion}`;
+}
+
+export function isCategorizedChangelogFunctions(
+  changelogFuncs: ChangelogFunctions,
+): changelogFuncs is CategorizedChangelogFunctions {
+  return (
+    typeof (changelogFuncs as CategorizedChangelogFunctions)
+      .getCategorizedReleaseLines === 'function'
+  );
+}
+
+/**
+ * Computes the dependency releases relevant to `release`, and the changesets
+ * that caused them.
+ *
+ * @param cwd - The root directory of the project.
+ * @param release - The release to compute updated dependencies for.
+ * @param releases - All releases in the release plan.
+ * @param changesets - The changesets in the release plan.
+ * @param config - How internal dependencies are updated.
+ * @param config.updateInternalDependencies - The minimum bump type that
+ * updates an internal dependency range.
+ * @param config.onlyUpdatePeerDependentsWhenOutOfRange - Whether peer
+ * dependents are only updated when the new version leaves the declared range.
+ * @returns The dependency releases and the changesets that caused them.
+ */
+function getUpdatedDependencies(
+  cwd: string,
+  release: ModCompWithPackage,
+  releases: ModCompWithPackage[],
+  changesets: NewChangesetWithCommit[],
+  {
+    updateInternalDependencies,
+    onlyUpdatePeerDependentsWhenOutOfRange,
+  }: DependencyUpdateConfig,
+): {
+  dependentReleases: ModCompWithPackage[];
+  relevantChangesets: NewChangesetWithCommit[];
+} {
+  const dependentReleases = releases.filter((rel) => {
+    const dependencyVersionRange = release.packageJson.dependencies?.[rel.name];
+    const peerDependencyVersionRange =
+      release.packageJson.peerDependencies?.[rel.name];
+
+    const versionRange = dependencyVersionRange ?? peerDependencyVersionRange;
+    const usesWorkspaceRange = versionRange?.startsWith('workspace:');
+    return Boolean(
+      versionRange &&
+      (usesWorkspaceRange === true || validRange(versionRange) !== null) &&
+      shouldUpdateDependencyBasedOnConfig(
+        cwd,
+        rel,
+        {
+          depVersionRange: versionRange,
+          depType: dependencyVersionRange ? 'dependencies' : 'peerDependencies',
+        },
+        {
+          minReleaseType: updateInternalDependencies,
+          onlyUpdatePeerDependentsWhenOutOfRange,
+        },
+      ),
+    );
+  });
+
+  const relevantChangesetIds: Set<string> = new Set();
+
+  dependentReleases.forEach((rel) => {
+    rel.changesets.forEach((cs) => {
+      relevantChangesetIds.add(cs);
+    });
+  });
+
+  const relevantChangesets = changesets.filter((cs) =>
+    relevantChangesetIds.has(cs.id),
+  );
+
+  return { dependentReleases, relevantChangesets };
+}
 
 // release is the package and version we are releasing
 export async function getChangelogEntry(
@@ -21,16 +129,22 @@ export async function getChangelogEntry(
   changesets: NewChangesetWithCommit[],
   changelogFuncs: ChangelogFunctions,
   changelogOpts: null | Record<string, unknown>,
-  {
-    updateInternalDependencies,
-    onlyUpdatePeerDependentsWhenOutOfRange,
-  }: {
-    updateInternalDependencies: 'patch' | 'minor';
-    onlyUpdatePeerDependentsWhenOutOfRange: boolean;
-  },
+  dependencyUpdateConfig: DependencyUpdateConfig,
 ): Promise<string | null> {
   if (release.type === 'none') {
     return null;
+  }
+
+  if (isCategorizedChangelogFunctions(changelogFuncs)) {
+    return getCategorizedChangelogEntry(
+      cwd,
+      release,
+      releases,
+      changesets,
+      changelogFuncs,
+      changelogOpts,
+      dependencyUpdateConfig,
+    );
   }
 
   const changelogLines: ChangelogLines = {
@@ -55,41 +169,13 @@ export async function getChangelogEntry(
       );
     }
   });
-  const dependentReleases = releases.filter((rel) => {
-    const dependencyVersionRange = release.packageJson.dependencies?.[rel.name];
-    const peerDependencyVersionRange =
-      release.packageJson.peerDependencies?.[rel.name];
 
-    const versionRange = dependencyVersionRange ?? peerDependencyVersionRange;
-    const usesWorkspaceRange = versionRange?.startsWith('workspace:');
-    return (
-      versionRange &&
-      (usesWorkspaceRange === true || validRange(versionRange) !== null) &&
-      shouldUpdateDependencyBasedOnConfig(
-        cwd,
-        rel,
-        {
-          depVersionRange: versionRange,
-          depType: dependencyVersionRange ? 'dependencies' : 'peerDependencies',
-        },
-        {
-          minReleaseType: updateInternalDependencies,
-          onlyUpdatePeerDependentsWhenOutOfRange,
-        },
-      )
-    );
-  });
-
-  const relevantChangesetIds: Set<string> = new Set();
-
-  dependentReleases.forEach((rel) => {
-    rel.changesets.forEach((cs) => {
-      relevantChangesetIds.add(cs);
-    });
-  });
-
-  const relevantChangesets = changesets.filter((cs) =>
-    relevantChangesetIds.has(cs.id),
+  const { dependentReleases, relevantChangesets } = getUpdatedDependencies(
+    cwd,
+    release,
+    releases,
+    changesets,
+    dependencyUpdateConfig,
   );
 
   changelogLines.patch.push(
@@ -109,11 +195,112 @@ export async function getChangelogEntry(
   };
 
   const renderedLines = [
-    `## ${release.newVersion}`,
+    await getVersionHeaderLine(changelogFuncs, release, changelogOpts),
     generateMarkdownForVersionType('major', resolvedChangelogLines.major),
     generateMarkdownForVersionType('minor', resolvedChangelogLines.minor),
     generateMarkdownForVersionType('patch', resolvedChangelogLines.patch),
   ].filter((line) => line);
+
+  if (renderedLines.length === 1) {
+    renderedLines.push('No changes in this release.');
+  }
+
+  return renderedLines.join('\n\n');
+}
+
+/**
+ * Renders a release entry for a categorized changelog module: a version
+ * heading, followed by one section per category declared by the module, in
+ * the declared order.
+ *
+ * @param cwd - The root directory of the project.
+ * @param release - The release to render an entry for.
+ * @param releases - All releases in the release plan.
+ * @param changesets - The changesets in the release plan.
+ * @param changelogFuncs - The categorized changelog module.
+ * @param changelogOpts - The options configured for the changelog module.
+ * @param dependencyUpdateConfig - How internal dependencies are updated.
+ * @returns The rendered release entry.
+ */
+async function getCategorizedChangelogEntry(
+  cwd: string,
+  release: ModCompWithPackage,
+  releases: ModCompWithPackage[],
+  changesets: NewChangesetWithCommit[],
+  changelogFuncs: CategorizedChangelogFunctions,
+  changelogOpts: null | Record<string, unknown>,
+  dependencyUpdateConfig: DependencyUpdateConfig,
+): Promise<string> {
+  const linesByCategory = new Map<string, string[]>(
+    changelogFuncs.categories.map((category) => [category, []]),
+  );
+
+  const addLine = (
+    { category, line }: CategorizedReleaseLine,
+    source: string,
+  ): void => {
+    const lines = linesByCategory.get(category);
+    if (!lines) {
+      throw new Error(
+        `Unknown changelog category "${category}" returned by ${source} (known categories: ${changelogFuncs.categories.join(
+          ', ',
+        )})`,
+      );
+    }
+    lines.push(line);
+  };
+
+  const categorizedLines = await Promise.all(
+    changesets.map(async (cs) => {
+      const rls = cs.releases.find(
+        (releaseInChangeset) => releaseInChangeset.name === release.name,
+      );
+      if (rls && rls.type !== 'none') {
+        return changelogFuncs.getCategorizedReleaseLines(
+          cs,
+          rls.type,
+          changelogOpts,
+        );
+      }
+      return [];
+    }),
+  );
+  for (const lines of categorizedLines) {
+    for (const line of lines) {
+      addLine(line, 'getCategorizedReleaseLines');
+    }
+  }
+
+  const { dependentReleases, relevantChangesets } = getUpdatedDependencies(
+    cwd,
+    release,
+    releases,
+    changesets,
+    dependencyUpdateConfig,
+  );
+
+  const dependencyLines =
+    await changelogFuncs.getCategorizedDependencyReleaseLines(
+      relevantChangesets,
+      dependentReleases,
+      changelogOpts,
+    );
+  for (const line of dependencyLines) {
+    addLine(line, 'getCategorizedDependencyReleaseLines');
+  }
+
+  const renderedLines: string[] = [
+    await getVersionHeaderLine(changelogFuncs, release, changelogOpts),
+  ];
+  for (const category of changelogFuncs.categories) {
+    const section = generateMarkdownForSection(
+      category,
+      linesByCategory.get(category) ?? [],
+    );
+    if (section) {
+      renderedLines.push(section);
+    }
+  }
 
   if (renderedLines.length === 1) {
     renderedLines.push('No changes in this release.');
@@ -127,12 +314,26 @@ export function generateMarkdownForVersionType(
   type: keyof ChangelogLines,
   lines: string[],
 ): string | undefined {
+  return generateMarkdownForSection(`${capitalize(type)} Changes`, lines);
+}
+
+/**
+ * Renders a changelog section: a heading followed by the given release lines.
+ *
+ * @param title - The section title.
+ * @param lines - The release lines to put in the section.
+ * @returns The rendered section, or `undefined` if there are no lines.
+ */
+function generateMarkdownForSection(
+  title: string,
+  lines: string[],
+): string | undefined {
   const releaseLines = lines.filter((line) => line);
   if (!releaseLines.length) {
     return undefined;
   }
 
-  let content = `### ${capitalize(type)} Changes`;
+  let content = `### ${title}`;
   // Track the new lines to be added between release lines. Start with two as we
   // want the extra spacing after the heading.
   let newLines = 2;
