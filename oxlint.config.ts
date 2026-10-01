@@ -24,15 +24,11 @@ export default createConfig({
     {
       files: ['**/*.ts', '**/*.mts', '**/*.cts'],
       extends: [typescript],
-      rules: {
-        'typescript/promise-function-async': 'off',
-      },
     },
     {
       files: ['**/*.cjs', '**/*.cts'],
       extends: [nodejs, commonjs],
       rules: {
-        'import/extensions': 'off',
         'import/unambiguous': 'off',
       },
     },
@@ -44,25 +40,13 @@ export default createConfig({
         'yarn.config.cjs',
       ],
       extends: [nodejs],
-      rules: {
-        'node/no-sync': 'off',
-        'node/no-process-env': 'off',
-        'unicorn/no-useless-undefined': 'off',
-      },
     },
     {
       files: ['**/*.test.ts', '**/tests/**'],
       extends: [nodejs],
-      rules: {
-        'node/no-sync': 'off',
-        'node/no-process-env': 'off',
-      },
     },
     {
       files: ['scripts/**/*.ts'],
-      rules: {
-        'import/extensions': 'off',
-      },
     },
   ],
 });
