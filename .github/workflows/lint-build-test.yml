@@ -41,7 +41,7 @@ jobs:
         script:
           - constraints
           - lint:dependencies
-          - lint:eslint
+          - lint:oxlint
           - lint:misc:check
           - lint:tsc
           - readme-content:check
