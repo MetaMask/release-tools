@@ -20,6 +20,18 @@ const invalidCategorizedFunctionsPath = path.resolve(
   import.meta.dirname,
   'test-utils/categorized-functions-invalid.ts',
 );
+const noHeaderCategorizedFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions-no-header.ts',
+);
+const versionHeaderFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/version-header-functions.ts',
+);
+const invalidVersionHeaderFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/invalid-version-header-functions.ts',
+);
 
 const baseConfig: Config = {
   changelog: [categorizedFunctionsPath, null],
@@ -304,6 +316,109 @@ All notable changes to this project will be documented in this file.
       }),
     ).rejects.toThrow(
       'Changelog modules exporting `getCategorizedReleaseLines` must also export `getCategorizedDependencyReleaseLines` and a non-empty `categories` array',
+    );
+  });
+});
+
+describe('version headings', () => {
+  it('uses the default version heading when a categorized module does not export getVersionHeader', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': kacChangelog,
+      },
+      singlePackagePlan('Added: A new feature'),
+      {
+        ...baseConfig,
+        changelog: [noHeaderCategorizedFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('## 1.1.0\n\n### Added\n\n- A new feature');
+  });
+
+  it('honors getVersionHeader for modules that are not categorized', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md':
+          '# Changelog\n\nSome prose.\n\n## v1.0.0\n\n- Initial release\n',
+      },
+      singlePackagePlan('A new feature'),
+      {
+        ...baseConfig,
+        changelog: [versionHeaderFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+Some prose.
+
+## v1.1.0
+
+### Minor Changes
+
+- A new feature
+
+## v1.0.0
+
+- Initial release
+`);
+  });
+
+  it('appends after the preamble for standard modules when the changelog has no releases yet', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': '# Changelog\n\nSome prose.\n',
+      },
+      singlePackagePlan('A new feature'),
+      {
+        ...baseConfig,
+        changelog: [versionHeaderFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+Some prose.
+
+## v1.1.0
+
+### Minor Changes
+
+- A new feature
+`);
+  });
+
+  it('errors when the getVersionHeader export is not a function', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(singlePackagePlan('A new feature'), packages, {
+        ...baseConfig,
+        changelog: [invalidVersionHeaderFunctionsPath, null],
+      }),
+    ).rejects.toThrow(
+      'The `getVersionHeader` export of a changelog module must be a function',
     );
   });
 });
