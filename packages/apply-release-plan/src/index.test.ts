@@ -7,10 +7,10 @@ import type {
   PreState,
 } from '@changesets/types';
 import { getPackages } from '@manypkg/get-packages';
+import { resolve } from 'import-meta-resolve';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'import-meta-resolve';
 import { exec } from 'tinyexec';
 import { describe, expect, it, vi } from 'vitest';
 
