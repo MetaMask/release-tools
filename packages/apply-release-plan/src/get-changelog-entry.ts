@@ -8,6 +8,7 @@ import validRange from 'semver/ranges/valid.js';
 import type {
   CategorizedChangelogFunctions,
   CategorizedReleaseLine,
+  GetVersionHeader,
 } from './types.js';
 import { capitalize, shouldUpdateDependencyBasedOnConfig } from './utils.js';
 
@@ -21,6 +22,27 @@ type DependencyUpdateConfig = {
   updateInternalDependencies: 'patch' | 'minor';
   onlyUpdatePeerDependentsWhenOutOfRange: boolean;
 };
+
+/**
+ * Renders the heading line that opens a release entry, using the module's
+ * `getVersionHeader` export when present and the default `## <version>`
+ * heading otherwise.
+ *
+ * @param changelogFuncs - The changelog module.
+ * @param release - The release to render a heading for.
+ * @param changelogOpts - The options configured for the changelog module.
+ * @returns The version heading line.
+ */
+async function getVersionHeaderLine(
+  changelogFuncs: ChangelogFunctions & { getVersionHeader?: GetVersionHeader },
+  release: ModCompWithPackage,
+  changelogOpts: null | Record<string, unknown>,
+): Promise<string> {
+  if (changelogFuncs.getVersionHeader) {
+    return await changelogFuncs.getVersionHeader(release, changelogOpts);
+  }
+  return `## ${release.newVersion}`;
+}
 
 export function isCategorizedChangelogFunctions(
   changelogFuncs: ChangelogFunctions,
@@ -173,7 +195,7 @@ export async function getChangelogEntry(
   };
 
   const renderedLines = [
-    `## ${release.newVersion}`,
+    await getVersionHeaderLine(changelogFuncs, release, changelogOpts),
     generateMarkdownForVersionType('major', resolvedChangelogLines.major),
     generateMarkdownForVersionType('minor', resolvedChangelogLines.minor),
     generateMarkdownForVersionType('patch', resolvedChangelogLines.patch),
@@ -187,9 +209,9 @@ export async function getChangelogEntry(
 }
 
 /**
- * Renders a release entry for a categorized changelog module: a bracketed,
- * Keep a Changelog style version heading, followed by one section per
- * category declared by the module, in the declared order.
+ * Renders a release entry for a categorized changelog module: a version
+ * heading, followed by one section per category declared by the module, in
+ * the declared order.
  *
  * @param cwd - The root directory of the project.
  * @param release - The release to render an entry for.
@@ -267,7 +289,9 @@ async function getCategorizedChangelogEntry(
     addLine(line, 'getCategorizedDependencyReleaseLines');
   }
 
-  const renderedLines: string[] = [`## [${release.newVersion}]`];
+  const renderedLines: string[] = [
+    await getVersionHeaderLine(changelogFuncs, release, changelogOpts),
+  ];
   for (const category of changelogFuncs.categories) {
     const section = generateMarkdownForSection(
       category,

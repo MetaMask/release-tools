@@ -35,11 +35,15 @@ Note that `apply-release-plan` does not validate the release plan's accuracy.
 
 To generate a release plan from written changesets use `@changesets/get-release-plan`
 
-## Categorized changelogs
+## Customizable changelog entries
 
 Upstream renders each release's changelog entry as a `## <version>` heading followed by `### Major Changes` / `### Minor Changes` / `### Patch Changes` sections — the grouping and structure are hardcoded, and the changelog module configured in `.changeset/config.json` only controls the content of individual lines.
 
-This fork adds an opt-in **categorized mode**. A changelog module opts in by exporting three additional members alongside the standard `getReleaseLine` / `getDependencyReleaseLine`:
+This fork lets the changelog module shape the entry, independently of any particular changelog format. All extensions are opt-in, and modules that do not use them get the upstream behavior, unchanged.
+
+### Categorized sections
+
+A changelog module can group release lines into arbitrary named sections instead of the bump-type sections, by exporting three additional members alongside the standard `getReleaseLine` / `getDependencyReleaseLine`:
 
 ```ts
 import type {
@@ -47,7 +51,9 @@ import type {
   GetCategorizedDependencyReleaseLines,
 } from '@metamask/apply-release-plan';
 
-// The complete, ordered list of section titles.
+// The complete, ordered list of section titles. These are whatever the
+// target changelog format calls for, e.g. Keep a Changelog categories or
+// `Features` / `Bug Fixes`.
 export const categories = [
   'Added',
   'Changed',
@@ -73,15 +79,27 @@ export const getCategorizedDependencyReleaseLines: GetCategorizedDependencyRelea
     }));
 ```
 
-When a categorized module is configured:
+The release entry is then rendered as a version heading followed by one `### <category>` section per entry in `categories`, in that order. Empty categories are omitted. Returning a line for a category not present in `categories` is an error, and no files are written.
 
-- The release entry is rendered as `## [<version>]` (bracketed, Keep a Changelog style) followed by one `### <category>` section per entry in `categories`, in that order. Empty categories are omitted.
-- Returning a line for a category not present in `categories` is an error, and no files are written.
-- The new entry is inserted before the first existing version heading (bracketed headings like `## [1.2.3]` are recognized), or appended after the title and preamble when the changelog has no releases yet.
+### Custom version headings
 
-Modules without the categorized exports get the upstream behavior, unchanged.
+Any changelog module (categorized or not) can control the heading line that opens a release entry by exporting `getVersionHeader`:
 
-Note that categorized mode only writes the new release section: it does not produce a complete Keep a Changelog document on its own. Version link references at the bottom of the file (and any other whole-file conventions) are expected to be maintained by a separate tool such as [`@metamask/auto-changelog`](https://github.com/MetaMask/auto-changelog), run as a post-processing step.
+```ts
+import type { GetVersionHeader } from '@metamask/apply-release-plan';
+
+// For example `## [1.2.3]` (Keep a Changelog style), or `## v1.2.3`.
+export const getVersionHeader: GetVersionHeader = async (release) =>
+  `## [${release.newVersion}]`;
+```
+
+When absent, the default `## <version>` heading is used.
+
+### Entry placement
+
+New entries are inserted before the first existing version heading, or appended after the title and preamble when the changelog has no releases yet. Recognizing existing version headings is a best effort to fit common formats: plain (`## 1.2.3`), bracketed (`## [1.2.3]`), and `v`-prefixed (`## v1.2.3`) headings are all detected.
+
+Note that these extensions only shape the new release section: they do not produce a complete changelog document for formats with whole-file conventions. For example, Keep a Changelog version link references at the bottom of the file are expected to be maintained by a separate tool such as [`@metamask/auto-changelog`](https://github.com/MetaMask/auto-changelog), run as a post-processing step.
 
 ## Contributing
 

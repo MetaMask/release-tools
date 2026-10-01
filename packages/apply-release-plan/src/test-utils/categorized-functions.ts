@@ -5,9 +5,12 @@ import type {
   NewChangesetWithCommit,
 } from '@changesets/types';
 
-import type { CategorizedReleaseLine } from '../types.js';
+import type { CategorizedReleaseLine, GetVersionHeader } from '../types.js';
 
 export const categories = ['Added', 'Changed', 'Fixed'];
+
+export const getVersionHeader: GetVersionHeader = async (release) =>
+  `## [${release.newVersion}]`;
 
 export const getReleaseLine = async (
   changeset: NewChangesetWithCommit,

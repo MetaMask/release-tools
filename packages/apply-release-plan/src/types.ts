@@ -41,9 +41,20 @@ export type GetCategorizedDependencyReleaseLines = (
 ) => CategorizedReleaseLine[] | Promise<CategorizedReleaseLine[]>;
 
 /**
+ * Renders the heading line that opens a release entry. Any changelog module
+ * (categorized or not) can export this to control the heading format — for
+ * example `## [1.2.3]` for Keep a Changelog, or `## v1.2.3`. When absent, the
+ * default `## <version>` heading is used.
+ */
+export type GetVersionHeader = (
+  release: ModCompWithPackage,
+  changelogOpts: null | Record<string, unknown>,
+) => string | Promise<string>;
+
+/**
  * A changelog module that opts into categorized changelog entries. When a
  * module exports `getCategorizedReleaseLines`, the release entry is rendered
- * as `## [<version>]` followed by one `### <category>` section per entry in
+ * as a version heading followed by one `### <category>` section per entry in
  * `categories` (in that order), instead of the default
  * `### Major/Minor/Patch Changes` sections.
  */
@@ -55,4 +66,5 @@ export type CategorizedChangelogFunctions = ChangelogFunctions & {
    * category not present in this list are an error.
    */
   categories: readonly string[];
+  getVersionHeader?: GetVersionHeader;
 };
