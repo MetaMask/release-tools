@@ -19,10 +19,10 @@ export default mergeConfig(baseConfig, {
       // thresholds match what the ported upstream test suite covers. Raise
       // them when adding tests rather than lowering them.
       thresholds: {
-        branches: 89,
-        functions: 95,
-        lines: 95,
-        statements: 95,
+        branches: 90,
+        functions: 100,
+        lines: 96,
+        statements: 96,
       },
     },
   },

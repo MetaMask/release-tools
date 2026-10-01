@@ -11,4 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - This package was forked from [`@changesets/apply-release-plan@8.1.1`](https://github.com/changesets/changesets/tree/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan) in the `changesets/changesets` repository. See [the original changelog](https://github.com/changesets/changesets/blob/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan/CHANGELOG.md) for changes before the fork.
 
+### Added
+
+- Add categorized (Keep a Changelog style) changelog mode: changelog modules can export `getCategorizedReleaseLines`, `getCategorizedDependencyReleaseLines`, and an ordered `categories` list to render release entries as `## [<version>]` with `### <category>` sections
+
 [Unreleased]: https://github.com/MetaMask/release-tools/

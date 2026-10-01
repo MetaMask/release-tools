@@ -22,9 +22,21 @@ import { pathToFileURL } from 'node:url';
 
 import { editJson } from './edit-json.js';
 import type { EditJsonOperation } from './edit-json.js';
-import { getChangelogEntry } from './get-changelog-entry.js';
+import {
+  getChangelogEntry,
+  isCategorizedChangelogFunctions,
+} from './get-changelog-entry.js';
+import type { CategorizedChangelogFunctions } from './types.js';
 import { getDependencyVersionEdits } from './version-package.js';
 import type { DependencyUpdateOptions } from './version-package.js';
+
+export { isCategorizedChangelogFunctions } from './get-changelog-entry.js';
+export type {
+  CategorizedChangelogFunctions,
+  CategorizedReleaseLine,
+  GetCategorizedDependencyReleaseLines,
+  GetCategorizedReleaseLines,
+} from './types.js';
 
 function importResolveFromDir(specifier: string, dir: string): string {
   return resolve(specifier, pathToFileURL(path.join(dir, 'x.mjs')).toString());
@@ -115,13 +127,14 @@ export async function applyReleasePlan(
   });
 
   // I think this might be the wrong place to do this, but gotta do it somewhere -  add changelog entries to releases
-  const releaseWithChangelogs = await getNewChangelogEntry(
-    releasesWithPackage,
-    changesets,
-    config,
-    cwd,
-    contextDir,
-  );
+  const { releasesWithChangelogs: releaseWithChangelogs, categorized } =
+    await getNewChangelogEntry(
+      releasesWithPackage,
+      changesets,
+      config,
+      cwd,
+      contextDir,
+    );
 
   if (releasePlan.preState?.mode === 'exit' && snapshot === undefined) {
     await fs.rm(path.join(cwd, '.changeset', 'pre.json'), {
@@ -175,7 +188,7 @@ export async function applyReleasePlan(
 
     if (changelog && changelog.length > 0) {
       const changelogPath = path.resolve(dir, 'CHANGELOG.md');
-      await updateChangelog(changelogPath, changelog, name);
+      await updateChangelog(changelogPath, changelog, name, categorized);
       touchedFiles.push(changelogPath);
       filesToFormat.push(changelogPath);
     }
@@ -267,14 +280,18 @@ async function getNewChangelogEntry(
   config: Config,
   cwd: string,
   contextDir: string,
-): Promise<(ModCompWithPackage & { changelog: string | null })[]> {
+): Promise<{
+  releasesWithChangelogs: (ModCompWithPackage & { changelog: string | null })[];
+  categorized: boolean;
+}> {
   if (!config.changelog) {
-    return Promise.resolve(
-      releasesWithPackage.map((release) => ({
+    return {
+      releasesWithChangelogs: releasesWithPackage.map((release) => ({
         ...release,
         changelog: null,
       })),
-    );
+      categorized: false,
+    };
   }
 
   let getChangelogFuncs: ChangelogFunctions = {
@@ -322,6 +339,21 @@ async function getNewChangelogEntry(
     throw new Error('Could not resolve changelog generation functions');
   }
 
+  const categorized = isCategorizedChangelogFunctions(getChangelogFuncs);
+  if (categorized) {
+    const categorizedFuncs = getChangelogFuncs as CategorizedChangelogFunctions;
+    if (
+      typeof categorizedFuncs.getCategorizedDependencyReleaseLines !==
+        'function' ||
+      !Array.isArray(categorizedFuncs.categories) ||
+      categorizedFuncs.categories.length === 0
+    ) {
+      throw new Error(
+        'Changelog modules exporting `getCategorizedReleaseLines` must also export `getCategorizedDependencyReleaseLines` and a non-empty `categories` array',
+      );
+    }
+  }
+
   const commits = await getCommitsThatAddChangesets(
     changesets.map((cs) => cs.id),
     cwd,
@@ -331,7 +363,7 @@ async function getNewChangelogEntry(
     return commit === undefined ? { ...cs } : { ...cs, commit };
   });
 
-  return Promise.all(
+  const releasesWithChangelogs = await Promise.all(
     releasesWithPackage.map(async (release) => {
       const changelog = await getChangelogEntry(
         cwd,
@@ -362,12 +394,15 @@ async function getNewChangelogEntry(
     );
     throw error;
   });
+
+  return { releasesWithChangelogs, categorized };
 }
 
 async function updateChangelog(
   changelogPath: string,
   changelog: string,
   name: string,
+  categorized: boolean,
 ): Promise<void> {
   const templateString = `\n\n${changelog.trim()}\n`;
   let fileData;
@@ -392,13 +427,21 @@ async function updateChangelog(
   // Require just 2 version numbers here, assuming `## 1.1` is a valid version heading.
   // Our version headings start with ##, we are more permissive here though.
   // Note: we also need to handle prerelease versions here but that's already covered by the regex.
-  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/mu);
+  // In categorized mode version headings are bracketed, Keep a Changelog
+  // style (`## [1.2.3]`), so allow an optional `[` before the version.
+  const firstVersionHeaderIndex = fileData.search(
+    categorized ? /^#{1,6}\s+\[?\d+\.\d+/mu : /^#{1,6}\s+\d+\.\d+/mu,
+  );
 
   let newChangelog: string;
   if (firstVersionHeaderIndex >= 0) {
     const prefix = fileData.slice(0, firstVersionHeaderIndex);
     const suffix = fileData.slice(firstVersionHeaderIndex);
     newChangelog = `${prefix + templateString.trimStart()}\n${suffix}`;
+  } else if (categorized) {
+    // No release section yet: append after the title and preamble rather than
+    // splicing the entry after the first line, keeping any prose intact.
+    newChangelog = fileData.trimEnd() + templateString;
   } else {
     const index = fileData.indexOf('\n');
     newChangelog =
