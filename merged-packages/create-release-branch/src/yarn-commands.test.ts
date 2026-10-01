@@ -1,4 +1,5 @@
-import { when } from 'jest-when';
+import { vi } from 'vitest';
+import { when } from 'vitest-when';
 
 import * as miscUtils from './misc-utils.js';
 import {
@@ -7,15 +8,15 @@ import {
   updateYarnLockfile,
 } from './yarn-commands.js';
 
-jest.mock('./misc-utils');
+vi.mock('./misc-utils');
 
 describe('yarn-commands', () => {
   describe('fixConstraints', () => {
     it('runs "yarn constraints --fix" with the correct parameters', async () => {
       const repositoryDirectoryPath = '/path/to/repo';
-      when(jest.spyOn(miscUtils, 'getStdoutFromCommand'))
+      when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
         .calledWith('yarn', ['--version'])
-        .mockResolvedValue('2.0.0');
+        .thenResolve('2.0.0');
 
       await fixConstraints(repositoryDirectoryPath);
 

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import fs from 'fs';
 import { SemVer } from 'semver';
 
@@ -6,7 +7,7 @@ import * as packageUtils from './package.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
 import { IncrementableVersionParts } from './release-specification.js';
 
-jest.mock('./package');
+vi.mock('./package');
 
 describe('release-plan-utils', () => {
   describe('planRelease', () => {
@@ -180,7 +181,7 @@ describe('release-plan-utils', () => {
         ],
       };
       const stderr = fs.createWriteStream('/dev/null');
-      const updatePackageSpy = jest.spyOn(packageUtils, 'updatePackage');
+      const updatePackageSpy = vi.spyOn(packageUtils, 'updatePackage');
 
       await executeReleasePlan(project, releasePlan, 'prettier', stderr);
 

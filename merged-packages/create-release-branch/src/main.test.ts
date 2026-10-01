@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import fs from 'fs';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
@@ -6,15 +7,15 @@ import { main } from './main.js';
 import * as monorepoWorkflowOperations from './monorepo-workflow-operations.js';
 import * as ui from './ui.js';
 
-jest.mock('./initial-parameters');
-jest.mock('./monorepo-workflow-operations');
-jest.mock('./ui');
-jest.mock('./dirname', () => ({
-  getCurrentDirectoryPath: jest.fn().mockReturnValue('/path/to/somewhere'),
+vi.mock('./initial-parameters');
+vi.mock('./monorepo-workflow-operations');
+vi.mock('./ui');
+vi.mock('./dirname', () => ({
+  getCurrentDirectoryPath: vi.fn().mockReturnValue('/path/to/somewhere'),
 }));
-jest.mock('open', () => ({
+vi.mock('open', () => ({
   apps: {
-    browser: jest.fn(),
+    browser: vi.fn(),
   },
 }));
 
@@ -23,7 +24,7 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    jest
+    vi
       .spyOn(initialParametersModule, 'determineInitialParameters')
       .mockResolvedValue({
         project,
@@ -35,7 +36,7 @@ describe('main', () => {
         port: 3000,
         formatter: 'prettier',
       });
-    const followMonorepoWorkflowSpy = jest
+    const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
       .mockResolvedValue();
 
@@ -62,7 +63,7 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    jest
+    vi
       .spyOn(initialParametersModule, 'determineInitialParameters')
       .mockResolvedValue({
         project,
@@ -74,7 +75,7 @@ describe('main', () => {
         port: 3000,
         formatter: 'prettier',
       });
-    const startUISpy = jest.spyOn(ui, 'startUI').mockResolvedValue();
+    const startUISpy = vi.spyOn(ui, 'startUI').mockResolvedValue();
 
     await main({
       argv: [],
@@ -98,7 +99,7 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: false });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    jest
+    vi
       .spyOn(initialParametersModule, 'determineInitialParameters')
       .mockResolvedValue({
         project,
@@ -110,7 +111,7 @@ describe('main', () => {
         port: 3000,
         formatter: 'prettier',
       });
-    const followMonorepoWorkflowSpy = jest
+    const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
       .mockResolvedValue();
 
