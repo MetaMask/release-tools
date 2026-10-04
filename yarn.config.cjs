@@ -403,14 +403,13 @@ async function workspaceFileExists(workspace, path) {
  */
 function expectWorkspaceField(workspace, fieldName, expectedValue) {
   const fieldValue = get(workspace.manifest, fieldName);
-  const hasExpectedValue = arguments.length === 3;
 
-  if (hasExpectedValue && expectedValue !== null) {
+  if (expectedValue !== undefined && expectedValue !== null) {
     workspace.set(fieldName, expectedValue);
   } else if (expectedValue === null) {
     workspace.unset(fieldName);
   } else if (
-    !hasExpectedValue &&
+    expectedValue === undefined &&
     (fieldValue === undefined || fieldValue === null)
   ) {
     workspace.error(`Missing required field "${fieldName}".`);

@@ -13,6 +13,8 @@ export default createConfig({
     '**/dist/**',
     '.yarn/**',
     'merged-packages/**',
+    // The template's tsconfigs extend `../../tsconfig.packages.json`, which
+    // only resolves once the package has been generated into `packages/`.
     'scripts/create-package/package-template/**',
   ],
 
@@ -38,15 +40,10 @@ export default createConfig({
         '**/scripts/**',
         'packages/apply-release-plan/**',
         'yarn.config.cjs',
+        '**/*.test.ts',
+        '**/tests/**',
       ],
       extends: [nodejs],
-    },
-    {
-      files: ['**/*.test.ts', '**/tests/**'],
-      extends: [nodejs],
-    },
-    {
-      files: ['scripts/**/*.ts'],
     },
   ],
 });
