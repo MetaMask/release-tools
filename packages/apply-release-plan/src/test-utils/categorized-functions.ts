@@ -16,7 +16,16 @@ export const getReleaseLine = async (
   _changeset: NewChangesetWithCommit,
 ): Promise<string> => _changeset.summary;
 
-export const getDependencyReleaseLine = async (): Promise<string> => '';
+export const getDependencyReleaseLine = async (
+  _changesets: NewChangesetWithCommit[],
+  dependenciesUpdated: ModCompWithPackage[],
+): Promise<string> =>
+  dependenciesUpdated
+    .map(
+      (dependency) =>
+        `- Bump \`${dependency.name}\` to \`${dependency.newVersion}\``,
+    )
+    .join('\n');
 
 export const categorizeReleaseLine = async (
   line: string,
@@ -39,12 +48,8 @@ export const categorizeReleaseLine = async (
 
 export const categorizeDependencyReleaseLine = async (
   line: string,
-  _changesets: NewChangesetWithCommit[],
-  dependenciesUpdated: ModCompWithPackage[],
 ): Promise<CategorizedReleaseLine[]> =>
-  line === ''
-    ? []
-    : dependenciesUpdated.map((dependency) => ({
-        category: 'Changed',
-        line: `- Bump \`${dependency.name}\` to \`${dependency.newVersion}\``,
-      }));
+  line
+    .split('\n')
+    .filter((item) => item.trim() !== '')
+    .map((item) => ({ category: 'Changed', line: item }));

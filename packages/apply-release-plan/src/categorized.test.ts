@@ -243,9 +243,9 @@ All notable changes to this project will be documented in this file.
       path.join(tempDir, 'packages/pkg-a/CHANGELOG.md'),
       'utf8',
     );
-    expect(pkgAChangelog).toContain('## [1.0.1]');
-    expect(pkgAChangelog).toContain('### Changed');
-    expect(pkgAChangelog).toContain('- Bump `pkg-b` to `1.1.0`');
+    expect(pkgAChangelog).toContain(
+      '## [1.0.1]\n\n### Changed\n\n- Bump `pkg-b` to `1.1.0`',
+    );
 
     const pkgBChangelog = await fs.readFile(
       path.join(tempDir, 'packages/pkg-b/CHANGELOG.md'),
