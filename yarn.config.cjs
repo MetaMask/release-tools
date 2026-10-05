@@ -34,6 +34,11 @@ const ALLOWED_INCONSISTENT_DEPENDENCIES = {
 const ALLOWED_PEER_DEPENDENCIES = [];
 
 /**
+ * These packages are tools and do not ship with APIs.
+ */
+const TOOLS = ['@metamask/create-release-branch'];
+
+/**
  * Aliases for the Yarn type definitions, to make the code more readable.
  *
  * @typedef {import('@yarnpkg/types').Yarn.Constraints.Yarn} Yarn
@@ -115,8 +120,11 @@ module.exports = defineConfig({
         // All non-root packages must not have side effects.
         expectWorkspaceField(workspace, 'sideEffects', false);
 
-        // All non-root packages must set up ESM-compatible exports correctly.
-        expectCorrectWorkspaceExports(workspace);
+        // All non-root packages must set up ESM-compatible exports correctly
+        // (aside from tools).
+        if (!TOOLS.includes(workspace.ident)) {
+          expectCorrectWorkspaceExports(workspace);
+        }
 
         // All non-root packages must have the same "build" script.
         expectWorkspaceField(
@@ -145,8 +153,11 @@ module.exports = defineConfig({
           `rimraf './dist' './tsconfig.build.tsbuildinfo'`,
         );
 
-        // All non-root packages must have the same "build:docs" script.
-        expectWorkspaceField(workspace, 'scripts.build:docs', 'typedoc');
+        // All non-root packages must have the same "build:docs" script (aside
+        // from tools).
+        if (!TOOLS.includes(workspace.ident)) {
+          expectWorkspaceField(workspace, 'scripts.build:docs', 'typedoc');
+        }
 
         // No non-root packages may have a "prepack" script.
         workspace.unset('scripts.prepack');
