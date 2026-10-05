@@ -25,9 +25,8 @@ import type { EditJsonOperation } from './edit-json.js';
 import {
   getChangelogEntry,
   isCategorizedChangelogFunctions,
-  normalizeCategories,
+  validateCategorizedChangelogFunctions,
 } from './get-changelog-entry.js';
-import type { CategorizedChangelogFunctions } from './types.js';
 import { getDependencyVersionEdits } from './version-package.js';
 import type { DependencyUpdateOptions } from './version-package.js';
 
@@ -337,20 +336,14 @@ async function getNewChangelogEntry(
   }
 
   if (isCategorizedChangelogFunctions(getChangelogFuncs)) {
-    const categorizedChangelogFuncs =
-      getChangelogFuncs as ChangelogFunctions & {
-        categories: readonly unknown[];
-      };
-    getChangelogFuncs = {
-      ...categorizedChangelogFuncs,
-      categories: normalizeCategories(categorizedChangelogFuncs.categories),
-    } as ChangelogFunctions;
+    // Fail before any file is written. `getChangelogEntry` normalizes the
+    // categories again when it renders each entry.
+    validateCategorizedChangelogFunctions(getChangelogFuncs);
   }
 
   if (
     'getVersionHeader' in getChangelogFuncs &&
-    typeof (getChangelogFuncs as CategorizedChangelogFunctions)
-      .getVersionHeader !== 'function'
+    typeof getChangelogFuncs.getVersionHeader !== 'function'
   ) {
     throw new Error(
       'The `getVersionHeader` export of a changelog module must be a function',

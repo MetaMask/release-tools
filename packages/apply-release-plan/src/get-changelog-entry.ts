@@ -39,7 +39,7 @@ async function getVersionHeaderLine(
   changelogOpts: null | Record<string, unknown>,
 ): Promise<string> {
   if (changelogFuncs.getVersionHeader) {
-    return await changelogFuncs.getVersionHeader(release, changelogOpts);
+    return changelogFuncs.getVersionHeader(release, changelogOpts);
   }
   return `## ${release.newVersion}`;
 }
@@ -48,51 +48,21 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
 }
 
+/**
+ * Detects whether a changelog module opts into categorized mode. The rest of
+ * the categorized interface is validated by
+ * `validateCategorizedChangelogFunctions`.
+ *
+ * @param changelogFuncs - The changelog module.
+ * @returns Whether the module exports `categorizeReleaseLine`.
+ */
 export function isCategorizedChangelogFunctions(
   changelogFuncs: ChangelogFunctions,
 ): changelogFuncs is CategorizedChangelogFunctions {
   return (
     typeof (changelogFuncs as CategorizedChangelogFunctions)
-      .categorizeReleaseLine === 'function' &&
-    typeof (changelogFuncs as CategorizedChangelogFunctions)
-      .categorizeDependencyReleaseLine === 'function' &&
-    Array.isArray((changelogFuncs as CategorizedChangelogFunctions).categories)
+      .categorizeReleaseLine === 'function'
   );
-}
-
-export function normalizeCategories(categories: readonly unknown[]): string[] {
-  if (!Array.isArray(categories) || categories.length === 0) {
-    throw new Error(
-      'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
-    );
-  }
-
-  const seen = new Set<string>();
-  const deduped: string[] = [];
-  for (const category of categories) {
-    if (!isNonEmptyString(category)) {
-      throw new Error(
-        'Changelog module categories must be a non-empty array of non-empty strings',
-      );
-    }
-    const trimmed = category.trim();
-    if (!seen.has(trimmed)) {
-      seen.add(trimmed);
-      deduped.push(trimmed);
-    }
-  }
-
-  if (deduped.length === 0) {
-    throw new Error(
-      'Changelog module categories must be a non-empty array of non-empty strings',
-    );
-  }
-
-  return deduped;
-}
-
-function skipEmptyLine(line: string): boolean {
-  return line.trim() === '';
 }
 
 /**
@@ -177,18 +147,41 @@ function categorizeLines(
   }
 }
 
-function validateCategorizedChangelogFunctions(
+/**
+ * Validates the categorized interface of a changelog module and returns its
+ * categories, trimmed and deduplicated by first occurrence.
+ *
+ * @param changelogFuncs - The changelog module, known to opt into categorized mode.
+ * @returns The normalized categories, in declaration order.
+ */
+export function validateCategorizedChangelogFunctions(
   changelogFuncs: CategorizedChangelogFunctions,
 ): string[] {
+  const { categories } = changelogFuncs;
   if (
-    typeof changelogFuncs.categorizeReleaseLine !== 'function' ||
-    typeof changelogFuncs.categorizeDependencyReleaseLine !== 'function'
+    typeof changelogFuncs.categorizeDependencyReleaseLine !== 'function' ||
+    !Array.isArray(categories) ||
+    categories.length === 0
   ) {
     throw new Error(
       'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
     );
   }
-  return normalizeCategories(changelogFuncs.categories);
+
+  const deduped: string[] = [];
+  for (const category of categories) {
+    if (!isNonEmptyString(category)) {
+      throw new Error(
+        'Changelog module categories must be a non-empty array of non-empty strings',
+      );
+    }
+    const trimmed = category.trim();
+    if (!deduped.includes(trimmed)) {
+      deduped.push(trimmed);
+    }
+  }
+
+  return deduped;
 }
 
 /**
@@ -243,7 +236,7 @@ export async function getChangelogEntry(
         releaseInChangeset.type,
         changelogOpts,
       );
-      if (skipEmptyLine(releaseLine)) {
+      if (releaseLine.trim() === '') {
         continue;
       }
 
@@ -266,7 +259,7 @@ export async function getChangelogEntry(
       dependentReleases,
       changelogOpts,
     );
-    if (!skipEmptyLine(dependencyLine)) {
+    if (dependencyLine.trim() !== '') {
       const categorizedDependencyLines =
         await changelogFuncs.categorizeDependencyReleaseLine(
           dependencyLine,
