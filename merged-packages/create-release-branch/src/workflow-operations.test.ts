@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { when } from 'vitest-when';
 
 import { buildMockProject } from '../tests/unit/helpers';
 import * as repoModule from './repo.js';
@@ -15,10 +14,10 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve('main');
-      when(vi.spyOn(repoModule, 'branchExists'))
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
         .thenResolve(false);
       const runGitCommandWithin = vi.spyOn(repoModule, 'runGitCommandWithin');
@@ -45,10 +44,10 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve('main');
-      when(vi.spyOn(repoModule, 'branchExists'))
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
         .thenResolve(false);
       const runGitCommandWithin = vi.spyOn(repoModule, 'runGitCommandWithin');
@@ -75,7 +74,7 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve(newReleaseBranchName);
 
@@ -96,7 +95,7 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve(newReleaseBranchName);
 
@@ -117,10 +116,10 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve('main');
-      when(vi.spyOn(repoModule, 'branchExists'))
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
         .thenResolve(true);
 
@@ -141,10 +140,10 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(vi.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
         .thenResolve('main');
-      when(vi.spyOn(repoModule, 'branchExists'))
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
         .thenResolve(true);
 

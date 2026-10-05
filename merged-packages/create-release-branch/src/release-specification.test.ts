@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 import fs from 'fs';
-import { when } from 'vitest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
@@ -168,7 +167,7 @@ packages:
         path: '/path/to/editor',
         args: ['arg1', 'arg2'],
       };
-      when(vi.spyOn(miscUtils, 'runCommand'))
+      vi.when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],
@@ -212,7 +211,7 @@ packages:
         args: ['arg1', 'arg2'],
       };
       const stdout = new MockWritable();
-      when(vi.spyOn(miscUtils, 'runCommand'))
+      vi.when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],
@@ -246,7 +245,7 @@ packages:
         args: ['arg1', 'arg2'],
       };
       const error = new Error('oops');
-      when(vi.spyOn(miscUtils, 'runCommand'))
+      vi.when(vi.spyOn(miscUtils, 'runCommand'))
         .calledWith(
           '/path/to/editor',
           ['arg1', 'arg2', releaseSpecificationPath],

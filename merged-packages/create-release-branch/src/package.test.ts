@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import * as autoChangelog from '@metamask/auto-changelog';
 import fs from 'fs';
-import { when } from 'vitest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
@@ -75,7 +74,7 @@ describe('package', () => {
     it('returns information about the manifest (in both unvalidated and validated forms)', async () => {
       const unvalidatedManifest = {};
       const validatedManifest = buildMockManifest();
-      when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
           unvalidated: unvalidatedManifest,
@@ -103,7 +102,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
         .thenResolve(true);
 
@@ -127,7 +126,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
         .thenResolve(false);
 
@@ -173,7 +172,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
         .thenResolve(true);
 
@@ -221,7 +220,7 @@ describe('package', () => {
       const unvalidatedManifest = {};
       const validatedManifest = buildMockManifest();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
           unvalidated: unvalidatedManifest,
@@ -254,7 +253,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith(
           '/path/to/project',
           '/path/to/package',
@@ -287,7 +286,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith(
           '/path/to/project',
           '/path/to/package',
@@ -320,7 +319,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
         .thenResolve(true);
 
@@ -348,7 +347,7 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
         .thenResolve(false);
 
@@ -393,7 +392,7 @@ describe('package', () => {
 
     it("prints a warning if a tag matching 'v' + the root package version exists instead of the package name + version", async () => {
       const stderr = new MockWritable();
-      when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
           unvalidated: {},
@@ -419,7 +418,7 @@ describe('package', () => {
 
     it("throws if the project has tags, but neither a tag matching the package name + version nor 'v' + the root package version exists", async () => {
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
           unvalidated: {},
@@ -675,7 +674,7 @@ describe('package', () => {
           validatedManifest: buildMockManifest(),
           changelogPath,
         });
-        when(vi.spyOn(autoChangelog, 'updateChangelog'))
+        vi.when(vi.spyOn(autoChangelog, 'updateChangelog'))
           .calledWith({
             changelogContent: 'existing changelog',
             isReleaseCandidate: false,
@@ -715,7 +714,7 @@ describe('package', () => {
           validatedManifest: buildMockManifest(),
           changelogPath,
         });
-        when(vi.spyOn(autoChangelog, 'updateChangelog'))
+        vi.when(vi.spyOn(autoChangelog, 'updateChangelog'))
           .calledWith({
             changelogContent: 'existing changelog',
             isReleaseCandidate: false,

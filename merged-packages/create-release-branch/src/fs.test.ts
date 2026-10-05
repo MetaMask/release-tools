@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import fs from 'fs';
-import { when } from 'vitest-when';
 import path from 'path';
 import { rimraf } from 'rimraf';
 
@@ -79,7 +78,7 @@ describe('fs', () => {
   describe('readJsonObjectFile', () => {
     it('uses readJsonObjectFile from @metamask/action-utils to parse the contents of the given JSON file as an object', async () => {
       const filePath = '/some/file';
-      when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
+      vi.when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
         .calledWith(filePath)
         .thenResolve({ some: 'object' });
 
@@ -91,7 +90,7 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
+      vi.when(vi.spyOn(actionUtils, 'readJsonObjectFile'))
         .calledWith(filePath)
         .thenReject(error);
 
@@ -107,7 +106,7 @@ describe('fs', () => {
   describe('writeJsonFile', () => {
     it('uses writeJsonFile from @metamask/action-utils to write the given object to the given file as JSON', async () => {
       const filePath = '/some/file';
-      when(vi.spyOn(actionUtils, 'writeJsonFile'))
+      vi.when(vi.spyOn(actionUtils, 'writeJsonFile'))
         .calledWith(filePath, { some: 'object' })
         .thenResolve(undefined);
 
@@ -117,7 +116,7 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(vi.spyOn(actionUtils, 'writeJsonFile'))
+      vi.when(vi.spyOn(actionUtils, 'writeJsonFile'))
         .calledWith(filePath, { some: 'object' })
         .thenReject(error);
 
@@ -162,7 +161,7 @@ describe('fs', () => {
       const error: any = new Error('oops');
       error.code = 'ESOMETHING';
       error.stack = 'some stack';
-      when(vi.spyOn(fs.promises, 'stat'))
+      vi.when(vi.spyOn(fs.promises, 'stat'))
         .calledWith(entryPath)
         .thenReject(error);
 
@@ -177,7 +176,7 @@ describe('fs', () => {
     it('re-throws any error that occurs as a new error that points to the original', async () => {
       const entryPath = '/some/file';
       const error = new Error('oops');
-      when(vi.spyOn(fs.promises, 'stat'))
+      vi.when(vi.spyOn(fs.promises, 'stat'))
         .calledWith(entryPath)
         .thenReject(error);
 
@@ -237,7 +236,7 @@ describe('fs', () => {
     it('re-throws any error that occurs, assigning it the same code, a wrapped message, and a new stack', async () => {
       const directoryPath = '/some/directory';
       const error = new Error('oops');
-      when(vi.spyOn(fs.promises, 'mkdir'))
+      vi.when(vi.spyOn(fs.promises, 'mkdir'))
         .calledWith(directoryPath, { recursive: true })
         .thenReject(error);
 
@@ -270,7 +269,7 @@ describe('fs', () => {
     it('re-throws any error that occurs, assigning it the same code, a wrapped message, and a new stack', async () => {
       const filePath = '/some/file';
       const error = new Error('oops');
-      when(vi.spyOn(fs.promises, 'rm'))
+      vi.when(vi.spyOn(fs.promises, 'rm'))
         .calledWith(filePath, { force: true })
         .thenReject(error);
 

@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { when } from 'vitest-when';
 
 import * as miscUtils from './misc-utils.js';
 import {
@@ -14,7 +13,7 @@ describe('yarn-commands', () => {
   describe('fixConstraints', () => {
     it('runs "yarn constraints --fix" with the correct parameters', async () => {
       const repositoryDirectoryPath = '/path/to/repo';
-      when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
         .calledWith('yarn', ['--version'])
         .thenResolve('2.0.0');
 

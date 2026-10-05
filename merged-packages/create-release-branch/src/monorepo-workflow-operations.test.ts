@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 import fs from 'fs';
-import { when } from 'vitest-when';
 import path from 'path';
 import { MockWritable } from 'stdio-mock';
 
@@ -213,32 +212,32 @@ async function setupFollowMonorepoWorkflow({
   const stdout = new MockWritable();
   const stderr = new MockWritable();
   determineEditorSpy.mockResolvedValue(isEditorAvailable ? editor : null);
-  when(generateReleaseSpecificationTemplateForMonorepoSpy)
+  vi.when(generateReleaseSpecificationTemplateForMonorepoSpy)
     .calledWith({ project, isEditorAvailable })
     .thenResolve('');
 
   if (errorUponEditingReleaseSpec) {
-    when(waitForUserToEditReleaseSpecificationSpy)
+    vi.when(waitForUserToEditReleaseSpecificationSpy)
       .calledWith(releaseSpecificationPath, editor)
       .thenReject(errorUponEditingReleaseSpec);
   } else {
-    when(waitForUserToEditReleaseSpecificationSpy)
+    vi.when(waitForUserToEditReleaseSpecificationSpy)
       .calledWith(releaseSpecificationPath, editor)
       .thenResolve();
   }
 
   if (errorUponValidatingReleaseSpec) {
-    when(validateReleaseSpecificationSpy)
+    vi.when(validateReleaseSpecificationSpy)
       .calledWith(project, releaseSpecificationPath)
       .thenReject(errorUponValidatingReleaseSpec);
   } else {
-    when(validateReleaseSpecificationSpy)
+    vi.when(validateReleaseSpecificationSpy)
       .calledWith(project, releaseSpecificationPath)
       .thenResolve(releaseSpecification);
   }
 
   if (errorUponPlanningRelease) {
-    when(planReleaseSpy)
+    vi.when(planReleaseSpy)
       .calledWith({
         project,
         releaseSpecificationPackages: releaseSpecification.packages,
@@ -246,7 +245,7 @@ async function setupFollowMonorepoWorkflow({
       })
       .thenReject(errorUponPlanningRelease);
   } else {
-    when(planReleaseSpy)
+    vi.when(planReleaseSpy)
       .calledWith({
         project,
         releaseSpecificationPackages: releaseSpecification.packages,
@@ -256,16 +255,16 @@ async function setupFollowMonorepoWorkflow({
   }
 
   if (errorUponExecutingReleasePlan) {
-    when(executeReleasePlanSpy)
+    vi.when(executeReleasePlanSpy)
       .calledWith(project, releasePlan, formatter, stderr)
       .thenReject(errorUponExecutingReleasePlan);
   } else {
-    when(executeReleasePlanSpy)
+    vi.when(executeReleasePlanSpy)
       .calledWith(project, releasePlan, formatter, stderr)
       .thenResolve(undefined);
   }
 
-  when(commitAllChangesSpy)
+  vi.when(commitAllChangesSpy)
     .calledWith(projectDirectoryPath, '')
     .thenResolve();
 

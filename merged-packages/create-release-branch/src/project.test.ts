@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import { mkdir } from 'fs/promises';
-import { when } from 'vitest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 
@@ -68,17 +67,17 @@ describe('project', () => {
         };
         const projectTagNames = ['tag1', 'tag2', 'tag3'];
         const stderr = createNoopWriteStream();
-        when(vi.spyOn(repoModule, 'getTagNames'))
+        vi.when(vi.spyOn(repoModule, 'getTagNames'))
           .calledWith(projectDirectoryPath)
           .thenResolve(projectTagNames);
-        when(vi.spyOn(packageModule, 'readMonorepoRootPackage'))
+        vi.when(vi.spyOn(packageModule, 'readMonorepoRootPackage'))
           .calledWith({
             packageDirectoryPath: projectDirectoryPath,
             projectDirectoryPath,
             projectTagNames,
           })
           .thenResolve(rootPackage);
-        when(vi.spyOn(actionUtils, 'getWorkspaceLocations'))
+        vi.when(vi.spyOn(actionUtils, 'getWorkspaceLocations'))
           .calledWith(
             rootPackage.validatedManifest.workspaces,
             projectDirectoryPath,
@@ -89,7 +88,7 @@ describe('project', () => {
           packageModule,
           'readMonorepoWorkspacePackage',
         );
-        when(readMonorepoWorkspacePackageMock)
+        vi.when(readMonorepoWorkspacePackageMock)
           .calledWith({
             packageDirectoryPath: path.join(
               projectDirectoryPath,
@@ -103,7 +102,7 @@ describe('project', () => {
             stderr,
           })
           .thenResolve(workspacePackages.a);
-        when(readMonorepoWorkspacePackageMock)
+        vi.when(readMonorepoWorkspacePackageMock)
           .calledWith({
             packageDirectoryPath: path.join(
               projectDirectoryPath,
@@ -193,7 +192,7 @@ describe('project', () => {
       it('returns the HTTPS version of this URL', async () => {
         const packageManifest = {};
         const repositoryDirectoryPath = '/path/to/project';
-        when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
+        vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
           .calledWith('git', ['config', '--get', 'remote.origin.url'], {
             cwd: repositoryDirectoryPath,
           })
@@ -225,11 +224,11 @@ describe('project', () => {
 
       const restoreFilesSpy = vi.spyOn(repoModule, 'restoreFiles');
 
-      when(vi.spyOn(fs, 'fileExists'))
+      vi.when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.b.changelogPath)
         .thenResolve(true);
 
-      when(vi.spyOn(fs, 'fileExists'))
+      vi.when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.c.changelogPath)
         .thenResolve(true);
 
@@ -294,7 +293,7 @@ describe('project', () => {
         },
       });
 
-      when(vi.spyOn(fs, 'fileExists'))
+      vi.when(vi.spyOn(fs, 'fileExists'))
         .calledWith(project.workspacePackages.a.changelogPath)
         .thenResolve(false);
 

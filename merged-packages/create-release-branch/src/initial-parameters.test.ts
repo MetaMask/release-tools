@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { when } from 'vitest-when';
 import os from 'os';
 import path from 'path';
 
@@ -30,7 +29,7 @@ describe('initial-parameters', () => {
     it('returns an object derived from command-line arguments and environment variables that contains data necessary to run the workflow', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -45,7 +44,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -72,7 +71,7 @@ describe('initial-parameters', () => {
         rootPackage: buildMockPackage(),
       });
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: 'project',
@@ -105,7 +104,7 @@ describe('initial-parameters', () => {
     it('resolves the given temporary directory relative to the current working directory', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -120,7 +119,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -138,7 +137,7 @@ describe('initial-parameters', () => {
         rootPackage: buildMockPackage('@foo/bar'),
       });
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -153,7 +152,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -171,7 +170,7 @@ describe('initial-parameters', () => {
     it('returns initial parameters including reset: true, derived from a command-line argument of "--reset true"', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -186,7 +185,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -202,7 +201,7 @@ describe('initial-parameters', () => {
     it('returns initial parameters including reset: false, derived from a command-line argument of "--reset false"', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -217,7 +216,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -233,7 +232,7 @@ describe('initial-parameters', () => {
     it('returns initial parameters including a releaseType of "backport", derived from a command-line argument of "--backport true"', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -248,7 +247,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 
@@ -264,7 +263,7 @@ describe('initial-parameters', () => {
     it('returns initial parameters including a releaseType of "ordinary", derived from a command-line argument of "--backport false"', async () => {
       const project = buildMockProject();
       const stderr = createNoopWriteStream();
-      when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
           projectDirectory: '/path/to/project',
@@ -279,7 +278,7 @@ describe('initial-parameters', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(projectModule, 'readProject'))
+      vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
 

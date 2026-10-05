@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { when } from 'vitest-when';
 
 import { determineEditor } from './editor.js';
 import * as envModule from './env.js';
@@ -14,7 +13,7 @@ describe('editor', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: 'editor' });
-      when(vi.spyOn(miscUtils, 'resolveExecutable'))
+      vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('editor')
         .thenResolve('/path/to/resolved-editor');
 
@@ -32,10 +31,10 @@ describe('editor', () => {
         miscUtils,
         'resolveExecutable',
       );
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenResolve(null);
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenResolve('/path/to/code');
 
@@ -53,10 +52,10 @@ describe('editor', () => {
         miscUtils,
         'resolveExecutable',
       );
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenResolve(null);
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenResolve(null);
 
@@ -71,10 +70,10 @@ describe('editor', () => {
         miscUtils,
         'resolveExecutable',
       );
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenResolve(null);
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenReject(new Error('some error'));
 
@@ -89,10 +88,10 @@ describe('editor', () => {
         miscUtils,
         'resolveExecutable',
       );
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenReject(new Error('some error'));
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenResolve(null);
 
@@ -107,10 +106,10 @@ describe('editor', () => {
         miscUtils,
         'resolveExecutable',
       );
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenReject(new Error('some error'));
-      when(resolveExecutableMock)
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenReject(new Error('some error'));
 
@@ -121,7 +120,7 @@ describe('editor', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(miscUtils, 'resolveExecutable'))
+      vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('code')
         .thenResolve(null);
 
@@ -132,7 +131,7 @@ describe('editor', () => {
       vi
         .spyOn(envModule, 'getEnvironmentVariables')
         .mockReturnValue({ EDITOR: undefined });
-      when(vi.spyOn(miscUtils, 'resolveExecutable'))
+      vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('code')
         .thenReject(new Error('some error'));
 

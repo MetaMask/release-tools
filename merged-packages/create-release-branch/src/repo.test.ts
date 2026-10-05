@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { when } from 'vitest-when';
 
 import * as miscUtils from './misc-utils.js';
 import {
@@ -38,7 +37,7 @@ describe('repo', () => {
 
   describe('getTagNames', () => {
     it('returns all of the tag names that match a known format, sorted by ascending semantic version order', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['tag', '--sort=version:refname', '--merged'], {
           cwd: '/path/to/repo',
         })
@@ -52,12 +51,12 @@ describe('repo', () => {
     });
 
     it('returns an empty array if the repo has no tags as long as it was not cloned shallowly', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['tag', '--sort=version:refname', '--merged'], {
           cwd: '/path/to/repo',
         })
         .thenResolve([]);
-      when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
         .calledWith('git', ['rev-parse', '--is-shallow-repository'], {
           cwd: '/path/to/repo',
         })
@@ -67,12 +66,12 @@ describe('repo', () => {
     });
 
     it('throws if the repo has no tags but it was cloned shallowly', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['tag', '--sort=version:refname', '--merged'], {
           cwd: '/path/to/repo',
         })
         .thenResolve([]);
-      when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
         .calledWith('git', ['rev-parse', '--is-shallow-repository'], {
           cwd: '/path/to/repo',
         })
@@ -84,12 +83,12 @@ describe('repo', () => {
     });
 
     it('throws if "git rev-parse --is-shallow-repository" returns neither "true" nor "false"', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['tag', '--sort=version:refname', '--merged'], {
           cwd: '/path/to/repo',
         })
         .thenResolve([]);
-      when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
         .calledWith('git', ['rev-parse', '--is-shallow-repository'], {
           cwd: '/path/to/repo',
         })
@@ -103,7 +102,7 @@ describe('repo', () => {
 
   describe('hasChangesInDirectorySinceGitTag', () => {
     it('returns true if "git diff" includes any files within the given directory, for the first call', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['diff', 'v1.0.0', 'HEAD', '--name-only'], {
           cwd: '/path/to/repo',
         })
@@ -119,7 +118,7 @@ describe('repo', () => {
     });
 
     it('returns false if "git diff" does not include any files within the given directory, for the first call', async () => {
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['diff', 'v2.0.0', 'HEAD', '--name-only'], {
           cwd: '/path/to/repo',
         })
@@ -161,7 +160,7 @@ describe('repo', () => {
         'getStdoutFromCommand',
       );
 
-      when(getStdoutFromCommandSpy)
+      vi.when(getStdoutFromCommandSpy)
         .calledWith('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
           cwd: '/path/to/project',
         })
@@ -182,7 +181,7 @@ describe('repo', () => {
   describe('branchExists', () => {
     it('returns true when specified branch name exists', async () => {
       const releaseBranchName = 'release/1.0.0';
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['branch', '--list', releaseBranchName], {
           cwd: '/path/to/repo',
         })
@@ -193,7 +192,7 @@ describe('repo', () => {
 
     it("returns false when specified branch name doesn't exist", async () => {
       const releaseBranchName = 'release/1.0.0';
-      when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
         .calledWith('git', ['branch', '--list', releaseBranchName], {
           cwd: '/path/to/repo',
         })
@@ -212,7 +211,7 @@ describe('repo', () => {
         'getStdoutFromCommand',
       );
       const defaultBranch = 'main';
-      when(getStdoutFromCommandSpy)
+      vi.when(getStdoutFromCommandSpy)
         .calledWith('git', ['merge-base', defaultBranch, 'HEAD'], {
           cwd: '/path/to',
         })
