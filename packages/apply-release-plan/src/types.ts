@@ -21,20 +21,21 @@ export type CategorizedReleaseLine = {
 };
 
 /**
- * Categorized variant of `GetReleaseLine`: instead of a single line bucketed
- * by version bump type, a changeset can yield several lines, each assigned to
- * a named section.
+ * Categorizes a line produced by `getReleaseLine` into one or more named
+ * sections.
  */
-export type GetCategorizedReleaseLines = (
+export type CategorizeReleaseLine = (
+  line: string,
   changeset: NewChangesetWithCommit,
   type: VersionType,
   changelogOpts: null | Record<string, unknown>,
 ) => CategorizedReleaseLine[] | Promise<CategorizedReleaseLine[]>;
 
 /**
- * Categorized variant of `GetDependencyReleaseLine`.
+ * Categorizes a line produced by `getDependencyReleaseLine`.
  */
-export type GetCategorizedDependencyReleaseLines = (
+export type CategorizeDependencyReleaseLine = (
+  line: string,
   changesets: NewChangesetWithCommit[],
   dependenciesUpdated: ModCompWithPackage[],
   changelogOpts: null | Record<string, unknown>,
@@ -59,8 +60,8 @@ export type GetVersionHeader = (
  * `### Major/Minor/Patch Changes` sections.
  */
 export type CategorizedChangelogFunctions = ChangelogFunctions & {
-  getCategorizedReleaseLines: GetCategorizedReleaseLines;
-  getCategorizedDependencyReleaseLines: GetCategorizedDependencyReleaseLines;
+  categorizeReleaseLine: CategorizeReleaseLine;
+  categorizeDependencyReleaseLine: CategorizeDependencyReleaseLine;
   /**
    * The complete, ordered list of section titles. Lines returned for a
    * category not present in this list are an error.

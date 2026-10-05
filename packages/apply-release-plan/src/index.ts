@@ -34,8 +34,8 @@ export { isCategorizedChangelogFunctions } from './get-changelog-entry.js';
 export type {
   CategorizedChangelogFunctions,
   CategorizedReleaseLine,
-  GetCategorizedDependencyReleaseLines,
-  GetCategorizedReleaseLines,
+  CategorizeDependencyReleaseLine,
+  CategorizeReleaseLine,
   GetVersionHeader,
 } from './types.js';
 
@@ -336,16 +336,51 @@ async function getNewChangelogEntry(
   }
 
   if (isCategorizedChangelogFunctions(getChangelogFuncs)) {
+    const categorizedFuncs = getChangelogFuncs;
     if (
-      typeof getChangelogFuncs.getCategorizedDependencyReleaseLines !==
-        'function' ||
-      !Array.isArray(getChangelogFuncs.categories) ||
-      getChangelogFuncs.categories.length === 0
+      typeof categorizedFuncs.categorizeDependencyReleaseLine !== 'function'
     ) {
       throw new Error(
-        'Changelog modules exporting `getCategorizedReleaseLines` must also export `getCategorizedDependencyReleaseLines` and a non-empty `categories` array',
+        'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
       );
     }
+    if (
+      !Array.isArray(categorizedFuncs.categories) ||
+      categorizedFuncs.categories.length === 0
+    ) {
+      throw new Error(
+        'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
+      );
+    }
+
+    const dedupedCategories: string[] = [];
+    const seenCategories = new Set<string>();
+    for (const rawCategory of categorizedFuncs.categories) {
+      if (typeof rawCategory !== 'string') {
+        throw new Error(
+          'Changelog module categories must be a non-empty array of non-empty strings',
+        );
+      }
+      const category = rawCategory.trim();
+      if (category === '') {
+        throw new Error(
+          'Changelog module categories must be a non-empty array of non-empty strings',
+        );
+      }
+      if (!seenCategories.has(category)) {
+        seenCategories.add(category);
+        dedupedCategories.push(category);
+      }
+    }
+
+    if (dedupedCategories.length === 0) {
+      throw new Error(
+        'Changelog module categories must be a non-empty array of non-empty strings',
+      );
+    }
+
+    categorizedFuncs.categories = dedupedCategories;
+    getChangelogFuncs = categorizedFuncs;
   }
 
   if (
@@ -429,9 +464,10 @@ async function updateChangelog(
   // Our version headings start with ##, we are more permissive here though.
   // Note: we also need to handle prerelease versions here but that's already covered by the regex.
   // As a best effort to fit common changelog formats, also accept headings
-  // with a bracketed version (`## [1.2.3]`, Keep a Changelog style) or a `v`
+  // that include extra text (e.g. `## Version 1.2.3`, `## Release v1.2.3`),
+  // bracketed versions (`## [1.2.3]`, Keep a Changelog style), or a `v`
   // prefix (`## v1.2.3`).
-  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\[?v?\d+\.\d+/mu);
+  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+.*\d+\.\d+/mu);
 
   let newChangelog: string;
   if (firstVersionHeaderIndex >= 0) {

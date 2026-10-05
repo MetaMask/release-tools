@@ -1,9 +1,9 @@
 // A categorized changelog module without a `getVersionHeader` export, used to
-// test the default version heading.
+// verify the default header behavior.
 export {
   categories,
-  getCategorizedDependencyReleaseLines,
-  getCategorizedReleaseLines,
+  categorizeDependencyReleaseLine,
+  categorizeReleaseLine,
   getDependencyReleaseLine,
   getReleaseLine,
 } from './categorized-functions.js';

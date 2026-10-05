@@ -1,4 +1,4 @@
-// A categorized changelog module used to test the categorized entry mode.
+// A categorized changelog module used to test categorized entry rendering.
 // Summary lines are expected to look like `<Category>: <text>`.
 import type {
   ModCompWithPackage,
@@ -14,25 +14,31 @@ export const getVersionHeader: GetVersionHeader = async (release) =>
 
 export const getReleaseLine = async (
   changeset: NewChangesetWithCommit,
-): Promise<string> => `- ${changeset.summary}`;
+): Promise<string> => changeset.summary;
 
 export const getDependencyReleaseLine = async (): Promise<string> => '';
 
-export const getCategorizedReleaseLines = async (
+export const categorizeReleaseLine = async (
+  _line: string,
   changeset: NewChangesetWithCommit,
 ): Promise<CategorizedReleaseLine[]> =>
   changeset.summary
     .split('\n')
-    .filter((line) => line.trim() !== '')
-    .map((line) => {
-      const [category, ...rest] = line.split(':');
-      return {
-        category: category.trim(),
-        line: `- ${rest.join(':').trim()}`,
-      };
+    .filter((item) => item.trim() !== '')
+    .flatMap((item) => {
+      const [category, ...rest] = item.split(':');
+      const text = rest.join(':').trim();
+      if (category.trim() === 'FanOut') {
+        return [
+          { category: 'Added', line: `- ${text}` },
+          { category: 'Changed', line: `- ${text}` },
+        ];
+      }
+      return [{ category: category.trim(), line: `- ${text}` }];
     });
 
-export const getCategorizedDependencyReleaseLines = async (
+export const categorizeDependencyReleaseLine = async (
+  _line: string,
   _changesets: NewChangesetWithCommit[],
   dependenciesUpdated: ModCompWithPackage[],
 ): Promise<CategorizedReleaseLine[]> =>

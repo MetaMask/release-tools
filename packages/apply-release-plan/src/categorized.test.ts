@@ -297,7 +297,8 @@ All notable changes to this project will be documented in this file.
         path.join(tempDir, 'package.json'),
         'utf8',
       );
-      expect(JSON.parse(packageJson).version).toBe('1.0.0');
+      const parsedPkg = JSON.parse(packageJson) as { version: string };
+      expect(parsedPkg.version).toBe('1.0.0');
     }),
   );
 
