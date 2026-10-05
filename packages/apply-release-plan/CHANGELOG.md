@@ -13,11 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add categorized changelog mode: changelog modules can export `getCategorizedReleaseLines`, `getCategorizedDependencyReleaseLines`, and an ordered `categories` list to group release lines into arbitrary named sections instead of the hardcoded `### Major/Minor/Patch Changes`
-- Add support for a `getVersionHeader` changelog module export that controls the heading line of a release entry (e.g. `## [1.2.3]` or `## v1.2.3`)
+- Add categorized changelog mode: changelog modules can export `categorizeReleaseLine` and `categorizeDependencyReleaseLine` to assign lines produced by `getReleaseLine` and `getDependencyReleaseLine` to named sections from an ordered `categories` list, instead of the hardcoded `### Major/Minor/Patch Changes` ([#25](https://github.com/MetaMask/release-tools/pull/25))
+- Add support for a `getVersionHeader` changelog module export that controls the heading line of a release entry (e.g. `## [1.2.3]` or `## v1.2.3`) ([#25](https://github.com/MetaMask/release-tools/pull/25))
 
 ### Changed
 
-- Insert new release entries after the title and preamble (instead of after the first line) when a changelog has no version headings yet, and recognize bracketed (`## [1.2.3]`) and `v`-prefixed (`## v1.2.3`) version headings when placing entries
+- Insert new release entries after the title and preamble (instead of after the first line) when a changelog has no version headings yet, and recognize any heading containing a version number when placing entries ([#25](https://github.com/MetaMask/release-tools/pull/25))
 
 [Unreleased]: https://github.com/MetaMask/release-tools/
