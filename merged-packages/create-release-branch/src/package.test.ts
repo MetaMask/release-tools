@@ -1,6 +1,6 @@
+import { vi } from 'vitest';
 import * as autoChangelog from '@metamask/auto-changelog';
 import fs from 'fs';
-import { when } from 'jest-when';
 import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
@@ -27,11 +27,11 @@ import {
 } from './package.js';
 import * as repoModule from './repo.js';
 
-jest.mock('./package-manifest');
-jest.mock('./repo');
-jest.mock('@metamask/auto-changelog', () => ({
-  ...jest.requireActual('@metamask/auto-changelog'),
-  updateChangelog: jest.fn(),
+vi.mock('./package-manifest');
+vi.mock('./repo');
+vi.mock('@metamask/auto-changelog', async () => ({
+  ...(await vi.importActual('@metamask/auto-changelog')),
+  updateChangelog: vi.fn(),
 
   // Replacing the implementation of the `oxfmt` function because Jest
   // doesn't work well with dynamic imports, and Oxfmt is ESM-only.
@@ -40,17 +40,18 @@ jest.mock('@metamask/auto-changelog', () => ({
   // Replacing the implementation of the `prettier` function because Jest
   // doesn't work well with dynamic imports.
   prettier: async (content: string) => {
-    const markdown = jest.requireActual('prettier/plugins/markdown');
-    return await jest
-      .requireActual('prettier/standalone')
-      .format(content, { parser: 'markdown', plugins: [markdown] });
+    const { default: markdown } = await vi.importActual(
+      'prettier/plugins/markdown',
+    );
+    const { format } = await vi.importActual('prettier/standalone');
+    return await format(content, { parser: 'markdown', plugins: [markdown] });
   },
 }));
 
 describe('package', () => {
   describe('readMonorepoRootPackage', () => {
     it('returns information about the file structure of the package located at the given directory', async () => {
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -73,9 +74,9 @@ describe('package', () => {
     it('returns information about the manifest (in both unvalidated and validated forms)', async () => {
       const unvalidatedManifest = {};
       const validatedManifest = buildMockManifest();
-      when(jest.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
-        .mockResolvedValue({
+        .thenResolve({
           unvalidated: unvalidatedManifest,
           validated: validatedManifest,
         });
@@ -93,7 +94,7 @@ describe('package', () => {
     });
 
     it("flags the package as having been changed since its latest release if a tag matching the current version exists and changes have been made to the package's directory since the tag", async () => {
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -101,9 +102,9 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const pkg = await readMonorepoRootPackage({
         packageDirectoryPath: '/path/to/package',
@@ -117,7 +118,7 @@ describe('package', () => {
     });
 
     it("does not flag the package as having been changed since its latest release if a tag matching the current version exists, but changes have not been made to the package's directory since the tag", async () => {
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -125,9 +126,9 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .mockResolvedValue(false);
+        .thenResolve(false);
 
       const pkg = await readMonorepoRootPackage({
         packageDirectoryPath: '/path/to/package',
@@ -141,7 +142,7 @@ describe('package', () => {
     });
 
     it('flags the package as having been changed since its latest release if a tag matching the current version does not exist', async () => {
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -162,7 +163,7 @@ describe('package', () => {
     });
 
     it('throws if a tag matching the current version does not exist', async () => {
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -171,9 +172,9 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const promiseForPkg = readMonorepoRootPackage({
         packageDirectoryPath: '/path/to/package',
@@ -192,7 +193,7 @@ describe('package', () => {
   describe('readMonorepoWorkspacePackage', () => {
     it('returns information about the file structure of the package located at the given directory', async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -219,9 +220,9 @@ describe('package', () => {
       const unvalidatedManifest = {};
       const validatedManifest = buildMockManifest();
       const stderr = createNoopWriteStream();
-      when(jest.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
-        .mockResolvedValue({
+        .thenResolve({
           unvalidated: unvalidatedManifest,
           validated: validatedManifest,
         });
@@ -243,7 +244,7 @@ describe('package', () => {
 
     it("flags the package as having been changed since its latest release if a tag matching the package name + version exists and changes have been made to the package's directory since the tag", async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -252,13 +253,13 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith(
           '/path/to/project',
           '/path/to/package',
           '@scope/workspace-package@1.0.0',
         )
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const pkg = await readMonorepoWorkspacePackage({
         packageDirectoryPath: '/path/to/package',
@@ -276,7 +277,7 @@ describe('package', () => {
 
     it("does not flag the package as having been changed since its latest release if a tag matching the package name + version exists, but changes have not been made to the package's directory since the tag", async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -285,13 +286,13 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith(
           '/path/to/project',
           '/path/to/package',
           '@scope/workspace-package@1.0.0',
         )
-        .mockResolvedValue(false);
+        .thenResolve(false);
 
       const pkg = await readMonorepoWorkspacePackage({
         packageDirectoryPath: '/path/to/package',
@@ -309,7 +310,7 @@ describe('package', () => {
 
     it("flags the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, and changes have been made to the package's directory since the tag", async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -318,9 +319,9 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const pkg = await readMonorepoWorkspacePackage({
         packageDirectoryPath: '/path/to/package',
@@ -338,7 +339,7 @@ describe('package', () => {
 
     it("does not flag the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, but changes have not been made to the package's directory since the tag", async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -346,9 +347,9 @@ describe('package', () => {
             version: new SemVer('1.0.0'),
           }),
         });
-      when(jest.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
+      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
         .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
-        .mockResolvedValue(false);
+        .thenResolve(false);
 
       const pkg = await readMonorepoWorkspacePackage({
         packageDirectoryPath: '/path/to/package',
@@ -366,7 +367,7 @@ describe('package', () => {
 
     it('flags the package as having been changed since its latest release if the project has no tags', async () => {
       const stderr = createNoopWriteStream();
-      jest
+      vi
         .spyOn(packageManifestModule, 'readPackageManifest')
         .mockResolvedValue({
           unvalidated: {},
@@ -391,9 +392,9 @@ describe('package', () => {
 
     it("prints a warning if a tag matching 'v' + the root package version exists instead of the package name + version", async () => {
       const stderr = new MockWritable();
-      when(jest.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
-        .mockResolvedValue({
+        .thenResolve({
           unvalidated: {},
           validated: buildMockManifest({
             name: '@scope/workspace-package',
@@ -417,9 +418,9 @@ describe('package', () => {
 
     it("throws if the project has tags, but neither a tag matching the package name + version nor 'v' + the root package version exists", async () => {
       const stderr = createNoopWriteStream();
-      when(jest.spyOn(packageManifestModule, 'readPackageManifest'))
+      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
-        .mockResolvedValue({
+        .thenResolve({
           unvalidated: {},
           validated: buildMockManifest({
             name: '@scope/workspace-package',
@@ -626,7 +627,7 @@ describe('package', () => {
           }),
           newVersion: '2.0.0',
         };
-        jest.spyOn(fsModule, 'readFile').mockRejectedValue(new Error('oops'));
+        vi.spyOn(fsModule, 'readFile').mockRejectedValue(new Error('oops'));
 
         await expect(
           updatePackage({ project, packageReleasePlan, formatter: 'prettier' }),
@@ -673,7 +674,7 @@ describe('package', () => {
           validatedManifest: buildMockManifest(),
           changelogPath,
         });
-        when(jest.spyOn(autoChangelog, 'updateChangelog'))
+        vi.when(vi.spyOn(autoChangelog, 'updateChangelog'))
           .calledWith({
             changelogContent: 'existing changelog',
             isReleaseCandidate: false,
@@ -682,7 +683,7 @@ describe('package', () => {
             tagPrefixes: ['package@', 'v'],
             formatter: expect.any(Function),
           })
-          .mockResolvedValue('new changelog');
+          .thenResolve('new changelog');
         await fs.promises.writeFile(changelogPath, 'existing changelog');
 
         await updatePackageChangelog({
@@ -713,7 +714,7 @@ describe('package', () => {
           validatedManifest: buildMockManifest(),
           changelogPath,
         });
-        when(jest.spyOn(autoChangelog, 'updateChangelog'))
+        vi.when(vi.spyOn(autoChangelog, 'updateChangelog'))
           .calledWith({
             changelogContent: 'existing changelog',
             isReleaseCandidate: false,
@@ -722,7 +723,7 @@ describe('package', () => {
             tagPrefixes: ['package@', 'v'],
             formatter: expect.any(Function),
           })
-          .mockResolvedValue(undefined);
+          .thenResolve(undefined);
         await fs.promises.writeFile(changelogPath, 'existing changelog');
 
         await updatePackageChangelog({
@@ -778,7 +779,7 @@ describe('package', () => {
           validatedManifest: buildMockManifest(),
           changelogPath,
         });
-        jest.spyOn(fsModule, 'readFile').mockRejectedValue(new Error('oops'));
+        vi.spyOn(fsModule, 'readFile').mockRejectedValue(new Error('oops'));
 
         await expect(
           updatePackageChangelog({

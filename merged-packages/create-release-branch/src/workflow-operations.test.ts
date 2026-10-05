@@ -1,10 +1,10 @@
-import { when } from 'jest-when';
+import { vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers';
 import * as repoModule from './repo.js';
 import { createReleaseBranch } from './workflow-operations.js';
 
-jest.mock('./repo');
+vi.mock('./repo');
 
 describe('workflow-operations', () => {
   describe('createReleaseBranch', () => {
@@ -14,13 +14,13 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue('main');
-      when(jest.spyOn(repoModule, 'branchExists'))
+        .thenResolve('main');
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
-        .mockResolvedValue(false);
-      const runGitCommandWithin = jest.spyOn(repoModule, 'runGitCommandWithin');
+        .thenResolve(false);
+      const runGitCommandWithin = vi.spyOn(repoModule, 'runGitCommandWithin');
 
       const result = await createReleaseBranch({
         project,
@@ -44,13 +44,13 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue('main');
-      when(jest.spyOn(repoModule, 'branchExists'))
+        .thenResolve('main');
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
-        .mockResolvedValue(false);
-      const runGitCommandWithin = jest.spyOn(repoModule, 'runGitCommandWithin');
+        .thenResolve(false);
+      const runGitCommandWithin = vi.spyOn(repoModule, 'runGitCommandWithin');
 
       const result = await createReleaseBranch({
         project,
@@ -74,9 +74,9 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue(newReleaseBranchName);
+        .thenResolve(newReleaseBranchName);
 
       const result = await createReleaseBranch({
         project,
@@ -95,9 +95,9 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue(newReleaseBranchName);
+        .thenResolve(newReleaseBranchName);
 
       const result = await createReleaseBranch({
         project,
@@ -116,12 +116,12 @@ describe('workflow-operations', () => {
         project.releaseVersion.ordinaryNumber + 1
       }.0.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue('main');
-      when(jest.spyOn(repoModule, 'branchExists'))
+        .thenResolve('main');
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const result = await createReleaseBranch({
         project,
@@ -140,12 +140,12 @@ describe('workflow-operations', () => {
         project.releaseVersion.backportNumber + 1
       }.0`;
       const newReleaseBranchName = `release/${newReleaseVersion}`;
-      when(jest.spyOn(repoModule, 'getCurrentBranchName'))
+      vi.when(vi.spyOn(repoModule, 'getCurrentBranchName'))
         .calledWith(project.directoryPath)
-        .mockResolvedValue('main');
-      when(jest.spyOn(repoModule, 'branchExists'))
+        .thenResolve('main');
+      vi.when(vi.spyOn(repoModule, 'branchExists'))
         .calledWith(project.directoryPath, newReleaseBranchName)
-        .mockResolvedValue(true);
+        .thenResolve(true);
 
       const result = await createReleaseBranch({
         project,
