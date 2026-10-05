@@ -1,5 +1,5 @@
 import * as commentJson from 'comment-json';
-import execa from 'execa';
+import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 import * as prettier from 'prettier';
@@ -25,7 +25,7 @@ vi.mock('fs', () => {
   return { default: { promises }, promises };
 });
 
-vi.mock('execa', () => ({ default: vi.fn() }));
+vi.mock('execa', () => ({ execa: vi.fn() }));
 
 vi.mock('prettier', () => ({
   format: vi.fn(),
