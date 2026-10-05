@@ -13,16 +13,16 @@ export const getVersionHeader: GetVersionHeader = async (release) =>
   `## [${release.newVersion}]`;
 
 export const getReleaseLine = async (
-  changeset: NewChangesetWithCommit,
-): Promise<string> => changeset.summary;
+  _changeset: NewChangesetWithCommit,
+): Promise<string> => _changeset.summary;
 
 export const getDependencyReleaseLine = async (): Promise<string> => '';
 
 export const categorizeReleaseLine = async (
-  _line: string,
-  changeset: NewChangesetWithCommit,
+  line: string,
+  _changeset: NewChangesetWithCommit,
 ): Promise<CategorizedReleaseLine[]> =>
-  changeset.summary
+  line
     .split('\n')
     .filter((item) => item.trim() !== '')
     .flatMap((item) => {
@@ -38,11 +38,13 @@ export const categorizeReleaseLine = async (
     });
 
 export const categorizeDependencyReleaseLine = async (
-  _line: string,
+  line: string,
   _changesets: NewChangesetWithCommit[],
   dependenciesUpdated: ModCompWithPackage[],
 ): Promise<CategorizedReleaseLine[]> =>
-  dependenciesUpdated.map((dependency) => ({
-    category: 'Changed',
-    line: `- Bump \`${dependency.name}\` to \`${dependency.newVersion}\``,
-  }));
+  line === ''
+    ? []
+    : dependenciesUpdated.map((dependency) => ({
+        category: 'Changed',
+        line: `- Bump \`${dependency.name}\` to \`${dependency.newVersion}\``,
+      }));

@@ -25,6 +25,7 @@ import type { EditJsonOperation } from './edit-json.js';
 import {
   getChangelogEntry,
   isCategorizedChangelogFunctions,
+  normalizeCategories,
 } from './get-changelog-entry.js';
 import type { CategorizedChangelogFunctions } from './types.js';
 import { getDependencyVersionEdits } from './version-package.js';
@@ -336,51 +337,14 @@ async function getNewChangelogEntry(
   }
 
   if (isCategorizedChangelogFunctions(getChangelogFuncs)) {
-    const categorizedFuncs = getChangelogFuncs;
-    if (
-      typeof categorizedFuncs.categorizeDependencyReleaseLine !== 'function'
-    ) {
-      throw new Error(
-        'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
-      );
-    }
-    if (
-      !Array.isArray(categorizedFuncs.categories) ||
-      categorizedFuncs.categories.length === 0
-    ) {
-      throw new Error(
-        'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
-      );
-    }
-
-    const dedupedCategories: string[] = [];
-    const seenCategories = new Set<string>();
-    for (const rawCategory of categorizedFuncs.categories) {
-      if (typeof rawCategory !== 'string') {
-        throw new Error(
-          'Changelog module categories must be a non-empty array of non-empty strings',
-        );
-      }
-      const category = rawCategory.trim();
-      if (category === '') {
-        throw new Error(
-          'Changelog module categories must be a non-empty array of non-empty strings',
-        );
-      }
-      if (!seenCategories.has(category)) {
-        seenCategories.add(category);
-        dedupedCategories.push(category);
-      }
-    }
-
-    if (dedupedCategories.length === 0) {
-      throw new Error(
-        'Changelog module categories must be a non-empty array of non-empty strings',
-      );
-    }
-
-    categorizedFuncs.categories = dedupedCategories;
-    getChangelogFuncs = categorizedFuncs;
+    const categorizedChangelogFuncs =
+      getChangelogFuncs as ChangelogFunctions & {
+        categories: readonly unknown[];
+      };
+    getChangelogFuncs = {
+      ...categorizedChangelogFuncs,
+      categories: normalizeCategories(categorizedChangelogFuncs.categories),
+    } as ChangelogFunctions;
   }
 
   if (

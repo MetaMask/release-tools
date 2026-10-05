@@ -6,3 +6,7 @@ export const categories = ['Added', 'Added', '', 'Fixed'];
 export const getReleaseLine = async (): Promise<string> => 'Added: works';
 
 export const getDependencyReleaseLine = async (): Promise<string> => '';
+
+export const categorizeReleaseLine = async (): Promise<never[]> => [];
+
+export const categorizeDependencyReleaseLine = async (): Promise<never[]> => [];

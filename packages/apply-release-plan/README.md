@@ -47,8 +47,8 @@ A changelog module can group release lines into arbitrary named sections instead
 
 ```ts
 import type {
-  GetCategorizedReleaseLines,
-  GetCategorizedDependencyReleaseLines,
+  CategorizeReleaseLine,
+  CategorizeDependencyReleaseLine,
 } from '@metamask/apply-release-plan';
 
 // The complete, ordered list of section titles. These are whatever the
@@ -64,14 +64,14 @@ export const categories = [
 ];
 
 // One changeset can yield several lines, each assigned to a category.
-export const getCategorizedReleaseLines: GetCategorizedReleaseLines = async (
+export const categorizeReleaseLine: CategorizeReleaseLine = async (
   changeset,
   type,
   options,
 ) => [{ category: 'Added', line: '- Add a fabulous feature' }];
 
 // The categorized variant of `getDependencyReleaseLine`.
-export const getCategorizedDependencyReleaseLines: GetCategorizedDependencyReleaseLines =
+export const categorizeDependencyReleaseLine: CategorizeDependencyReleaseLine =
   async (changesets, dependenciesUpdated, options) =>
     dependenciesUpdated.map((dependency) => ({
       category: 'Changed',
@@ -97,7 +97,7 @@ When absent, the default `## <version>` heading is used.
 
 ### Entry placement
 
-New entries are inserted before the first existing version heading, or appended after the title and preamble when the changelog has no releases yet. Recognizing existing version headings is a best effort to fit common formats: plain (`## 1.2.3`), bracketed (`## [1.2.3]`), and `v`-prefixed (`## v1.2.3`) headings are all detected.
+New entries are inserted before the first existing version heading, or appended after the title and preamble when the changelog has no releases yet. Recognizing existing version headings is a best effort to fit common formats: plain (`## 1.2.3`), bracketed (`## [1.2.3]`), and `v`-prefixed (`## v1.2.3`) headings are all detected with `/^#{1,6}\s+.*\d+\.\d+/mu`.
 
 Note that these extensions only shape the new release section: they do not produce a complete changelog document for formats with whole-file conventions. For example, Keep a Changelog version link references at the bottom of the file are expected to be maintained by a separate tool such as [`@metamask/auto-changelog`](https://github.com/MetaMask/auto-changelog), run as a post-processing step.
 

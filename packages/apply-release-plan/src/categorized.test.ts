@@ -32,6 +32,10 @@ const invalidVersionHeaderFunctionsPath = path.resolve(
   import.meta.dirname,
   'test-utils/invalid-version-header-functions.ts',
 );
+const duplicateCategoriesFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions-duplicates.ts',
+);
 
 const baseConfig: Config = {
   changelog: [categorizedFunctionsPath, null],
@@ -239,9 +243,9 @@ All notable changes to this project will be documented in this file.
       path.join(tempDir, 'packages/pkg-a/CHANGELOG.md'),
       'utf8',
     );
-    expect(pkgAChangelog).toContain(
-      '## [1.0.1]\n\n### Changed\n\n- Bump `pkg-b` to `1.1.0`',
-    );
+    expect(pkgAChangelog).toContain('## [1.0.1]');
+    expect(pkgAChangelog).toContain('### Changed');
+    expect(pkgAChangelog).toContain('- Bump `pkg-b` to `1.1.0`');
 
     const pkgBChangelog = await fs.readFile(
       path.join(tempDir, 'packages/pkg-b/CHANGELOG.md'),
@@ -249,6 +253,65 @@ All notable changes to this project will be documented in this file.
     );
     expect(pkgBChangelog).toContain(
       '## [1.1.0]\n\n### Added\n\n- A new feature',
+    );
+  });
+
+  it('skips empty release lines before categorizing them', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': kacChangelog,
+      },
+      singlePackagePlan('Added: keep me\n\nFixed: and me'),
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain(
+      '### Added\n\n- keep me\n\n### Fixed\n\n- and me',
+    );
+  });
+
+  it('passes multiline release lines and keeps repeated categories in order', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': kacChangelog,
+      },
+      singlePackagePlan(
+        'Added: first: one\n\nChanged: second line\nFanOut: third',
+      ),
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('### Added');
+    expect(changelog).toContain('- first: one');
+    expect(changelog).toContain('- third');
+    expect(changelog).toContain('### Changed');
+    expect(changelog).toContain('- second line');
+  });
+
+  it('keeps unknown categories as an error and does not write files', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(
+        singlePackagePlan('Unknown: nope'),
+        packages,
+        baseConfig,
+      ),
+    ).rejects.toThrow(
+      'Unknown changelog category "Unknown" returned by categorizeReleaseLine (known categories: Added, Changed, Fixed)',
     );
   });
 
@@ -285,7 +348,7 @@ All notable changes to this project will be documented in this file.
           baseConfig,
         ),
       ).rejects.toThrow(
-        'Unknown changelog category "Bogus" returned by getCategorizedReleaseLines (known categories: Added, Changed, Fixed)',
+        'Unknown changelog category "Bogus" returned by categorizeReleaseLine (known categories: Added, Changed, Fixed)',
       );
 
       const changelog = await fs.readFile(
@@ -316,7 +379,46 @@ All notable changes to this project will be documented in this file.
         changelog: [invalidCategorizedFunctionsPath, null],
       }),
     ).rejects.toThrow(
-      'Changelog modules exporting `getCategorizedReleaseLines` must also export `getCategorizedDependencyReleaseLines` and a non-empty `categories` array',
+      'Changelog module categories must be a non-empty array of non-empty strings',
+    );
+  });
+
+  it('deduplicates categories and keeps the first occurrence', async () => {
+    const tempDir = await applyToFixture(
+      {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': kacChangelog,
+      },
+      singlePackagePlan('Added: A new feature'),
+      {
+        ...baseConfig,
+        changelog: [duplicateCategoriesFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('### Added\n\n- line');
+    expect(changelog).not.toContain('### Changed\n\n- line');
+  });
+
+  it('rejects empty or whitespace-only categories', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(singlePackagePlan('Added: A new feature'), packages, {
+        ...baseConfig,
+        changelog: [invalidCategorizedFunctionsPath, null],
+      }),
+    ).rejects.toThrow(
+      'Changelog module categories must be a non-empty array of non-empty strings',
     );
   });
 });

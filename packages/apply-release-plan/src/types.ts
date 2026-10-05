@@ -54,7 +54,7 @@ export type GetVersionHeader = (
 
 /**
  * A changelog module that opts into categorized changelog entries. When a
- * module exports `getCategorizedReleaseLines`, the release entry is rendered
+ * module exports `categorizeReleaseLine`, the release entry is rendered
  * as a version heading followed by one `### <category>` section per entry in
  * `categories` (in that order), instead of the default
  * `### Major/Minor/Patch Changes` sections.
