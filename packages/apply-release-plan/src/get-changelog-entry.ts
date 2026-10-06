@@ -100,21 +100,19 @@ function getUpdatedDependencies(
     const usesWorkspaceRange = versionRange?.startsWith('workspace:');
     return Boolean(
       versionRange &&
-        (usesWorkspaceRange === true || validRange(versionRange) !== null) &&
-        shouldUpdateDependencyBasedOnConfig(
-          cwd,
-          rel,
-          {
-            depVersionRange: versionRange,
-            depType: dependencyVersionRange
-              ? 'dependencies'
-              : 'peerDependencies',
-          },
-          {
-            minReleaseType: updateInternalDependencies,
-            onlyUpdatePeerDependentsWhenOutOfRange,
-          },
-        ),
+      (usesWorkspaceRange === true || validRange(versionRange) !== null) &&
+      shouldUpdateDependencyBasedOnConfig(
+        cwd,
+        rel,
+        {
+          depVersionRange: versionRange,
+          depType: dependencyVersionRange ? 'dependencies' : 'peerDependencies',
+        },
+        {
+          minReleaseType: updateInternalDependencies,
+          onlyUpdatePeerDependentsWhenOutOfRange,
+        },
+      ),
     );
   });
 
@@ -404,43 +402,41 @@ export async function getChangelogEntry(
 }
 
 /**
- * Renders a custom-category section.
+ * Renders a changelog section: a heading followed by the given release lines.
  *
- * @param heading - The section heading.
- * @param lines - The rendered section lines.
- * @returns The rendered section, or null when there are no lines.
- */
-export function generateMarkdownForSection(
-  heading: string,
-  lines: string[],
-): string | null {
-  if (lines.length === 0) {
-    return null;
-  }
-
-  return [
-    `### ${capitalize(heading)}`,
-    ...lines.map((line) => `- ${line}`),
-  ].join('\n');
-}
-
-/**
- * Renders a standard release-type section.
- *
- * @param heading - The release type heading.
- * @param lines - The rendered release lines.
- * @returns The rendered section, or null when there are no lines.
+ * @param type - The release bucket to render.
+ * @param lines - The lines to include in the section.
+ * @returns The rendered section heading and lines, or `undefined` if there are no lines.
  */
 export function generateMarkdownForVersionType(
-  heading: string,
+  type: keyof ChangelogLines,
   lines: string[],
-): string | null {
-  if (lines.length === 0) {
-    return null;
+): string | undefined {
+  return generateMarkdownForSection(`${capitalize(type)} Changes`, lines);
+}
+
+function generateMarkdownForSection(
+  title: string,
+  lines: string[],
+): string | undefined {
+  const releaseLines = lines.filter((line) => line);
+  if (!releaseLines.length) {
+    return undefined;
   }
 
-  return [
-    `### ${capitalize(heading)} Changes`,
-    ...lines.map((line) => `- ${line}`),
-  ].join('\n');
+  let content = `### ${title}`;
+  let newLines = 2;
+
+  for (const line of releaseLines) {
+    const startNewLinesCount = line.match(/^\n*/u)?.[0].length ?? 0;
+    newLines += startNewLinesCount;
+
+    const newLinesContent = '\n'.repeat(Math.min(Math.max(newLines, 1), 2));
+    content += newLinesContent + line.trim();
+
+    const endNewLinesCount = line.match(/\n*$/u)?.[0].length ?? 0;
+    newLines = endNewLinesCount;
+  }
+
+  return content;
 }

@@ -1,6 +1,120 @@
+import type { ChangelogFunctions } from '@changesets/types';
 import { describe, expect, it } from 'vitest';
 
-import { generateMarkdownForVersionType } from './get-changelog-entry.js';
+import {
+  generateMarkdownForVersionType,
+  isCustomCategoryChangelogFunctions,
+  validateCustomCategoryChangelogFunctions,
+} from './get-changelog-entry.js';
+import type { CustomCategoryChangelogFunctions } from './types.js';
+
+const baseChangelogFunctions: ChangelogFunctions = {
+  getReleaseLine: async () => '',
+  getDependencyReleaseLine: async () => '',
+};
+
+function asCustomCategoryChangelogFunctions(
+  changelogFuncs: unknown,
+): CustomCategoryChangelogFunctions {
+  return changelogFuncs as CustomCategoryChangelogFunctions;
+}
+
+describe('isCustomCategoryChangelogFunctions', () => {
+  it('returns true when categorizeReleaseLine is a function', () => {
+    expect(
+      isCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeReleaseLine: async () => [],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('returns false when categorizeReleaseLine is absent', () => {
+    expect(isCustomCategoryChangelogFunctions(baseChangelogFunctions)).toBe(
+      false,
+    );
+  });
+
+  it('returns false when categorizeReleaseLine is not a function', () => {
+    expect(
+      isCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeReleaseLine: 'not a function',
+        }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('validateCustomCategoryChangelogFunctions', () => {
+  it('returns the categories trimmed and deduplicated by first occurrence', () => {
+    expect(
+      validateCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeReleaseLine: async () => [],
+          categorizeDependencyReleaseLine: async () => [],
+          categories: [' Added ', 'Changed', 'Added'],
+        }),
+      ),
+    ).toStrictEqual(['Added', 'Changed']);
+  });
+
+  it('throws when categorizeDependencyReleaseLine is missing', () => {
+    expect(() =>
+      validateCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categories: ['Added'],
+        }),
+      ),
+    ).toThrow(
+      'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
+    );
+  });
+
+  it('throws when categories is missing or empty', () => {
+    expect(() =>
+      validateCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeDependencyReleaseLine: async () => [],
+        }),
+      ),
+    ).toThrow(
+      'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
+    );
+
+    expect(() =>
+      validateCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeDependencyReleaseLine: async () => [],
+          categories: [],
+        }),
+      ),
+    ).toThrow(
+      'Changelog modules exporting `categorizeReleaseLine` must also export `categorizeDependencyReleaseLine` and a non-empty `categories` array',
+    );
+  });
+
+  it('throws when a category is empty or whitespace-only', () => {
+    expect(() =>
+      validateCustomCategoryChangelogFunctions(
+        asCustomCategoryChangelogFunctions({
+          ...baseChangelogFunctions,
+          categorizeDependencyReleaseLine: async () => [],
+          categories: ['Added', '   '],
+        }),
+      ),
+    ).toThrow(
+      'Changelog module categories must be a non-empty array of non-empty strings',
+    );
+  });
+});
 
 describe('generateMarkdownForVersionType', () => {
   it('returns undefined when there are empty lines', () => {
