@@ -59,7 +59,7 @@ export type GetVersionHeader = (
  * `categories` (in that order), instead of the default
  * `### Major/Minor/Patch Changes` sections.
  */
-export type CategorizedChangelogFunctions = ChangelogFunctions & {
+export type CustomCategoryChangelogFunctions = ChangelogFunctions & {
   categorizeReleaseLine: CategorizeReleaseLine;
   categorizeDependencyReleaseLine: CategorizeDependencyReleaseLine;
   /**

@@ -24,15 +24,15 @@ import { editJson } from './edit-json.js';
 import type { EditJsonOperation } from './edit-json.js';
 import {
   getChangelogEntry,
-  isCategorizedChangelogFunctions,
-  validateCategorizedChangelogFunctions,
+  isCustomCategoryChangelogFunctions,
+  validateCustomCategoryChangelogFunctions,
 } from './get-changelog-entry.js';
 import { getDependencyVersionEdits } from './version-package.js';
 import type { DependencyUpdateOptions } from './version-package.js';
 
-export { isCategorizedChangelogFunctions } from './get-changelog-entry.js';
+export { isCustomCategoryChangelogFunctions } from './get-changelog-entry.js';
 export type {
-  CategorizedChangelogFunctions,
+  CustomCategoryChangelogFunctions,
   CategorizedReleaseLine,
   CategorizeDependencyReleaseLine,
   CategorizeReleaseLine,
@@ -335,10 +335,10 @@ async function getNewChangelogEntry(
     throw new Error('Could not resolve changelog generation functions');
   }
 
-  if (isCategorizedChangelogFunctions(getChangelogFuncs)) {
+  if (isCustomCategoryChangelogFunctions(getChangelogFuncs)) {
     // Fail before any file is written. `getChangelogEntry` normalizes the
     // categories again when it renders each entry.
-    validateCategorizedChangelogFunctions(getChangelogFuncs);
+    validateCustomCategoryChangelogFunctions(getChangelogFuncs);
   }
 
   if (
