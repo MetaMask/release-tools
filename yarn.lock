@@ -1137,7 +1137,7 @@ __metadata:
     bats: "npm:^1.13.0"
     comment-json: "npm:^4.5.1"
     eslint-plugin-n: "npm:^18.3.0"
-    execa: "npm:^5.0.0"
+    execa: "npm:^8.0.1"
     knip: "npm:^6.23.0"
     lodash: "npm:^4.17.21"
     oxfmt: "npm:^0.45.0"
@@ -3572,7 +3572,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^5.0.0, execa@npm:^5.1.1":
+"execa@npm:^5.1.1":
   version: 5.1.1
   resolution: "execa@npm:5.1.1"
   dependencies:
