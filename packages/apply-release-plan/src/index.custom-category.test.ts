@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
 
 import { applyReleasePlan } from './index.js';
 import { temporarilySilenceLogs, testdir } from './test-utils/index.js';
-import type { Fixture } from './test-utils/index.js';
 
 const categorizedFunctionsPath = path.resolve(
   import.meta.dirname,
@@ -72,17 +71,6 @@ All notable changes to this project will be documented in this file.
 [1.0.0]: https://github.com/example/example/releases/tag/1.0.0
 `;
 
-async function applyReleasePlanToFixture(
-  fixture: Fixture,
-  releasePlan: ReleasePlan,
-  config: Config = baseConfig,
-): Promise<string> {
-  const tempDir = await testdir(fixture);
-  const packages = await getPackages(tempDir);
-  await applyReleasePlan(releasePlan, packages, config);
-  return tempDir;
-}
-
 function buildSinglePackagePlan(summary: string): ReleasePlan {
   return {
     changesets: [
@@ -107,13 +95,18 @@ function buildSinglePackagePlan(summary: string): ReleasePlan {
 
 describe('applyReleasePlan with custom category changelog functions', () => {
   it('writes a bracketed version header with sections grouped by category', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan(`Added: A new feature
 Fixed: A pesky bug`),
+      packages,
+      baseConfig,
     );
 
     const changelog = await fs.readFile(
@@ -145,13 +138,18 @@ All notable changes to this project will be documented in this file.
   });
 
   it("orders sections by the module's categories declaration, not by entry order", async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan(`Fixed: A pesky bug
 Added: A new feature`),
+      packages,
+      baseConfig,
     );
 
     const changelog = await fs.readFile(
@@ -164,15 +162,20 @@ Added: A new feature`),
   });
 
   it('appends after the preamble when the changelog has no releases yet', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': `# Changelog
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': `# Changelog
 
 All notable changes to this project will be documented in this file.
 `,
-      },
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan('Added: A new feature'),
+      packages,
+      baseConfig,
     );
 
     const changelog = await fs.readFile(
@@ -219,27 +222,28 @@ All notable changes to this project will be documented in this file.
       preState: undefined,
     };
 
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({
-          private: true,
-          workspaces: ['packages/*'],
-        }),
-        'package-lock.json': '',
-        'packages/pkg-a/package.json': JSON.stringify({
-          name: 'pkg-a',
-          version: '1.0.0',
-          dependencies: { 'pkg-b': '^1.0.0' },
-        }),
-        'packages/pkg-a/CHANGELOG.md': kacChangelog,
-        'packages/pkg-b/package.json': JSON.stringify({
-          name: 'pkg-b',
-          version: '1.0.0',
-        }),
-        'packages/pkg-b/CHANGELOG.md': kacChangelog,
-      },
-      releasePlan,
-    );
+    const fixture = {
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+      }),
+      'package-lock.json': '',
+      'packages/pkg-a/package.json': JSON.stringify({
+        name: 'pkg-a',
+        version: '1.0.0',
+        dependencies: { 'pkg-b': '^1.0.0' },
+      }),
+      'packages/pkg-a/CHANGELOG.md': kacChangelog,
+      'packages/pkg-b/package.json': JSON.stringify({
+        name: 'pkg-b',
+        version: '1.0.0',
+      }),
+      'packages/pkg-b/CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(releasePlan, packages, baseConfig);
 
     const pkgAChangelog = await fs.readFile(
       path.join(tempDir, 'packages/pkg-a/CHANGELOG.md'),
@@ -259,14 +263,19 @@ All notable changes to this project will be documented in this file.
   });
 
   it('skips empty release lines before categorizing them', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan(`Added: keep me
 
 Fixed: and me`),
+      packages,
+      baseConfig,
     );
 
     const changelog = await fs.readFile(
@@ -279,17 +288,22 @@ Fixed: and me`),
   });
 
   it('passes multiline release lines and keeps repeated categories in order', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan(
         `Added: first: one
 
 Changed: second line
 FanOut: third`,
       ),
+      packages,
+      baseConfig,
     );
 
     const changelog = await fs.readFile(
@@ -323,13 +337,14 @@ FanOut: third`,
   });
 
   it('notes when a release has no changelog entries', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
-      buildSinglePackagePlan(''),
-    );
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan(''), packages, baseConfig);
 
     const changelog = await fs.readFile(
       path.join(tempDir, 'CHANGELOG.md'),
@@ -395,12 +410,16 @@ FanOut: third`,
   });
 
   it('deduplicates categories and keeps the first occurrence', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan('Added: A new feature'),
+      packages,
       {
         ...baseConfig,
         changelog: [duplicateCategoriesFunctionsPath, null],
@@ -440,12 +459,16 @@ FanOut: third`,
 
 describe('version headings', () => {
   it('uses the default version heading when a categorized module does not export getVersionHeader', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': kacChangelog,
-      },
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
       buildSinglePackagePlan('Added: A new feature'),
+      packages,
       {
         ...baseConfig,
         changelog: [noHeaderCategorizedFunctionsPath, null],
@@ -460,18 +483,18 @@ describe('version headings', () => {
   });
 
   it('honors getVersionHeader for modules that are not categorized', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md':
-          '# Changelog\n\nSome prose.\n\n## v1.0.0\n\n- Initial release\n',
-      },
-      buildSinglePackagePlan('A new feature'),
-      {
-        ...baseConfig,
-        changelog: [versionHeaderFunctionsPath, null],
-      },
-    );
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md':
+        '# Changelog\n\nSome prose.\n\n## v1.0.0\n\n- Initial release\n',
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan('A new feature'), packages, {
+      ...baseConfig,
+      changelog: [versionHeaderFunctionsPath, null],
+    });
 
     const changelog = await fs.readFile(
       path.join(tempDir, 'CHANGELOG.md'),
@@ -494,17 +517,17 @@ Some prose.
   });
 
   it('appends after the preamble for standard modules when the changelog has no releases yet', async () => {
-    const tempDir = await applyReleasePlanToFixture(
-      {
-        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
-        'CHANGELOG.md': '# Changelog\n\nSome prose.\n',
-      },
-      buildSinglePackagePlan('A new feature'),
-      {
-        ...baseConfig,
-        changelog: [versionHeaderFunctionsPath, null],
-      },
-    );
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': '# Changelog\n\nSome prose.\n',
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan('A new feature'), packages, {
+      ...baseConfig,
+      changelog: [versionHeaderFunctionsPath, null],
+    });
 
     const changelog = await fs.readFile(
       path.join(tempDir, 'CHANGELOG.md'),
