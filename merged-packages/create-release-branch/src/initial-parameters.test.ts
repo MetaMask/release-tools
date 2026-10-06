@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
 import os from 'os';
 import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildMockProject,
@@ -41,9 +41,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -83,9 +83,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       const readProjectSpy = vi
         .spyOn(projectModule, 'readProject')
         .mockResolvedValue(project);
@@ -116,9 +116,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -149,9 +149,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -182,9 +182,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -213,9 +213,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -244,9 +244,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);
@@ -275,9 +275,9 @@ describe('initial-parameters', () => {
           port: 3000,
           formatter: 'prettier',
         });
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(projectModule, 'readProject'))
         .calledWith('/path/to/project', { stderr })
         .thenResolve(project);

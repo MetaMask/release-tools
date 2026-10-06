@@ -27,14 +27,14 @@ export default abstract class LocalRepo extends Repo {
   /**
    * The directory that holds the "remote" companion of this repo.
    */
-  #remoteRepoDirectoryPath: string;
+  readonly #remoteRepoDirectoryPath: string;
 
   /**
    * Usually when this repo is initialized, a commit is created (which will
    * contain starting `package.json` files). You can use this option to disable
    * that if you need to create your own commits for clarity.
    */
-  #createInitialCommit: boolean;
+  readonly #createInitialCommit: boolean;
 
   constructor({
     remoteRepoDirectoryPath,
@@ -49,7 +49,7 @@ export default abstract class LocalRepo extends Repo {
   /**
    * Clones the "remote" repo.
    */
-  protected async create() {
+  protected async create(): Promise<void> {
     await this.runCommand(
       'git',
       ['clone', this.#remoteRepoDirectoryPath, this.getWorkingDirectoryPath()],
@@ -62,7 +62,7 @@ export default abstract class LocalRepo extends Repo {
    * and changelog. Also creates an initial commit if this repo was configured
    * with `createInitialCommit: true`.
    */
-  protected async afterCreate() {
+  protected async afterCreate(): Promise<void> {
     await super.afterCreate();
 
     // We reconfigure the repo such that it ostensibly has a remote that points
@@ -112,7 +112,7 @@ export default abstract class LocalRepo extends Repo {
    *
    * @returns `local-repo` within the environment directory.
    */
-  getWorkingDirectoryPath() {
+  getWorkingDirectoryPath(): string {
     return path.join(this.environmentDirectoryPath, 'local-repo');
   }
 

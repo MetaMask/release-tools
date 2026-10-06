@@ -51,7 +51,9 @@ export type Package = {
  * @param packageVersion - The version of the package.
  * @returns An array of possible release tag names.
  */
-function generateMonorepoRootPackageReleaseTagName(packageVersion: string) {
+function generateMonorepoRootPackageReleaseTagName(
+  packageVersion: string,
+): string {
   return `v${packageVersion}`;
 }
 
@@ -67,7 +69,7 @@ function generateMonorepoRootPackageReleaseTagName(packageVersion: string) {
 function generateMonorepoWorkspacePackageReleaseTagName(
   packageName: string,
   packageVersion: string,
-) {
+): string {
   return `${packageName}@${packageVersion}`;
 }
 
@@ -266,6 +268,7 @@ export function getFormatter(
  *
  * @param args - The arguments.
  * @param args.project - The project.
+ * @param args.project.repositoryUrl - The URL of the project's repository.
  * @param args.package - A particular package in the project.
  * @param args.version - The release version to migrate unreleased changes to.
  * @param args.formatter - The formatter to use for formatting the changelog.
@@ -319,6 +322,7 @@ export async function migrateUnreleasedChangelogChangesToRelease({
  *
  * @param args - The arguments.
  * @param args.project - The project.
+ * @param args.project.repositoryUrl - The URL of the project's repository.
  * @param args.package - A particular package in the project.
  * @param args.formatter - The formatter to use for formatting the changelog.
  * @param args.stderr - A stream that can be used to write to standard error.

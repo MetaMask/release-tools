@@ -24,7 +24,7 @@ export function DependencyErrorSection({
   setSelections,
   errorSubject,
   errorDetails,
-}: DependencyErrorSectionProps) {
+}: DependencyErrorSectionProps): React.JSX.Element {
   return (
     <div className="mt-4 pt-4 border-t border-red-200">
       <div className="flex justify-between items-center mb-2">
@@ -62,8 +62,8 @@ export function DependencyErrorSection({
           >
             <a
               href="#"
-              onClick={(event) => {
-                event.preventDefault();
+              onClick={(clickEvent) => {
+                clickEvent.preventDefault();
                 document
                   .getElementById(`package-${dep}`)
                   ?.scrollIntoView({ behavior: 'smooth' });

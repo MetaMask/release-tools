@@ -80,7 +80,7 @@ export async function followMonorepoWorkflow({
   formatter: Formatter;
   stdout: Pick<WriteStream, 'write'>;
   stderr: Pick<WriteStream, 'write'>;
-}) {
+}): Promise<void> {
   const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
     project,
     releaseType,

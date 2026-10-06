@@ -52,6 +52,7 @@ const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
  *
  * @param args - The set of arguments to this function.
  * @param args.project - Information about the project.
+ * @param args.project.workspacePackages - The workspace packages in the project.
  * @param args.isEditorAvailable - Whether or not an executable can be found on
  * the user's computer to edit the release spec once it is generated.
  * @returns The release specification template.
@@ -62,7 +63,7 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
 }: {
   project: Project;
   isEditorAvailable: boolean;
-}) {
+}): Promise<string> {
   const afterEditingInstructions = isEditorAvailable
     ? `
 # When you're finished, save this file and close it. The tool will update the
@@ -133,7 +134,7 @@ export async function waitForUserToEditReleaseSpecification(
   releaseSpecificationPath: string,
   editor: Editor,
   stdout: Pick<WriteStream, 'write'> = fs.createWriteStream('/dev/null'),
-) {
+): Promise<void> {
   let caughtError: unknown;
 
   debug(
@@ -385,7 +386,10 @@ export function validateAllPackageEntries(
           errors.push({
             message: [
               `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-              `("${changedPackageName}" is at a greater version "${project.workspacePackages[changedPackageName].validatedManifest.version}")`,
+              `("${changedPackageName}" is at a greater version "${String(
+                project.workspacePackages[changedPackageName].validatedManifest
+                  .version,
+              )}")`,
             ],
             lineNumber,
           });
@@ -531,7 +535,9 @@ export async function validateReleaseSpecification(
   ].join('\n\n');
 
   try {
-    unvalidatedReleaseSpecification = YAML.parse(releaseSpecificationContents);
+    unvalidatedReleaseSpecification = YAML.parse(
+      releaseSpecificationContents,
+    ) as { packages: Record<string, string | null> };
   } catch (error) {
     throw wrapError(
       [
@@ -569,7 +575,7 @@ export async function validateReleaseSpecification(
           const itemPrefix = '* ';
 
           if (error.lineNumber === undefined) {
-            return `${itemPrefix}${error.message}`;
+            return `${itemPrefix}${String(error.message)}`;
           }
 
           const lineNumberPrefix = `Line ${error.lineNumber}: `;
@@ -593,41 +599,40 @@ export async function validateReleaseSpecification(
     throw new Error(message);
   }
 
-  const packages = Object.keys(unvalidatedReleaseSpecification.packages).reduce(
-    (obj, packageName) => {
-      const versionSpecifierOrDirective =
-        unvalidatedReleaseSpecification.packages[packageName];
+  const packages = Object.keys(unvalidatedReleaseSpecification.packages).reduce<
+    ReleaseSpecification['packages']
+  >((obj, packageName) => {
+    const versionSpecifierOrDirective =
+      unvalidatedReleaseSpecification.packages[packageName];
 
+    if (
+      versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
+      versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
+    ) {
       if (
-        versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
-        versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
+        Object.values(IncrementableVersionParts).includes(
+          // Typecast: It doesn't matter what type versionSpecifierOrDirective
+          // is as we are checking for inclusion.
+          versionSpecifierOrDirective as IncrementableVersionParts,
+        )
       ) {
-        if (
-          Object.values(IncrementableVersionParts).includes(
-            // Typecast: It doesn't matter what type versionSpecifierOrDirective
-            // is as we are checking for inclusion.
-            versionSpecifierOrDirective as any,
-          )
-        ) {
-          return {
-            ...obj,
-            // Typecast: We know what this is as we've checked it above.
-            [packageName]:
-              versionSpecifierOrDirective as IncrementableVersionParts,
-          };
-        }
-
         return {
           ...obj,
-          // Typecast: We know that this will safely parse.
-          [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
+          // Typecast: We know what this is as we've checked it above.
+          [packageName]:
+            versionSpecifierOrDirective as IncrementableVersionParts,
         };
       }
 
-      return obj;
-    },
-    {} as ReleaseSpecification['packages'],
-  );
+      return {
+        ...obj,
+        // Typecast: We know that this will safely parse.
+        [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
+      };
+    }
+
+    return obj;
+  }, {});
 
   return { packages, path: releaseSpecificationPath };
 }

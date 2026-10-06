@@ -12,7 +12,6 @@ export default createConfig({
     '**/coverage/**',
     '**/dist/**',
     '.yarn/**',
-    'merged-packages/**',
     // The template's tsconfigs extend `../../tsconfig.packages.json`, which
     // only resolves once the package has been generated into `packages/`.
     'scripts/create-package/package-template/**',
@@ -24,7 +23,7 @@ export default createConfig({
 
   overrides: [
     {
-      files: ['**/*.ts', '**/*.mts', '**/*.cts'],
+      files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
       extends: [typescript],
     },
     {
@@ -39,11 +38,23 @@ export default createConfig({
         '.github/**',
         '**/scripts/**',
         'packages/apply-release-plan/**',
+        'merged-packages/create-release-branch/**',
+        '!merged-packages/create-release-branch/src/ui/**',
         'yarn.config.cjs',
         '**/*.test.ts',
         '**/tests/**',
       ],
       extends: [nodejs],
+      rules: {
+        // The `create-release-branch` CLI reads environment variables
+        // directly, which is expected for a Node.js tool. This matches the
+        // equivalent override in `core`.
+        'node/no-process-env': 'off',
+      },
+    },
+    {
+      files: ['merged-packages/create-release-branch/src/ui/**'],
+      env: { browser: true },
     },
   ],
 });

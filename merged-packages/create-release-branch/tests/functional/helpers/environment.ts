@@ -89,7 +89,7 @@ export default abstract class Environment<SpecificLocalRepo extends LocalRepo> {
    * as `git fetch --tags`, and a "local" repo, which is the one against which
    * the tool is run.
    */
-  async initialize() {
+  async initialize(): Promise<void> {
     await this.remoteRepo.initialize();
     await this.localRepo.initialize();
   }

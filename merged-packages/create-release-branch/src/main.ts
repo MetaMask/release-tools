@@ -26,7 +26,7 @@ export async function main({
   cwd: string;
   stdout: Pick<WriteStream, 'write'>;
   stderr: Pick<WriteStream, 'write'>;
-}) {
+}): Promise<void> {
   const {
     project,
     tempDirectoryPath,

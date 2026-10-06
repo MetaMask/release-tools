@@ -1,16 +1,16 @@
 import express from 'express';
 import type { WriteStream } from 'fs';
-import open from 'open';
+import openBrowser from 'open';
 import { join } from 'path';
 
 import { getCurrentDirectoryPath } from './dirname.js';
 import { readFile } from './fs.js';
 import { Formatter } from './initial-parameters.js';
 import { Package } from './package.js';
+import type { Project } from './project.js';
 import {
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
-  type Project,
 } from './project.js';
 import { executeReleasePlan, planRelease } from './release-plan.js';
 import {
@@ -18,7 +18,6 @@ import {
   findCandidateDependencies,
   findCandidateDependentsOfTypeForMajorBump,
   IncrementableVersionParts,
-  ReleaseSpecification,
   validateAllPackageEntries,
 } from './release-specification.js';
 import { commitAllChanges } from './repo.js';
@@ -89,25 +88,26 @@ export async function startUI({
     },
   });
 
-  const server = app.listen(port, async () => {
+  const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
 
-    try {
-      stdout.write(`\nAttempting to open UI in browser...`);
-      await open(url);
-      stdout.write(`\nUI server running at ${url}\n`);
-    } catch (error) {
-      stderr.write(`\n---------------------------------------------------\n`);
-      stderr.write(`Error automatically opening browser: ${error}\n`);
-      stderr.write(`Please open the following URL manually:\n`);
-      stderr.write(`${url}\n`);
-      stderr.write(`---------------------------------------------------\n\n`);
-    }
+    stdout.write(`\nAttempting to open UI in browser...`);
+    openBrowser(url)
+      .then(() => {
+        stdout.write(`\nUI server running at ${url}\n`);
+      })
+      .catch((error: unknown) => {
+        stderr.write(`\n---------------------------------------------------\n`);
+        stderr.write(`Error automatically opening browser: ${String(error)}\n`);
+        stderr.write(`Please open the following URL manually:\n`);
+        stderr.write(`${url}\n`);
+        stderr.write(`---------------------------------------------------\n\n`);
+      });
   });
 
   return new Promise((resolve, reject) => {
-    server.on('error', (error) => {
-      stderr.write(`Failed to start server: ${error}\n`);
+    server.on('error', (error: Error) => {
+      stderr.write(`Failed to start server: ${error.message}\n`);
       reject(error);
     });
 
@@ -155,7 +155,7 @@ function createApp({
     const majorBumpsArray =
       typeof majorBumps === 'string'
         ? majorBumps.split(',').filter(Boolean)
-        : (req.query.majorBumps as string[] | undefined) || [];
+        : ((req.query.majorBumps as string[] | undefined) ?? []);
 
     const requiredDirectDependentNames = new Set(
       majorBumpsArray.flatMap((majorBump) =>
@@ -200,7 +200,7 @@ function createApp({
 
       res.send(changelogContent);
     } catch (error) {
-      stderr.write(`Changelog error: ${error}\n`);
+      stderr.write(`Changelog error: ${String(error)}\n`);
       res.status(500).send('Internal Server Error');
     }
   });
@@ -209,7 +209,7 @@ function createApp({
     '/api/check-packages',
     async (req: express.Request, res: express.Response): Promise<void> => {
       try {
-        const releasedPackages: Record<string, string | null> = req.body;
+        const releasedPackages = req.body as Record<string, string | null>;
 
         const errors = Object.entries(releasedPackages).reduce(
           (map, [changedPackageName, versionSpecifierOrDirective]) => {
@@ -271,7 +271,7 @@ function createApp({
 
         res.json({ status: 'success' });
       } catch (error) {
-        stderr.write(`Release error: ${error}\n`);
+        stderr.write(`Release error: ${String(error)}\n`);
         res.status(400).send('Invalid request');
       }
     },
@@ -281,7 +281,7 @@ function createApp({
     '/api/release',
     async (req: express.Request, res: express.Response): Promise<void> => {
       try {
-        const releasedPackages: Record<string, string | null> = req.body;
+        const releasedPackages = req.body as Record<string, string | null>;
 
         const errors = validateAllPackageEntries(project, releasedPackages, 0);
 
@@ -295,35 +295,32 @@ function createApp({
 
         const releaseSpecificationPackages = Object.keys(
           releasedPackages,
-        ).reduce(
-          (obj, packageName) => {
-            const versionSpecifierOrDirective = releasedPackages[packageName];
+        ).reduce((obj, packageName) => {
+          const versionSpecifierOrDirective = releasedPackages[packageName];
 
-            if (versionSpecifierOrDirective !== 'intentionally-skip') {
-              if (
-                Object.values(IncrementableVersionParts).includes(
-                  versionSpecifierOrDirective as any,
-                )
-              ) {
-                return {
-                  ...obj,
-                  [packageName]:
-                    versionSpecifierOrDirective as IncrementableVersionParts,
-                };
-              }
-
+          if (versionSpecifierOrDirective !== 'intentionally-skip') {
+            if (
+              Object.values(IncrementableVersionParts).includes(
+                versionSpecifierOrDirective as IncrementableVersionParts,
+              )
+            ) {
               return {
                 ...obj,
-                [packageName]: semver.parse(
-                  versionSpecifierOrDirective,
-                ) as SemVer,
+                [packageName]:
+                  versionSpecifierOrDirective as IncrementableVersionParts,
               };
             }
 
-            return obj;
-          },
-          {} as ReleaseSpecification['packages'],
-        );
+            return {
+              ...obj,
+              [packageName]: semver.parse(
+                versionSpecifierOrDirective,
+              ) as SemVer,
+            };
+          }
+
+          return obj;
+        }, {});
 
         await restoreChangelogsForSkippedPackages({
           project,
@@ -349,7 +346,7 @@ function createApp({
 
         closeServer();
       } catch (error) {
-        stderr.write(`Release error: ${error}\n`);
+        stderr.write(`Release error: ${String(error)}\n`);
         res.status(400).send('Invalid request');
       }
     },

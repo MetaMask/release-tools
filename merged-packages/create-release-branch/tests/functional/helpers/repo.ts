@@ -46,7 +46,7 @@ export default abstract class Repo {
   /**
    * Sets up the repo.
    */
-  async initialize() {
+  async initialize(): Promise<void> {
     await this.create();
     await this.afterCreate();
   }
@@ -62,7 +62,10 @@ export default abstract class Repo {
   async readJsonFile(
     partialFilePath: string,
   ): Promise<Record<string, unknown>> {
-    return JSON.parse(await this.readFile(partialFilePath));
+    return JSON.parse(await this.readFile(partialFilePath)) as Record<
+      string,
+      unknown
+    >;
   }
 
   /**
@@ -181,8 +184,7 @@ export default abstract class Repo {
     args?: readonly string[] | undefined,
     options?: ExecaOptions | undefined,
   ): Promise<ExecaChildProcess<string>> {
-    const { env, ...remainingOptions } =
-      options === undefined ? { env: {} } : options;
+    const { env, ...remainingOptions } = options ?? { env: {} };
 
     debug(
       'Running command `%s %s`...',

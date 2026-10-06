@@ -18,14 +18,16 @@ import type { Project } from '../../src/project.js';
  * Returns a version of the given record type where optionality is removed from
  * the designated keys.
  */
-export type Require<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: T[P] };
+export type Require<Type, Keys extends keyof Type> = Omit<Type, Keys> & {
+  [Key in Keys]-?: Type[Key];
+};
 
 /**
  * Returns a version of the given record type where optionality is added to
  * the designated keys.
  */
-type Unrequire<T, K extends keyof T> = Omit<T, K> & {
-  [P in K]+?: T[P];
+type Unrequire<Type, Keys extends keyof Type> = Omit<Type, Keys> & {
+  [Key in Keys]+?: Type[Key];
 };
 
 type MockPackageOverrides = Omit<

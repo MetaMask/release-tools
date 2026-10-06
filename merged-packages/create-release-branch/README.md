@@ -10,13 +10,13 @@ This is an interactive command-line tool that automates steps involved in prepar
 Add this tool as a development dependency to your project:
 
 ```sh
-yarn add --dev @metamask/create-release-branch
+yarn add @metamask/create-release-branch --dev
 ```
 
 or:
 
 ```sh
-npm install --save-dev @metamask/create-release-branch
+npm install @metamask/create-release-branch --save-dev
 ```
 
 ## Usage

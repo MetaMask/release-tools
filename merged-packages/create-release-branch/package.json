@@ -1,10 +1,19 @@
 {
   "name": "@metamask/create-release-branch",
   "version": "4.2.2",
-  "description": "An interactive command-line tool to prepare a release branch by automatically bumping versions and updating changelogs for desired packages. Works for both polyrepos and monorepos.",
+  "description": "An interactive command-line tool to prepare a release branch by automatically bumping versions and updating changelogs for desired packages. Works for both polyrepos and monorepos",
+  "keywords": [
+    "Ethereum",
+    "MetaMask"
+  ],
+  "homepage": "https://github.com/MetaMask/release-tools/tree/main/packages/create-release-branch#readme",
+  "bugs": {
+    "url": "https://github.com/MetaMask/release-tools/issues"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/create-release-branch.git"
+    "url": "https://github.com/MetaMask/release-tools.git"
   },
   "bin": "bin/create-release-branch.js",
   "files": [
@@ -12,13 +21,16 @@
     "dist/"
   ],
   "type": "module",
-  "exports": null,
+  "sideEffects": false,
+  "exports": {
+    "./package.json": "./package.json"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.build.json && yarn build:ui",
+    "build": "tsc --project tsconfig.build.json",
     "build:all": "tsc --build tsconfig.build.json --verbose",
     "build:clean": "yarn build:only-clean && yarn build",
     "build:only-clean": "rimraf './dist' './tsconfig.build.tsbuildinfo'",
@@ -33,45 +45,46 @@
   },
   "dependencies": {
     "@metamask/action-utils": "^2.0.0",
-    "@metamask/auto-changelog": "^6.1.1",
-    "@metamask/utils": "^9.0.0",
+    "@metamask/auto-changelog": "^6.1.0",
+    "@metamask/utils": "^11.12.0",
     "debug": "^4.3.4",
     "execa": "^8.0.1",
     "express": "^4.21.2",
     "open": "^10.1.0",
     "pony-cause": "^2.1.9",
-    "semver": "^7.5.4",
+    "semver": "^7.8.5",
     "validate-npm-package-name": "^5.0.0",
     "which": "^3.0.0",
     "yaml": "^2.2.2",
-    "yargs": "^17.7.1"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.23.5",
-    "@babel/plugin-transform-modules-commonjs": "^7.23.3",
-    "@babel/preset-env": "^7.23.5",
-    "@babel/preset-typescript": "^7.23.3",
     "@tailwindcss/vite": "^4.0.9",
     "@types/debug": "^4.1.7",
     "@types/express": "^5.0.0",
+    "@types/node": "^22.13.14",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@types/semver": "^7",
     "@types/validate-npm-package-name": "^4.0.2",
     "@types/which": "^3.0.0",
+    "@types/yargs": "^17.0.33",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-istanbul": "^5.0.1",
     "deepmerge": "^4.2.2",
     "nanoid": "^3.3.4",
+    "oxfmt": "^0.45.0",
     "prettier": "^3.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
-    "rimraf": "^4.0.5",
+    "rimraf": "^5.0.5",
     "stdio-mock": "^1.2.0",
     "tailwindcss": "^4.0.9",
-    "tsx": "^4.6.1",
+    "tsx": "^4.20.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^6.2.0",
+    "vite": "^6.4.0",
     "vitest": "^5.0.1"
   },
   "peerDependencies": {
@@ -87,14 +100,6 @@
     }
   },
   "engines": {
-    "node": "^18.18 || >=20"
-  },
-  "packageManager": "yarn@4.16.0",
-  "lavamoat": {
-    "allowScripts": {
-      "@lavamoat/preinstall-always-fail": false,
-      "tsx>esbuild": false,
-      "vite>esbuild": false
-    }
+    "node": "^22.16.0 || ^24"
   }
 }

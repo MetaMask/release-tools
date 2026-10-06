@@ -51,7 +51,7 @@ export default class MonorepoEnvironment<
 
   updateJsonFileWithinPackage: LocalMonorepo<WorkspacePackageNickname>['updateJsonFileWithinPackage'];
 
-  #packages: MonorepoEnvironmentOptions<WorkspacePackageNickname>['packages'];
+  readonly #packages: MonorepoEnvironmentOptions<WorkspacePackageNickname>['packages'];
 
   constructor(options: MonorepoEnvironmentOptions<WorkspacePackageNickname>) {
     super(options);

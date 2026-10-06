@@ -1,7 +1,8 @@
-import { vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { MockWritable } from 'stdio-mock';
+import { describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
 import { buildMockProject, Require } from '../tests/unit/helpers.js';
@@ -9,6 +10,7 @@ import * as editorModule from './editor.js';
 import type { Editor } from './editor.js';
 import { Formatter } from './initial-parameters.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
+import type { Project } from './project.js';
 import * as releasePlanModule from './release-plan.js';
 import type { ReleasePlan } from './release-plan.js';
 import * as releaseSpecificationModule from './release-specification.js';
@@ -47,13 +49,34 @@ async function fileExists(entryPath: string): Promise<boolean> {
  *
  * @returns The corresponding mock functions for each of the dependencies.
  */
-function getDependencySpies() {
+function getDependencySpies(): {
+  determineEditorSpy: MockInstance<typeof editorModule.determineEditor>;
+  createReleaseBranchSpy: MockInstance<
+    typeof workflowOperations.createReleaseBranch
+  >;
+  generateReleaseSpecificationTemplateForMonorepoSpy: MockInstance<
+    typeof releaseSpecificationModule.generateReleaseSpecificationTemplateForMonorepo
+  >;
+  waitForUserToEditReleaseSpecificationSpy: MockInstance<
+    typeof releaseSpecificationModule.waitForUserToEditReleaseSpecification
+  >;
+  validateReleaseSpecificationSpy: MockInstance<
+    typeof releaseSpecificationModule.validateReleaseSpecification
+  >;
+  planReleaseSpy: MockInstance<typeof releasePlanModule.planRelease>;
+  executeReleasePlanSpy: MockInstance<
+    typeof releasePlanModule.executeReleasePlan
+  >;
+  commitAllChangesSpy: MockInstance<typeof repoModule.commitAllChanges>;
+  fixConstraintsSpy: MockInstance<typeof yarnCommands.fixConstraints>;
+  updateYarnLockfileSpy: MockInstance<typeof yarnCommands.updateYarnLockfile>;
+  deduplicateDependenciesSpy: MockInstance<
+    typeof yarnCommands.deduplicateDependencies
+  >;
+} {
   return {
     determineEditorSpy: vi.spyOn(editorModule, 'determineEditor'),
-    createReleaseBranchSpy: vi.spyOn(
-      workflowOperations,
-      'createReleaseBranch',
-    ),
+    createReleaseBranchSpy: vi.spyOn(workflowOperations, 'createReleaseBranch'),
     generateReleaseSpecificationTemplateForMonorepoSpy: vi.spyOn(
       releaseSpecificationModule,
       'generateReleaseSpecificationTemplateForMonorepo',
@@ -184,7 +207,22 @@ async function setupFollowMonorepoWorkflow({
   errorUponExecutingReleasePlan?: Error;
   releaseVersion?: string;
   formatter?: Formatter;
-}) {
+}): Promise<
+  Omit<
+    ReturnType<typeof getDependencySpies>,
+    'determineEditorSpy' | 'validateReleaseSpecificationSpy'
+  > & {
+    project: Project;
+    projectDirectoryPath: string;
+    formatter: Formatter;
+    stdout: MockWritable;
+    stderr: MockWritable;
+    releaseSpecification: ReleaseSpecification;
+    releasePlan: ReleasePlan;
+    releaseVersion: string;
+    releaseSpecificationPath: string;
+  }
+> {
   const {
     determineEditorSpy,
     createReleaseBranchSpy,

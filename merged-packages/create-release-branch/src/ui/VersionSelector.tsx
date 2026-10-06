@@ -32,13 +32,13 @@ export function VersionSelector({
   onCustomVersionChange,
   onFetchChangelog,
   isLoadingChangelog,
-}: VersionSelectorProps) {
+}: VersionSelectorProps): React.JSX.Element {
   return (
     <div className="flex items-center space-x-2">
       <select
         value={selection}
-        onChange={(e) =>
-          onSelectionChange(packageName, e.target.value as ReleaseType)
+        onChange={(changeEvent) =>
+          onSelectionChange(packageName, changeEvent.target.value)
         }
         className="border rounded px-2 py-1"
       >
@@ -65,12 +65,18 @@ export function VersionSelector({
         <input
           type="text"
           placeholder="Enter version (e.g., 1.2.3)"
-          onChange={(e) => onCustomVersionChange(packageName, e.target.value)}
+          onChange={(changeEvent) =>
+            onCustomVersionChange(packageName, changeEvent.target.value)
+          }
           className="border rounded px-2 py-1"
         />
       )}
       <button
-        onClick={() => onFetchChangelog(packageName)}
+        onClick={() => {
+          onFetchChangelog(packageName).catch((caughtError: unknown) => {
+            console.error('Error fetching changelog:', caughtError);
+          });
+        }}
         disabled={isLoadingChangelog}
         className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 disabled:bg-gray-400"
       >
