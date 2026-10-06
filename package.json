@@ -8,8 +8,7 @@
     "url": "https://github.com/MetaMask/release-tools.git"
   },
   "workspaces": [
-    "packages/*",
-    "merged-packages/*"
+    "packages/*"
   ],
   "files": [],
   "type": "module",

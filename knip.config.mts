@@ -30,14 +30,6 @@ const config: KnipConfig = {
         '@changesets/cli',
       ],
     },
-    'merged-packages/create-release-branch': {
-      ignoreDependencies: [
-        // Loaded by the UI build through Tailwind's Vite plugin and by
-        // `react-markdown`'s runtime imports, neither of which knip resolves.
-        'react-markdown',
-        'tailwindcss',
-      ],
-    },
   },
 };
 
