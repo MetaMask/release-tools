@@ -1,10 +1,8 @@
-const currentDirectoryName = import.meta.dirname;
-
 /**
  * Get the current directory path.
  *
  * @returns The current directory path.
  */
 export function getCurrentDirectoryPath(): string {
-  return currentDirectoryName;
+  return import.meta.dirname;
 }
