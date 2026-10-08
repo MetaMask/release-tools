@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
 import { MockWritable } from 'stdio-mock';
+import { describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
 import { withSandbox } from '../tests/helpers.js';
@@ -405,10 +405,12 @@ packages:
           expect.objectContaining({
             message: expect.stringMatching(
               /^Your release spec does not appear to be valid YAML\.\n/u,
-            ),
+            ) as string,
             cause: expect.objectContaining({
-              message: expect.stringMatching(/^Missing closing "quote/u),
-            }),
+              message: expect.stringMatching(
+                /^Missing closing "quote/u,
+              ) as string,
+            }) as Error,
           }),
         );
       });

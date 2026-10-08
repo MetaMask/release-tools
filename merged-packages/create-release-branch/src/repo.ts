@@ -136,7 +136,7 @@ async function getFilesChangedSince(
 export async function commitAllChanges(
   repositoryDirectoryPath: string,
   commitMessage: string,
-) {
+): Promise<void> {
   await getStdoutFromGitCommandWithin(repositoryDirectoryPath, 'add', ['-A']);
   await getStdoutFromGitCommandWithin(repositoryDirectoryPath, 'commit', [
     '-m',
@@ -150,7 +150,9 @@ export async function commitAllChanges(
  * @param repositoryDirectoryPath - The file system path to the git repository.
  * @returns The name of the current branch in the specified repository.
  */
-export function getCurrentBranchName(repositoryDirectoryPath: string) {
+export async function getCurrentBranchName(
+  repositoryDirectoryPath: string,
+): Promise<string> {
   return getStdoutFromGitCommandWithin(repositoryDirectoryPath, 'rev-parse', [
     '--abbrev-ref',
     'HEAD',
@@ -174,7 +176,7 @@ export async function restoreFiles(
   repositoryDirectoryPath: string,
   repositoryDefaultBranch: string,
   filePaths: string[],
-) {
+): Promise<void> {
   const ancestorCommitSha = await getStdoutFromGitCommandWithin(
     repositoryDirectoryPath,
     'merge-base',
@@ -198,7 +200,7 @@ export async function restoreFiles(
 export async function branchExists(
   repositoryDirectoryPath: string,
   branchName: string,
-) {
+): Promise<boolean> {
   const branchNames = await getLinesFromGitCommandWithin(
     repositoryDirectoryPath,
     'branch',

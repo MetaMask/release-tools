@@ -1,5 +1,3 @@
-import { hasProperty, isObject } from '@metamask/utils';
-import type { ExecaError } from 'execa';
 import fs from 'fs';
 import { nanoid } from 'nanoid';
 import os from 'os';
@@ -36,8 +34,8 @@ async function ensureFileEntryDoesNotExist(entryPath: string): Promise<void> {
   try {
     await fs.promises.access(entryPath);
     throw new Error(`${entryPath} already exists, cannot continue`);
-  } catch (error: any) {
-    if (error.code !== 'ENOENT') {
+  } catch (error) {
+    if (!isErrorWithCode(error) || error.code !== 'ENOENT') {
       throw error;
     }
   }
@@ -51,7 +49,9 @@ async function ensureFileEntryDoesNotExist(entryPath: string): Promise<void> {
  * @throws If the temporary directory already exists for some reason. This would
  * indicate a bug in how the names of the directory is determined.
  */
-export async function withSandbox(fn: (sandbox: Sandbox) => any) {
+export async function withSandbox(
+  fn: (sandbox: Sandbox) => Promise<unknown>,
+): Promise<unknown> {
   const directoryPath = path.join(TEMP_DIRECTORY_PATH, nanoid());
   await ensureFileEntryDoesNotExist(directoryPath);
   await fs.promises.mkdir(directoryPath, { recursive: true });
@@ -73,23 +73,6 @@ export async function withSandbox(fn: (sandbox: Sandbox) => any) {
  */
 export function isErrorWithCode(error: unknown): error is { code: string } {
   return typeof error === 'object' && error !== null && 'code' in error;
-}
-
-/**
- * Type guard for determining whether the given value is an error object
- * produced by `execa`.
- *
- * @param error - The possible error object.
- * @returns True or false, depending on the result.
- */
-export function isExecaError(error: unknown): error is ExecaError {
-  return (
-    isObject(error) &&
-    hasProperty(error, 'message') &&
-    hasProperty(error, 'shortMessage') &&
-    hasProperty(error, 'isCanceled') &&
-    hasProperty(error, 'exitCode')
-  );
 }
 
 /**
@@ -144,7 +127,9 @@ export function buildChangelog(variantContent: string): string {
  * `process.env`.
  * @returns Whatever the callback returns.
  */
-export async function withProtectedProcessEnv<T>(callback: () => Promise<T>) {
+export async function withProtectedProcessEnv<Value>(
+  callback: () => Promise<Value>,
+): Promise<Value> {
   const originalEnv = { ...process.env };
 
   try {

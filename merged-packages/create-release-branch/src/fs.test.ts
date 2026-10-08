@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import fs from 'fs';
 import path from 'path';
 import { rimraf } from 'rimraf';
+import { describe, expect, it, vi } from 'vitest';
 
 import { withSandbox } from '../tests/helpers.js';
 import {
@@ -38,7 +38,7 @@ describe('fs', () => {
             message: `Could not read file '${filePath}'`,
             cause: expect.objectContaining({
               message: `ENOENT: no such file or directory, open '${filePath}'`,
-            }),
+            }) as Error,
           }),
         );
       });
@@ -68,7 +68,7 @@ describe('fs', () => {
             message: `Could not write file '${filePath}'`,
             cause: expect.objectContaining({
               message: `ENOENT: no such file or directory, open '${filePath}'`,
-            }),
+            }) as Error,
           }),
         );
       });
@@ -158,7 +158,7 @@ describe('fs', () => {
 
     it('re-throws any error that occurs, assigning it the same code, a wrapped message, and a new stack', async () => {
       const entryPath = '/some/file';
-      const error: any = new Error('oops');
+      const error: Error & { code?: string } = new Error('oops');
       error.code = 'ESOMETHING';
       error.stack = 'some stack';
       vi.when(vi.spyOn(fs.promises, 'stat'))
@@ -203,15 +203,15 @@ describe('fs', () => {
 
         await expect(
           fs.promises.readdir(path.join(sandbox.directoryPath, 'foo')),
-        ).toResolve();
+        ).resolves.toBeDefined();
         await expect(
           fs.promises.readdir(path.join(sandbox.directoryPath, 'foo', 'bar')),
-        ).toResolve();
+        ).resolves.toBeDefined();
         await expect(
           fs.promises.readdir(
             path.join(sandbox.directoryPath, 'foo', 'bar', 'baz'),
           ),
-        ).toResolve();
+        ).resolves.toBeDefined();
       });
     });
 
@@ -229,7 +229,9 @@ describe('fs', () => {
           path.join(sandbox.directoryPath, 'foo', 'bar', 'baz'),
         );
 
-        await expect(ensureDirectoryPathExists(directoryPath)).toResolve();
+        await expect(
+          ensureDirectoryPathExists(directoryPath),
+        ).resolves.toBeUndefined();
       });
     });
 

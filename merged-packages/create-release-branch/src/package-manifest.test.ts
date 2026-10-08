@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
+import { describe, expect, it } from 'vitest';
 
 import { withSandbox } from '../tests/helpers.js';
 import { readPackageManifest } from './package-manifest.js';

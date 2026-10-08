@@ -27,12 +27,15 @@ export default class LocalMonorepo<
   /**
    * The known packages within this repo (including the root).
    */
-  #packages: Record<'$root$' | WorkspacePackageNickname, PackageSpecification>;
+  readonly #packages: Record<
+    '$root$' | WorkspacePackageNickname,
+    PackageSpecification
+  >;
 
   /**
    * The known workspaces within this repo.
    */
-  #workspaces: LocalMonorepoOptions<WorkspacePackageNickname>['workspaces'];
+  readonly #workspaces: LocalMonorepoOptions<WorkspacePackageNickname>['workspaces'];
 
   constructor({
     packages,
@@ -63,7 +66,7 @@ export default class LocalMonorepo<
   async readFileWithinPackage(
     packageNickname: '$root$' | WorkspacePackageNickname,
     partialFilePath: string,
-  ) {
+  ): Promise<string> {
     const packageDirectoryPath = this.#packages[packageNickname].directoryPath;
     return await this.readFile(
       path.join(packageDirectoryPath, partialFilePath),
@@ -82,7 +85,7 @@ export default class LocalMonorepo<
   async readJsonFileWithinPackage(
     packageNickname: '$root$' | WorkspacePackageNickname,
     partialFilePath: string,
-  ) {
+  ): Promise<Record<string, unknown>> {
     const packageDirectoryPath = this.#packages[packageNickname].directoryPath;
     return await this.readJsonFile(
       path.join(packageDirectoryPath, partialFilePath),
@@ -157,7 +160,7 @@ export default class LocalMonorepo<
    * Writes an initial package.json for the root package as well as any
    * workspace packages (if specified).
    */
-  protected async afterCreate() {
+  protected async afterCreate(): Promise<void> {
     await super.afterCreate();
 
     await this.updateJsonFile('package.json', {
@@ -168,7 +171,7 @@ export default class LocalMonorepo<
     // Update manifests for root and workspace packages with `name`, `version`,
     // and (optionally) `workspaces`
     await Promise.all(
-      knownKeysOf(this.#packages).map((packageName) => {
+      knownKeysOf(this.#packages).map(async (packageName) => {
         const pkg = this.#packages[packageName];
         const content = {
           name: pkg.name,
@@ -192,7 +195,7 @@ export default class LocalMonorepo<
    *
    * @returns The name of the root package.
    */
-  protected getPackageName() {
+  protected getPackageName(): string {
     return this.#packages.$root$.name;
   }
 
@@ -201,7 +204,7 @@ export default class LocalMonorepo<
    *
    * @returns The version of the root package.
    */
-  protected getPackageVersion() {
+  protected getPackageVersion(): string | undefined {
     return this.#packages.$root$.version;
   }
 }

@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
 import fs from 'fs';
 import { SemVer } from 'semver';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
 import * as packageUtils from './package.js';

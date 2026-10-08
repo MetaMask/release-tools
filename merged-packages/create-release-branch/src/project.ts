@@ -126,12 +126,9 @@ export async function readProject(
         });
       }),
     )
-  ).reduce(
-    (obj, pkg) => {
-      return { ...obj, [pkg.validatedManifest.name]: pkg };
-    },
-    {} as Record<string, Package>,
-  );
+  ).reduce<Record<string, Package>>((obj, pkg) => {
+    return { ...obj, [pkg.validatedManifest.name]: pkg };
+  }, {});
 
   const isMonorepo = Object.keys(workspacePackages).length > 0;
 
@@ -227,7 +224,7 @@ export async function updateChangelogsForChangedPackages({
       .filter(
         ({ hasChangesSinceLatestRelease }) => hasChangesSinceLatestRelease,
       )
-      .map((pkg) =>
+      .map(async (pkg) =>
         updatePackageChangelog({
           project,
           formatter,
@@ -243,6 +240,8 @@ export async function updateChangelogsForChangedPackages({
  *
  * @param args - The arguments.
  * @param args.project - The project.
+ * @param args.project.directoryPath - The path to the project's root directory.
+ * @param args.project.workspacePackages - The workspace packages in the project.
  * @param args.releaseSpecificationPackages - A parsed version of the release spec
  * entered by the user.
  * @param args.defaultBranch - The name of the default branch in the repository.

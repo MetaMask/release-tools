@@ -10,7 +10,7 @@ import { Package, RELEASE_TYPE_OPTIONS, ReleaseType } from './types.js';
 import './style.css';
 
 // Helper function to compare sets
-const setsAreEqual = (a: Set<string>, b: Set<string>) => {
+const setsAreEqual = (a: Set<string>, b: Set<string>): boolean => {
   if (a.size !== b.size) {
     return false;
   }
@@ -18,17 +18,19 @@ const setsAreEqual = (a: Set<string>, b: Set<string>) => {
   return [...a].every((value) => b.has(value));
 };
 
+type PackageDependencyErrors = Record<
+  string,
+  {
+    missingDirectDependentNames: string[];
+    missingPeerDependentNames: string[];
+    missingDependencies: string[];
+  }
+>;
+
 type SubmitButtonProps = {
   selections: Record<string, string>;
-  packageDependencyErrors: Record<
-    string,
-    {
-      missingDirectDependentNames: string[];
-      missingPeerDependentNames: string[];
-      missingDependencies: string[];
-    }
-  >;
-  onSubmit: () => Promise<void>;
+  packageDependencyErrors: PackageDependencyErrors;
+  onSubmit: () => void;
 };
 
 /**
@@ -45,7 +47,7 @@ function SubmitButton({
   selections,
   packageDependencyErrors,
   onSubmit,
-}: SubmitButtonProps) {
+}: SubmitButtonProps): React.JSX.Element {
   const isDisabled =
     Object.keys(selections).length === 0 ||
     Object.keys(packageDependencyErrors).length > 0 ||
@@ -71,7 +73,7 @@ function SubmitButton({
  *
  * @returns The app component.
  */
-function App() {
+function App(): React.JSX.Element {
   const [packages, setPackages] = useState<Package[]>([]);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,16 +86,8 @@ function App() {
   const [versionErrors, setVersionErrors] = useState<Record<string, string>>(
     {},
   );
-  const [packageDependencyErrors, setPackageDependencyErrors] = useState<
-    Record<
-      string,
-      {
-        missingDirectDependentNames: string[];
-        missingPeerDependentNames: string[];
-        missingDependencies: string[];
-      }
-    >
-  >({});
+  const [packageDependencyErrors, setPackageDependencyErrors] =
+    useState<PackageDependencyErrors>({});
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedPackages, setSelectedPackages] = useState<Set<string>>(
     new Set(),
@@ -103,16 +97,17 @@ function App() {
 
   useEffect(() => {
     const majorBumps = Object.entries(selections)
-      .filter(([_, type]) => type === 'major')
+      .filter(([, type]) => type === 'major')
       .map(([pkgName]) => pkgName);
 
-    fetch(`/api/packages?majorBumps=${majorBumps.join(',')}`)
-      .then((res) => {
+    window
+      .fetch(`/api/packages?majorBumps=${majorBumps.join(',')}`)
+      .then(async (res) => {
         if (!res.ok) {
           throw new Error(`Received ${res.status}`);
         }
 
-        return res.json();
+        return (await res.json()) as Package[];
       })
       .then((data: Package[]) => {
         const newPackageNames = new Set(data.map((pkg) => pkg.name));
@@ -134,25 +129,34 @@ function App() {
           data.reduce((acc, pkg) => ({ ...acc, [pkg.name]: false }), {}),
         );
       })
-      .catch((err) => {
-        setError(err.message);
-        console.error('Error fetching packages:', err);
+      .catch((caughtError: unknown) => {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'An error occurred',
+        );
+        console.error('Error fetching packages:', caughtError);
       });
   }, [selections]);
 
-  const checkDependencies = async (selectionData: Record<string, string>) => {
+  const checkDependencies = async (
+    selectionData: Record<string, string>,
+  ): Promise<boolean> => {
     if (Object.keys(selectionData).length === 0) {
       return false;
     }
 
     try {
-      const response = await fetch('/api/check-packages', {
+      const response = await window.fetch('/api/check-packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectionData),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        status: 'success' | 'error';
+        errors?: PackageDependencyErrors;
+      };
 
       if (data.status === 'error' && data.errors) {
         setPackageDependencyErrors(data.errors);
@@ -162,24 +166,29 @@ function App() {
       setSubmitErrors([]);
       setPackageDependencyErrors({});
       return true;
-    } catch (err) {
+    } catch (caughtError) {
       const errorMessage =
-        err instanceof Error ? err.message : 'An error occurred';
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'An error occurred';
       setError(errorMessage);
-      console.error('Error checking dependencies:', err);
+      console.error('Error checking dependencies:', caughtError);
       return false;
     }
   };
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      checkDependencies(selections);
+      checkDependencies(selections).catch(() => undefined);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
+    return (): void => clearTimeout(timeoutId);
   }, [selections]);
 
-  const handleCustomVersionChange = (packageName: string, version: string) => {
+  const handleCustomVersionChange = (
+    packageName: string,
+    version: string,
+  ): void => {
     try {
       if (!version) {
         setVersionErrors((prev) => ({
@@ -191,7 +200,7 @@ function App() {
 
       const newVersion = new SemVer(version);
       const currentVersion = new SemVer(
-        packages.find((p) => p.name === packageName)?.version || '0.0.0',
+        packages.find((pkg) => pkg.name === packageName)?.version ?? '0.0.0',
       );
 
       if (newVersion.compare(currentVersion) <= 0) {
@@ -203,7 +212,7 @@ function App() {
       }
 
       setVersionErrors((prev) => {
-        const { [packageName]: _, ...rest } = prev;
+        const { [packageName]: _ignored, ...rest } = prev;
         return rest;
       });
 
@@ -211,7 +220,7 @@ function App() {
         ...prev,
         [packageName]: version,
       }));
-    } catch (err) {
+    } catch {
       setVersionErrors((prev) => ({
         ...prev,
         [packageName]: 'Invalid semver version',
@@ -224,10 +233,11 @@ function App() {
     value: ReleaseType | '',
   ): void => {
     if (value === '') {
-      const { [packageName]: _, ...rest } = selections;
+      const { [packageName]: _ignored, ...rest } = selections;
       setSelections(rest);
 
-      const { [packageName]: __, ...remainingErrors } = packageDependencyErrors;
+      const { [packageName]: _ignoredError, ...remainingErrors } =
+        packageDependencyErrors;
       setPackageDependencyErrors(remainingErrors);
     } else {
       setSelections({
@@ -241,7 +251,7 @@ function App() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/release', {
+      const response = await window.fetch('/api/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selections),
@@ -261,7 +271,14 @@ function App() {
           message: string | string[];
           lineNumber?: number;
         }[];
-      } = await response.json();
+      } = (await response.json()) as {
+        status: 'success' | 'error';
+        packagesErrors?: PackageDependencyErrors;
+        errors?: {
+          message: string | string[];
+          lineNumber?: number;
+        }[];
+      };
 
       if (data.status === 'error' && data.errors) {
         setSubmitErrors(
@@ -278,11 +295,13 @@ function App() {
       if (data.status === 'success') {
         setIsSuccess(true);
       }
-    } catch (err) {
+    } catch (caughtError) {
       const errorMessage =
-        err instanceof Error ? err.message : 'An error occurred';
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'An error occurred';
       setError(errorMessage);
-      console.error('Error submitting selections:', err);
+      console.error('Error submitting selections:', caughtError);
       // TODO: Show an error message instead of an alert
       // eslint-disable-next-line no-alert
       alert('Failed to submit selections. Please try again.');
@@ -295,7 +314,9 @@ function App() {
     setLoadingChangelogs((prev) => ({ ...prev, [packageName]: true }));
 
     try {
-      const response = await fetch(`/api/changelog?package=${packageName}`);
+      const response = await window.fetch(
+        `/api/changelog?package=${packageName}`,
+      );
 
       if (!response.ok) {
         throw new Error('Failed to fetch changelog');
@@ -303,16 +324,18 @@ function App() {
 
       const changelog = await response.text();
       setChangelogs((prev) => ({ ...prev, [packageName]: changelog }));
-    } catch (err) {
+    } catch (caughtError) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch changelog';
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to fetch changelog';
       setError(errorMessage);
     } finally {
       setLoadingChangelogs((prev) => ({ ...prev, [packageName]: false }));
     }
   };
 
-  const handleBulkAction = (action: ReleaseType) => {
+  const handleBulkAction = (action: ReleaseType): void => {
     const newSelections = { ...selections };
     selectedPackages.forEach((packageName) => {
       newSelections[packageName] = action;
@@ -322,7 +345,7 @@ function App() {
     setShowCheckboxes(true);
   };
 
-  const togglePackageSelection = (packageName: string) => {
+  const togglePackageSelection = (packageName: string): void => {
     setSelectedPackages((prev) => {
       const newSet = new Set(prev);
 
@@ -404,7 +427,7 @@ function App() {
               <button
                 key={value}
                 onClick={() => {
-                  handleBulkAction(value as ReleaseType);
+                  handleBulkAction(value);
                   setShowCheckboxes(false);
                 }}
                 className="mr-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -449,7 +472,11 @@ function App() {
         <SubmitButton
           selections={selections}
           packageDependencyErrors={packageDependencyErrors}
-          onSubmit={handleSubmit}
+          onSubmit={() => {
+            handleSubmit().catch((caughtError: unknown) => {
+              console.error('Error submitting selections:', caughtError);
+            });
+          }}
         />
       )}
 

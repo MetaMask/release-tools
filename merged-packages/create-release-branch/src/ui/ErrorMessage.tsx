@@ -9,7 +9,9 @@ type ErrorMessageProps = {
  * @param props.errors - The list of errors.
  * @returns The error message component.
  */
-export function ErrorMessage({ errors }: ErrorMessageProps) {
+export function ErrorMessage({
+  errors,
+}: ErrorMessageProps): React.JSX.Element | null {
   if (errors.length === 0) {
     return null;
   }

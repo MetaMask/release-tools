@@ -11,7 +11,7 @@ export default class RemoteRepo extends Repo {
   /**
    * Creates a bare repo.
    */
-  async create() {
+  async create(): Promise<void> {
     await fs.promises.mkdir(this.getWorkingDirectoryPath(), {
       recursive: true,
     });
@@ -23,7 +23,7 @@ export default class RemoteRepo extends Repo {
    *
    * @returns `remote-repo` within the environment directory.
    */
-  getWorkingDirectoryPath() {
+  getWorkingDirectoryPath(): string {
     return path.join(this.environmentDirectoryPath, 'remote-repo');
   }
 }

@@ -31,7 +31,7 @@ export async function determineEditor(): Promise<Editor | null> {
       executablePath = await resolveExecutable(EDITOR);
     } catch (error) {
       debug(
-        `Could not resolve executable ${EDITOR} (${error}), falling back to VSCode`,
+        `Could not resolve executable ${EDITOR} (${String(error)}), falling back to VSCode`,
       );
     }
   }
@@ -43,7 +43,7 @@ export async function determineEditor(): Promise<Editor | null> {
       executableArgs.push('--wait');
     } catch (error) {
       debug(
-        `Could not resolve path to VSCode: ${error}, continuing regardless`,
+        `Could not resolve path to VSCode: ${String(error)}, continuing regardless`,
       );
     }
   }

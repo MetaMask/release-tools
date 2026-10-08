@@ -1,9 +1,14 @@
 {
+  /**
+   * `./tests` is included so that type checking sees the functional test
+   * helpers. `vite/client` provides the types for the CSS side-effect import
+   * in the UI.
+   */
   "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["node", "react", "react-dom", "vitest/globals"]
+    "types": ["node", "react", "react-dom", "vite/client"]
   },
-  "include": ["./src"]
+  "include": ["./src", "./tests"]
 }

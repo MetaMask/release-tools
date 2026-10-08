@@ -1,5 +1,5 @@
-import { vi } from 'vitest';
 import fs from 'fs';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
 import * as initialParametersModule from './initial-parameters.js';
@@ -24,18 +24,19 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    vi
-      .spyOn(initialParametersModule, 'determineInitialParameters')
-      .mockResolvedValue({
-        project,
-        tempDirectoryPath: '/path/to/temp/directory',
-        reset: true,
-        defaultBranch: 'main',
-        releaseType: 'backport',
-        interactive: false,
-        port: 3000,
-        formatter: 'prettier',
-      });
+    vi.spyOn(
+      initialParametersModule,
+      'determineInitialParameters',
+    ).mockResolvedValue({
+      project,
+      tempDirectoryPath: '/path/to/temp/directory',
+      reset: true,
+      defaultBranch: 'main',
+      releaseType: 'backport',
+      interactive: false,
+      port: 3000,
+      formatter: 'prettier',
+    });
     const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
       .mockResolvedValue();
@@ -63,18 +64,19 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    vi
-      .spyOn(initialParametersModule, 'determineInitialParameters')
-      .mockResolvedValue({
-        project,
-        tempDirectoryPath: '/path/to/temp/directory',
-        reset: true,
-        defaultBranch: 'main',
-        releaseType: 'backport',
-        interactive: true,
-        port: 3000,
-        formatter: 'prettier',
-      });
+    vi.spyOn(
+      initialParametersModule,
+      'determineInitialParameters',
+    ).mockResolvedValue({
+      project,
+      tempDirectoryPath: '/path/to/temp/directory',
+      reset: true,
+      defaultBranch: 'main',
+      releaseType: 'backport',
+      interactive: true,
+      port: 3000,
+      formatter: 'prettier',
+    });
     const startUISpy = vi.spyOn(ui, 'startUI').mockResolvedValue();
 
     await main({
@@ -99,18 +101,19 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: false });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
-    vi
-      .spyOn(initialParametersModule, 'determineInitialParameters')
-      .mockResolvedValue({
-        project,
-        tempDirectoryPath: '/path/to/temp/directory',
-        reset: false,
-        defaultBranch: 'main',
-        releaseType: 'backport',
-        interactive: false,
-        port: 3000,
-        formatter: 'prettier',
-      });
+    vi.spyOn(
+      initialParametersModule,
+      'determineInitialParameters',
+    ).mockResolvedValue({
+      project,
+      tempDirectoryPath: '/path/to/temp/directory',
+      reset: false,
+      defaultBranch: 'main',
+      releaseType: 'backport',
+      interactive: false,
+      port: 3000,
+      formatter: 'prettier',
+    });
     const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
       .mockResolvedValue();

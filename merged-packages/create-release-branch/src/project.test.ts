@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
 import * as actionUtils from '@metamask/action-utils';
 import { mkdir } from 'fs/promises';
 import path from 'path';
 import { SemVer } from 'semver';
+import { describe, expect, it, vi } from 'vitest';
 
 import { withProtectedProcessEnv, withSandbox } from '../tests/helpers.js';
 import {

@@ -106,7 +106,7 @@ export async function executeReleasePlan(
   releasePlan: ReleasePlan,
   formatter: Formatter,
   stderr: Pick<WriteStream, 'write'>,
-) {
+): Promise<void> {
   await Promise.all(
     releasePlan.packages.map(async (workspaceReleasePlan) => {
       debug(

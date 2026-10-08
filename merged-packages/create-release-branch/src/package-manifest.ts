@@ -15,7 +15,7 @@ export { PackageManifestFieldNames, PackageManifestDependenciesFieldNames };
 /**
  * An unverified representation of the data in a package's `package.json`.
  */
-export type UnvalidatedPackageManifest = Readonly<Record<string, any>>;
+export type UnvalidatedPackageManifest = Readonly<Record<string, unknown>>;
 
 /**
  * A type-checked representation of the data in a package's `package.json`.
@@ -61,7 +61,7 @@ function buildPackageManifestFieldValidationErrorMessage({
   parentDirectory: string;
   fieldName: keyof UnvalidatedPackageManifest;
   verbPhrase: string;
-}) {
+}): string {
   const subject = isTruthyString(manifest[PackageManifestFieldNames.Name])
     ? `The value of "${fieldName}" in the manifest for "${
         manifest[PackageManifestFieldNames.Name]
@@ -181,11 +181,13 @@ function isValidPackageManifestDependencyValue(
     }
 
     const [, redirectedName, redirectedVersion] = redirectedDependencyMatch;
-    return (
-      validateNPMPackageName(redirectedName)?.validForOldPackages &&
-      isValidPackageManifestVersionField(redirectedVersion)
+    const packageNameValidation = validateNPMPackageName(redirectedName);
+    return Boolean(
+      packageNameValidation &&
+      packageNameValidation.validForOldPackages &&
+      isValidPackageManifestVersionField(redirectedVersion),
     );
-  } catch (e) /* istanbul ignore next */ {
+  } catch /* istanbul ignore next */ {
     return false;
   }
 }

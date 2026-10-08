@@ -23,7 +23,7 @@ export async function withMonorepoProjectEnvironment<
   callback: (
     environment: MonorepoEnvironment<WorkspacePackageNickname>,
   ) => Promise<CallbackReturnValue>,
-) {
+): Promise<CallbackReturnValue> {
   return withProtectedProcessEnv(async () => {
     return withSandbox(async (sandbox) => {
       const environment = new MonorepoEnvironment({

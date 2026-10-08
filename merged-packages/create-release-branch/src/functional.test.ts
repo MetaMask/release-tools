@@ -1,4 +1,5 @@
-import { vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { withMonorepoProjectEnvironment } from '../tests/functional/helpers/with.js';
 import { buildChangelog } from '../tests/helpers.js';
 

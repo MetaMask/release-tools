@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
 import * as execaModule from 'execa';
+import type { ExecaReturnValue } from 'execa';
+import { describe, expect, it, vi } from 'vitest';
 import * as whichModule from 'which';
 
 import {
@@ -19,6 +20,28 @@ vi.mock('execa', async () => ({
   ...(await vi.importActual('execa')),
   execa: vi.fn(),
 }));
+
+/**
+ * Builds a complete `execa` result for use in tests, since only `stdout`
+ * matters to the functions under test here.
+ *
+ * @param stdout - The standard output that the command produced.
+ * @returns The mock `execa` result.
+ */
+function buildExecaReturnValue(stdout: string): ExecaReturnValue<string> {
+  return {
+    command: 'some command',
+    escapedCommand: 'some command',
+    exitCode: 0,
+    stdout,
+    stderr: '',
+    failed: false,
+    timedOut: false,
+    killed: false,
+    cwd: process.cwd(),
+    isCanceled: false,
+  };
+}
 
 describe('misc-utils', () => {
   describe('isErrorWithCode', () => {
@@ -97,9 +120,12 @@ describe('misc-utils', () => {
     });
 
     it('copies over any "code" property that exists on the given Error', () => {
-      const originalError: any = new Error('oops');
+      const originalError: Error & { code?: string } = new Error('oops');
       originalError.code = 'CODE';
-      const newError: any = wrapError('Some message', originalError);
+      const newError: Error & { code?: string } = wrapError(
+        'Some message',
+        originalError,
+      );
 
       expect(newError.code).toBe('CODE');
     });
@@ -114,25 +140,23 @@ describe('misc-utils', () => {
 
   describe('resolveExecutable', () => {
     it('returns the fullpath of the given executable as returned by "which"', async () => {
-      vi
-        .spyOn(whichModule, 'default')
-        .mockResolvedValue('/path/to/executable');
+      vi.spyOn(whichModule, 'default').mockResolvedValue('/path/to/executable');
 
       expect(await resolveExecutable('executable')).toBe('/path/to/executable');
     });
 
     it('returns null if the given executable cannot be found', async () => {
-      vi
-        .spyOn(whichModule, 'default')
-        .mockRejectedValue(new Error('not found: executable'));
+      vi.spyOn(whichModule, 'default').mockRejectedValue(
+        new Error('not found: executable'),
+      );
 
       expect(await resolveExecutable('executable')).toBeNull();
     });
 
     it('throws the error that "which" throws if it is not a "not found" error', async () => {
-      vi
-        .spyOn(whichModule, 'default')
-        .mockRejectedValue(new Error('something else'));
+      vi.spyOn(whichModule, 'default').mockRejectedValue(
+        new Error('something else'),
+      );
 
       await expect(resolveExecutable('executable')).rejects.toThrow(
         'something else',
@@ -144,8 +168,7 @@ describe('misc-utils', () => {
     it('runs the command, discarding its output', async () => {
       const execaSpy = vi
         .spyOn(execaModule, 'execa')
-        // Typecast: It's difficult to provide a full return value for execa
-        .mockResolvedValue({ stdout: '   some output  ' } as any);
+        .mockResolvedValue(buildExecaReturnValue('   some output  '));
 
       const result = await runCommand('some command', ['arg1', 'arg2'], {
         all: true,
@@ -162,8 +185,7 @@ describe('misc-utils', () => {
     it('executes the given command and returns a version of the standard out from the command with whitespace trimmed', async () => {
       const execaSpy = vi
         .spyOn(execaModule, 'execa')
-        // Typecast: It's difficult to provide a full return value for execa
-        .mockResolvedValue({ stdout: '   some output  ' } as any);
+        .mockResolvedValue(buildExecaReturnValue('   some output  '));
 
       const output = await getStdoutFromCommand(
         'some command',
@@ -182,8 +204,7 @@ describe('misc-utils', () => {
     it('executes the given command and returns the standard out from the command split into lines', async () => {
       const execaSpy = vi
         .spyOn(execaModule, 'execa')
-        // Typecast: It's difficult to provide a full return value for execa
-        .mockResolvedValue({ stdout: 'line 1\nline 2\nline 3' } as any);
+        .mockResolvedValue(buildExecaReturnValue('line 1\nline 2\nline 3'));
 
       const lines = await getLinesFromCommand(
         'some command',
@@ -200,10 +221,9 @@ describe('misc-utils', () => {
     it('does not strip leading and trailing whitespace from the output, but does remove empty lines', async () => {
       const execaSpy = vi
         .spyOn(execaModule, 'execa')
-        // Typecast: It's difficult to provide a full return value for execa
-        .mockResolvedValue({
-          stdout: '  line 1\nline 2\n\n   line 3   \n',
-        } as any);
+        .mockResolvedValue(
+          buildExecaReturnValue('  line 1\nline 2\n\n   line 3   \n'),
+        );
 
       const lines = await getLinesFromCommand(
         'some command',

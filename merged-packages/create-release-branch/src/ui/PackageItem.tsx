@@ -76,7 +76,7 @@ export function PackageItem({
   setSelections,
   setChangelogs,
   onToggleSelect,
-}: PackageItemProps) {
+}: PackageItemProps): React.JSX.Element {
   return (
     <div
       key={pkg.name}
@@ -140,7 +140,7 @@ export function PackageItem({
               onSelectionChange={onSelectionChange}
               onCustomVersionChange={onCustomVersionChange}
               onFetchChangelog={onFetchChangelog}
-              isLoadingChangelog={loadingChangelogs[pkg.name] === true}
+              isLoadingChangelog={Boolean(loadingChangelogs[pkg.name])}
             />
           </div>
         </div>

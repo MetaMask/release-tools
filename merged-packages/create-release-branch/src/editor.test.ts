@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { determineEditor } from './editor.js';
 import * as envModule from './env.js';
@@ -10,9 +10,9 @@ vi.mock('./misc-utils');
 describe('editor', () => {
   describe('determineEditor', () => {
     it('returns information about the editor from EDITOR if it resolves to an executable', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
       vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('editor')
         .thenResolve('/path/to/resolved-editor');
@@ -24,16 +24,11 @@ describe('editor', () => {
     });
 
     it('falls back to VSCode if it exists and if EDITOR does not point to an executable', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
-      const resolveExecutableMock = vi.spyOn(
-        miscUtils,
-        'resolveExecutable',
-      );
-      vi.when(resolveExecutableMock)
-        .calledWith('editor')
-        .thenResolve(null);
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
+      vi.when(resolveExecutableMock).calledWith('editor').thenResolve(null);
       vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenResolve('/path/to/code');
@@ -45,34 +40,22 @@ describe('editor', () => {
     });
 
     it('returns null if resolving EDITOR returns null and resolving VSCode returns null', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
-      const resolveExecutableMock = vi.spyOn(
-        miscUtils,
-        'resolveExecutable',
-      );
-      vi.when(resolveExecutableMock)
-        .calledWith('editor')
-        .thenResolve(null);
-      vi.when(resolveExecutableMock)
-        .calledWith('code')
-        .thenResolve(null);
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
+      vi.when(resolveExecutableMock).calledWith('editor').thenResolve(null);
+      vi.when(resolveExecutableMock).calledWith('code').thenResolve(null);
 
       expect(await determineEditor()).toBeNull();
     });
 
     it('returns null if resolving EDITOR returns null and resolving VSCode throws', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
-      const resolveExecutableMock = vi.spyOn(
-        miscUtils,
-        'resolveExecutable',
-      );
-      vi.when(resolveExecutableMock)
-        .calledWith('editor')
-        .thenResolve(null);
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
+      vi.when(resolveExecutableMock).calledWith('editor').thenResolve(null);
       vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenReject(new Error('some error'));
@@ -81,31 +64,23 @@ describe('editor', () => {
     });
 
     it('returns null if resolving EDITOR throws and resolving VSCode returns null', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
-      const resolveExecutableMock = vi.spyOn(
-        miscUtils,
-        'resolveExecutable',
-      );
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
       vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenReject(new Error('some error'));
-      vi.when(resolveExecutableMock)
-        .calledWith('code')
-        .thenResolve(null);
+      vi.when(resolveExecutableMock).calledWith('code').thenResolve(null);
 
       expect(await determineEditor()).toBeNull();
     });
 
     it('returns null if resolving EDITOR throws and resolving VSCode throws', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: 'editor' });
-      const resolveExecutableMock = vi.spyOn(
-        miscUtils,
-        'resolveExecutable',
-      );
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'editor',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
       vi.when(resolveExecutableMock)
         .calledWith('editor')
         .thenReject(new Error('some error'));
@@ -117,9 +92,9 @@ describe('editor', () => {
     });
 
     it('returns null if EDITOR is unset and resolving VSCode returns null', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('code')
         .thenResolve(null);
@@ -128,9 +103,9 @@ describe('editor', () => {
     });
 
     it('returns null if EDITOR is unset and resolving VSCode throws', async () => {
-      vi
-        .spyOn(envModule, 'getEnvironmentVariables')
-        .mockReturnValue({ EDITOR: undefined });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
       vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('code')
         .thenReject(new Error('some error'));
