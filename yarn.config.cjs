@@ -494,7 +494,6 @@ function expectWorkspaceDescription(workspace) {
 
 /**
  * Expect that the workspace has a dual MIT/Apache-2.0 license file and field.
- * The ported apply-release-plan package is exempt because it retains its upstream MIT license.
  *
  * @param {Workspace} workspace - The workspace to check.
  */
