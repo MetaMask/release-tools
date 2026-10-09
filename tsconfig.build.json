@@ -7,7 +7,12 @@
    * (indirectly) extends it.
    */
   "references": [
-    { "path": "./packages/apply-release-plan/tsconfig.build.json" }
+    {
+      "path": "./packages/apply-release-plan/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/changeset-utils/tsconfig.build.json"
+    }
   ],
   "files": [],
   "include": []
