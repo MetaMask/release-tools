@@ -201,17 +201,19 @@ describe('fs', () => {
 
         await ensureDirectoryPathExists(directoryPath);
 
-        await expect(
-          fs.promises.readdir(path.join(sandbox.directoryPath, 'foo')),
-        ).resolves.toBeDefined();
-        await expect(
-          fs.promises.readdir(path.join(sandbox.directoryPath, 'foo', 'bar')),
-        ).resolves.toBeDefined();
-        await expect(
-          fs.promises.readdir(
+        expect(
+          await fs.promises.readdir(path.join(sandbox.directoryPath, 'foo')),
+        ).toBeDefined();
+        expect(
+          await fs.promises.readdir(
+            path.join(sandbox.directoryPath, 'foo', 'bar'),
+          ),
+        ).toBeDefined();
+        expect(
+          await fs.promises.readdir(
             path.join(sandbox.directoryPath, 'foo', 'bar', 'baz'),
           ),
-        ).resolves.toBeDefined();
+        ).toBeDefined();
       });
     });
 
@@ -229,9 +231,7 @@ describe('fs', () => {
           path.join(sandbox.directoryPath, 'foo', 'bar', 'baz'),
         );
 
-        await expect(
-          ensureDirectoryPathExists(directoryPath),
-        ).resolves.toBeUndefined();
+        expect(await ensureDirectoryPathExists(directoryPath)).toBeUndefined();
       });
     });
 

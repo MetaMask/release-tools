@@ -42,6 +42,8 @@ export default createConfig({
         'packages/apply-release-plan/**',
         'packages/*/vitest.config.mjs',
         'scripts/create-package/package-template/vitest.config.mjs',
+        'packages/create-release-branch/**',
+        '!packages/create-release-branch/src/ui/**',
         'yarn.config.cjs',
       ],
       extends: [nodejs],
@@ -53,6 +55,22 @@ export default createConfig({
     {
       files: ['tests/**/*.ts'],
       extends: [nodejs],
+    },
+    {
+      files: [
+        'packages/create-release-branch/**',
+        '!packages/create-release-branch/src/ui/**',
+      ],
+      extends: [nodejs],
+      rules: {
+        // The `create-release-branch` CLI reads environment variables directly.
+        'node/no-process-env': 'off',
+      },
+    },
+    {
+      files: ['packages/create-release-branch/src/ui/**'],
+      extends: [typescript],
+      env: { browser: true },
     },
   ],
 });

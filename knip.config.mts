@@ -30,6 +30,16 @@ const config: KnipConfig = {
         '@changesets/cli',
       ],
     },
+    'packages/create-release-branch': {
+      ignoreDependencies: [
+        // Imported only by the Vite-built UI (`src/ui/**`), which is not part
+        // of the dependency graph that knip analyzes for this workspace.
+        'react-markdown',
+        // Referenced only by the CSS `@import 'tailwindcss'` in the Vite UI
+        // styles, which knip cannot resolve.
+        'tailwindcss',
+      ],
+    },
   },
 };
 
