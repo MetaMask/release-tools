@@ -52,7 +52,7 @@
     "@metamask/oxlint-config-nodejs": "^0.1.1",
     "@metamask/oxlint-config-typescript": "^0.1.1",
     "@metamask/oxlint-config-vitest": "^0.1.1",
-    "@metamask/utils": "^11.12.0",
+    "@metamask/utils": "^12.0.0",
     "@types/lodash": "^4.14.191",
     "@types/node": "^22.13.14",
     "@types/semver": "^7",
