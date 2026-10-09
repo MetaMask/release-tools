@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@metamask/action-utils": "^2.0.0",
-    "@metamask/auto-changelog": "^6.1.1",
+    "@metamask/auto-changelog": "^6.1.0",
     "@metamask/utils": "^11.12.0",
     "debug": "^4.3.4",
     "execa": "^8.0.1",

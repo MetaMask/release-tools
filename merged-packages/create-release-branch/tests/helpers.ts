@@ -46,18 +46,19 @@ async function ensureFileEntryDoesNotExist(entryPath: string): Promise<void> {
  * the given function, then ensures that the directory is removed afterward.
  *
  * @param fn - The function to call.
+ * @returns Whatever the given function returns.
  * @throws If the temporary directory already exists for some reason. This would
  * indicate a bug in how the names of the directory is determined.
  */
-export async function withSandbox(
-  fn: (sandbox: Sandbox) => Promise<unknown>,
-): Promise<unknown> {
+export async function withSandbox<Result>(
+  fn: (sandbox: Sandbox) => Promise<Result>,
+): Promise<Result> {
   const directoryPath = path.join(TEMP_DIRECTORY_PATH, nanoid());
   await ensureFileEntryDoesNotExist(directoryPath);
   await fs.promises.mkdir(directoryPath, { recursive: true });
 
   try {
-    await fn({ directoryPath });
+    return await fn({ directoryPath });
   } finally {
     await fs.promises.rm(directoryPath, { force: true, recursive: true });
   }
