@@ -1320,6 +1320,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@metamask/oxlint-config-browser@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "@metamask/oxlint-config-browser@npm:0.1.1"
+  peerDependencies:
+    "@metamask/oxlint-config": ^0.1.1
+    oxlint: ^1.82.0
+  checksum: 10/ee7356efa59f2b6093bacdc2b84ca9f771843a058f596ee53600bde102ec8fd43600de730c112fdc7fa0eba0160a271d9c56feef59f7d6b2123854191f915204
+  languageName: node
+  linkType: hard
+
 "@metamask/oxlint-config-commonjs@npm:^0.1.1":
   version: 0.1.1
   resolution: "@metamask/oxlint-config-commonjs@npm:0.1.1"
@@ -1381,6 +1391,7 @@ __metadata:
     "@lavamoat/preinstall-always-fail": "npm:^2.1.0"
     "@metamask/create-release-branch": "npm:^4.2.2"
     "@metamask/oxlint-config": "npm:^0.1.1"
+    "@metamask/oxlint-config-browser": "npm:^0.1.1"
     "@metamask/oxlint-config-commonjs": "npm:^0.1.1"
     "@metamask/oxlint-config-nodejs": "npm:^0.1.1"
     "@metamask/oxlint-config-typescript": "npm:^0.1.1"

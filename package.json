@@ -47,6 +47,7 @@
     "@lavamoat/preinstall-always-fail": "^2.1.0",
     "@metamask/create-release-branch": "^4.2.2",
     "@metamask/oxlint-config": "^0.1.1",
+    "@metamask/oxlint-config-browser": "^0.1.1",
     "@metamask/oxlint-config-commonjs": "^0.1.1",
     "@metamask/oxlint-config-nodejs": "^0.1.1",
     "@metamask/oxlint-config-typescript": "^0.1.1",

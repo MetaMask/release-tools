@@ -1,4 +1,5 @@
 import base, { createConfig } from '@metamask/oxlint-config';
+import browser from '@metamask/oxlint-config-browser';
 import commonjs from '@metamask/oxlint-config-commonjs';
 import nodejs from '@metamask/oxlint-config-nodejs';
 import typescript from '@metamask/oxlint-config-typescript';
@@ -69,8 +70,7 @@ export default createConfig({
     },
     {
       files: ['packages/create-release-branch/src/ui/**'],
-      extends: [typescript],
-      env: { browser: true },
+      extends: [typescript, browser],
     },
   ],
 });
