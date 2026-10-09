@@ -2,6 +2,7 @@ import base, { createConfig } from '@metamask/oxlint-config';
 import commonjs from '@metamask/oxlint-config-commonjs';
 import nodejs from '@metamask/oxlint-config-nodejs';
 import typescript from '@metamask/oxlint-config-typescript';
+import vitest from '@metamask/oxlint-config-vitest';
 
 export default createConfig({
   extends: [base],
@@ -40,10 +41,17 @@ export default createConfig({
         '**/scripts/**',
         'packages/apply-release-plan/**',
         'packages/*/vitest.config.mjs',
+        'scripts/create-package/package-template/vitest.config.mjs',
         'yarn.config.cjs',
-        '**/*.test.ts',
-        '**/tests/**',
       ],
+      extends: [nodejs],
+    },
+    {
+      files: ['**/*.test.ts'],
+      extends: [nodejs, vitest],
+    },
+    {
+      files: ['tests/**/*.ts'],
       extends: [nodejs],
     },
   ],
