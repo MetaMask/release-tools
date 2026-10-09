@@ -1,4 +1,5 @@
 import base, { createConfig } from '@metamask/oxlint-config';
+import vitest from '@metamask/oxlint-config-vitest';
 import commonjs from '@metamask/oxlint-config-commonjs';
 import nodejs from '@metamask/oxlint-config-nodejs';
 import typescript from '@metamask/oxlint-config-typescript';
@@ -40,10 +41,21 @@ export default createConfig({
         '**/scripts/**',
         'packages/apply-release-plan/**',
         'packages/*/vitest.config.mjs',
+        'scripts/create-package/package-template/vitest.config.mjs',
         'yarn.config.cjs',
-        '**/*.test.ts',
-        '**/tests/**',
       ],
+      extends: [nodejs],
+    },
+    {
+      files: ['**/*.test.ts'],
+      extends: [nodejs, vitest],
+      rules: {
+        'vitest/no-conditional-expect': 'off',
+        'vitest/no-conditional-in-test': 'off',
+      },
+    },
+    {
+      files: ['tests/**/*.ts'],
       extends: [nodejs],
     },
   ],

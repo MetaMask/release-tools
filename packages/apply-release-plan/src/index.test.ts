@@ -3226,7 +3226,6 @@ describe('apply release plan', () => {
         );
         changedFiles = testResults.changedFiles;
       } catch (error) {
-        // eslint-disable-next-line vitest/no-conditional-expect
         expect((error as Error).message).toBe('some string probably');
 
         return;
@@ -3282,7 +3281,6 @@ describe('apply release plan', () => {
           releasePlan.config,
         );
       } catch (error) {
-        // eslint-disable-next-line vitest/no-conditional-expect
         expect((error as Error).message).toBe(
           'Could not find matching package for release of: impossible-package',
         );
@@ -3291,7 +3289,6 @@ describe('apply release plan', () => {
           nodeOptions: { cwd: tempDir },
         });
 
-        // eslint-disable-next-line vitest/no-conditional-expect
         expect(gitCmd.stdout.toString()).toContain('nothing to commit');
         return;
       }
@@ -3339,16 +3336,13 @@ describe('apply release plan', () => {
             ],
           });
         } catch (error) {
-          // eslint-disable-next-line vitest/no-conditional-expect
           expect((error as Error).message).toBe('no chance');
 
           const gitCmd = await exec('git', ['status'], {
             nodeOptions: { cwd: tempDir },
           });
 
-          // eslint-disable-next-line vitest/no-conditional-expect
           expect(gitCmd.stdout.toString()).toContain('nothing to commit');
-          // eslint-disable-next-line vitest/no-conditional-expect
           expect(vi.mocked(console.error).mock.calls).toMatchInlineSnapshot(`
             [
               [
