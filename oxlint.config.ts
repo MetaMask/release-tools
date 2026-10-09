@@ -39,6 +39,7 @@ export default createConfig({
         '.github/**',
         '**/scripts/**',
         'packages/apply-release-plan/**',
+        'packages/changeset-utils/**',
         'yarn.config.cjs',
         '**/*.test.ts',
         '**/tests/**',
