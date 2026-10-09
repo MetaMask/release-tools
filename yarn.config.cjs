@@ -398,6 +398,8 @@ async function workspaceFileExists(workspace, path) {
 }
 
 /**
+ * All packages must specify a license that is either MIT or dual MIT/Apache-2.0.
+ *
  * This function does one of three things depending on the arguments given:
  *
  * - With no value provided, this will expect that the workspace has the given
@@ -493,10 +495,13 @@ function expectWorkspaceDescription(workspace) {
  * @param {Workspace} workspace - The workspace to check.
  */
 async function expectWorkspaceLicense(workspace) {
-  if (
-    !(await workspaceFileExists(workspace, 'LICENSE')) &&
-    !(await workspaceFileExists(workspace, 'LICENCE'))
-  ) {
+  const hasLicenseFile =
+    (await workspaceFileExists(workspace, 'LICENSE')) ||
+    (await workspaceFileExists(workspace, 'LICENCE')) ||
+    ((await workspaceFileExists(workspace, 'LICENSE.MIT')) &&
+      (await workspaceFileExists(workspace, 'LICENSE.APACHE2')));
+
+  if (!hasLicenseFile) {
     workspace.error('Could not find LICENSE file');
   }
 
@@ -505,6 +510,12 @@ async function expectWorkspaceLicense(workspace) {
     workspace.manifest.license === undefined
   ) {
     expectWorkspaceField(workspace, 'license', 'MIT');
+  } else if (
+    !['MIT', '(MIT OR Apache-2.0)'].includes(workspace.manifest.license)
+  ) {
+    workspace.error(
+      'Expected license to be either "MIT" or "(MIT OR Apache-2.0)".',
+    );
   }
 }
 
