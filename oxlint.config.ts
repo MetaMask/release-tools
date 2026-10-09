@@ -39,7 +39,9 @@ export default createConfig({
         '.github/**',
         '**/scripts/**',
         'packages/apply-release-plan/**',
-        'packages/changeset-utils/**',
+        // Vitest configs import Node builtins, following the same pattern as
+        // `packages/*/jest.config.cjs` in the core monorepo.
+        'packages/*/vitest.config.mjs',
         'yarn.config.cjs',
         '**/*.test.ts',
         '**/tests/**',
