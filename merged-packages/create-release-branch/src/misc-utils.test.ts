@@ -28,8 +28,8 @@ vi.mock('execa', async () => ({
  * @param stdout - The standard output that the command produced.
  * @returns The mock `execa` result.
  */
-function buildExecaReturnValue(stdout: string): ExecaReturnValue<string> {
-  return {
+function buildExecaReturnValue(stdout: string): ExecaReturnValue<Buffer> {
+  const returnValue: ExecaReturnValue<string> = {
     command: 'some command',
     escapedCommand: 'some command',
     exitCode: 0,
@@ -41,6 +41,10 @@ function buildExecaReturnValue(stdout: string): ExecaReturnValue<string> {
     cwd: process.cwd(),
     isCanceled: false,
   };
+
+  // Typecast: `vi.spyOn` resolves `execa` to the overload that buffers its
+  // output, but the functions under test only read `stdout` as a string.
+  return returnValue as unknown as ExecaReturnValue<Buffer>;
 }
 
 describe('misc-utils', () => {

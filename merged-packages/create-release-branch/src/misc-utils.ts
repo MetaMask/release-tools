@@ -96,7 +96,7 @@ export function isErrorWithStack(error: unknown): error is { stack: string } {
  */
 export function wrapError(message: string, originalError: unknown): Error {
   if (isError(originalError)) {
-    const error: ErrorWithCause & { code?: string } = new ErrorWithCause(
+    const error: ErrorWithCause<Error> & { code?: string } = new ErrorWithCause(
       message,
       { cause: originalError },
     );

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
-import type { MockInstance } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
 import { buildMockProject, Require } from '../tests/unit/helpers.js';
@@ -50,29 +50,23 @@ async function fileExists(entryPath: string): Promise<boolean> {
  * @returns The corresponding mock functions for each of the dependencies.
  */
 function getDependencySpies(): {
-  determineEditorSpy: MockInstance<typeof editorModule.determineEditor>;
-  createReleaseBranchSpy: MockInstance<
-    typeof workflowOperations.createReleaseBranch
-  >;
-  generateReleaseSpecificationTemplateForMonorepoSpy: MockInstance<
+  determineEditorSpy: Mock<typeof editorModule.determineEditor>;
+  createReleaseBranchSpy: Mock<typeof workflowOperations.createReleaseBranch>;
+  generateReleaseSpecificationTemplateForMonorepoSpy: Mock<
     typeof releaseSpecificationModule.generateReleaseSpecificationTemplateForMonorepo
   >;
-  waitForUserToEditReleaseSpecificationSpy: MockInstance<
+  waitForUserToEditReleaseSpecificationSpy: Mock<
     typeof releaseSpecificationModule.waitForUserToEditReleaseSpecification
   >;
-  validateReleaseSpecificationSpy: MockInstance<
+  validateReleaseSpecificationSpy: Mock<
     typeof releaseSpecificationModule.validateReleaseSpecification
   >;
-  planReleaseSpy: MockInstance<typeof releasePlanModule.planRelease>;
-  executeReleasePlanSpy: MockInstance<
-    typeof releasePlanModule.executeReleasePlan
-  >;
-  commitAllChangesSpy: MockInstance<typeof repoModule.commitAllChanges>;
-  fixConstraintsSpy: MockInstance<typeof yarnCommands.fixConstraints>;
-  updateYarnLockfileSpy: MockInstance<typeof yarnCommands.updateYarnLockfile>;
-  deduplicateDependenciesSpy: MockInstance<
-    typeof yarnCommands.deduplicateDependencies
-  >;
+  planReleaseSpy: Mock<typeof releasePlanModule.planRelease>;
+  executeReleasePlanSpy: Mock<typeof releasePlanModule.executeReleasePlan>;
+  commitAllChangesSpy: Mock<typeof repoModule.commitAllChanges>;
+  fixConstraintsSpy: Mock<typeof yarnCommands.fixConstraints>;
+  updateYarnLockfileSpy: Mock<typeof yarnCommands.updateYarnLockfile>;
+  deduplicateDependenciesSpy: Mock<typeof yarnCommands.deduplicateDependencies>;
 } {
   return {
     determineEditorSpy: vi.spyOn(editorModule, 'determineEditor'),
