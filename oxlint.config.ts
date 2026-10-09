@@ -1,4 +1,5 @@
 import base, { createConfig } from '@metamask/oxlint-config';
+import browser from '@metamask/oxlint-config-browser';
 import commonjs from '@metamask/oxlint-config-commonjs';
 import nodejs from '@metamask/oxlint-config-nodejs';
 import typescript from '@metamask/oxlint-config-typescript';
@@ -42,6 +43,8 @@ export default createConfig({
         'packages/apply-release-plan/**',
         'packages/*/vitest.config.mjs',
         'scripts/create-package/package-template/vitest.config.mjs',
+        'packages/create-release-branch/**',
+        '!packages/create-release-branch/src/ui/**',
         'yarn.config.cjs',
       ],
       extends: [nodejs],
@@ -53,6 +56,21 @@ export default createConfig({
     {
       files: ['tests/**/*.ts'],
       extends: [nodejs],
+    },
+    {
+      files: [
+        'packages/create-release-branch/**',
+        '!packages/create-release-branch/src/ui/**',
+      ],
+      extends: [nodejs],
+      rules: {
+        // The `create-release-branch` CLI reads environment variables directly.
+        'node/no-process-env': 'off',
+      },
+    },
+    {
+      files: ['packages/create-release-branch/src/ui/**'],
+      extends: [typescript, browser],
     },
   ],
 });

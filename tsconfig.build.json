@@ -12,6 +12,9 @@
     },
     {
       "path": "./packages/changeset-utils/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/create-release-branch/tsconfig.build.json"
     }
   ],
   "files": [],
