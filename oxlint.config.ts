@@ -1,8 +1,8 @@
 import base, { createConfig } from '@metamask/oxlint-config';
-import vitest from '@metamask/oxlint-config-vitest';
 import commonjs from '@metamask/oxlint-config-commonjs';
 import nodejs from '@metamask/oxlint-config-nodejs';
 import typescript from '@metamask/oxlint-config-typescript';
+import vitest from '@metamask/oxlint-config-vitest';
 
 export default createConfig({
   extends: [base],
