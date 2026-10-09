@@ -1,0 +1,15 @@
+{
+  "packages/apply-release-plan/src/index.test.ts": {
+    "vitest/no-conditional-expect": {
+      "count": 6
+    },
+    "vitest/no-conditional-in-test": {
+      "count": 57
+    }
+  },
+  "scripts/create-package/utils.test.ts": {
+    "vitest/no-conditional-in-test": {
+      "count": 1
+    }
+  }
+}

@@ -49,10 +49,6 @@ export default createConfig({
     {
       files: ['**/*.test.ts'],
       extends: [nodejs, vitest],
-      rules: {
-        'vitest/no-conditional-expect': 'off',
-        'vitest/no-conditional-in-test': 'off',
-      },
     },
     {
       files: ['tests/**/*.ts'],
