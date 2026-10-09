@@ -34,6 +34,11 @@ const ALLOWED_INCONSISTENT_DEPENDENCIES = {
 const ALLOWED_PEER_DEPENDENCIES = [];
 
 /**
+ * These packages are allowed to use a license other than MIT OR Apache-2.0.
+ */
+const ALLOWED_NON_DUAL_LICENSE_PACKAGES = ['@metamask/apply-release-plan'];
+
+/**
  * These packages are tools and do not ship with APIs.
  */
 const TOOLS = ['@metamask/create-release-branch'];
@@ -398,6 +403,8 @@ async function workspaceFileExists(workspace, path) {
 }
 
 /**
+ * All packages must specify a license that is either MIT or dual MIT/Apache-2.0.
+ *
  * This function does one of three things depending on the arguments given:
  *
  * - With no value provided, this will expect that the workspace has the given
@@ -486,17 +493,18 @@ function expectWorkspaceDescription(workspace) {
 }
 
 /**
- * Expect that the workspace has a license file, and that the `license` field is
- * set. By default, this should be MIT, although some packages have pre-existing
- * license that we cannot change.
+ * Expect that the workspace has a dual MIT/Apache-2.0 license file and field.
  *
  * @param {Workspace} workspace - The workspace to check.
  */
 async function expectWorkspaceLicense(workspace) {
-  if (
-    !(await workspaceFileExists(workspace, 'LICENSE')) &&
-    !(await workspaceFileExists(workspace, 'LICENCE'))
-  ) {
+  const hasLicenseFile =
+    (await workspaceFileExists(workspace, 'LICENSE')) ||
+    (await workspaceFileExists(workspace, 'LICENCE')) ||
+    ((await workspaceFileExists(workspace, 'LICENSE.MIT')) &&
+      (await workspaceFileExists(workspace, 'LICENSE.APACHE2')));
+
+  if (!hasLicenseFile) {
     workspace.error('Could not find LICENSE file');
   }
 
@@ -504,7 +512,12 @@ async function expectWorkspaceLicense(workspace) {
     workspace.manifest.license === null ||
     workspace.manifest.license === undefined
   ) {
-    expectWorkspaceField(workspace, 'license', 'MIT');
+    expectWorkspaceField(workspace, 'license', '(MIT OR Apache-2.0)');
+  } else if (
+    workspace.manifest.license !== '(MIT OR Apache-2.0)' &&
+    !ALLOWED_NON_DUAL_LICENSE_PACKAGES.includes(workspace.manifest.name)
+  ) {
+    workspace.error('Expected license to be "(MIT OR Apache-2.0)".');
   }
 }
 
