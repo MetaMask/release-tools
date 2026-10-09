@@ -22,9 +22,22 @@ import { pathToFileURL } from 'node:url';
 
 import { editJson } from './edit-json.js';
 import type { EditJsonOperation } from './edit-json.js';
-import { getChangelogEntry } from './get-changelog-entry.js';
+import {
+  getChangelogEntry,
+  isCustomCategoryChangelogFunctions,
+  validateCustomCategoryChangelogFunctions,
+} from './get-changelog-entry.js';
 import { getDependencyVersionEdits } from './version-package.js';
 import type { DependencyUpdateOptions } from './version-package.js';
+
+export { isCustomCategoryChangelogFunctions } from './get-changelog-entry.js';
+export type {
+  CustomCategoryChangelogFunctions,
+  CategorizedReleaseLine,
+  CategorizeDependencyReleaseLine,
+  CategorizeReleaseLine,
+  GetVersionHeader,
+} from './types.js';
 
 function importResolveFromDir(specifier: string, dir: string): string {
   return resolve(specifier, pathToFileURL(path.join(dir, 'x.mjs')).toString());
@@ -322,6 +335,21 @@ async function getNewChangelogEntry(
     throw new Error('Could not resolve changelog generation functions');
   }
 
+  if (isCustomCategoryChangelogFunctions(getChangelogFuncs)) {
+    // Fail before any file is written. `getChangelogEntry` normalizes the
+    // categories again when it renders each entry.
+    validateCustomCategoryChangelogFunctions(getChangelogFuncs);
+  }
+
+  if (
+    'getVersionHeader' in getChangelogFuncs &&
+    typeof getChangelogFuncs.getVersionHeader !== 'function'
+  ) {
+    throw new Error(
+      'The `getVersionHeader` export of a changelog module must be a function',
+    );
+  }
+
   const commits = await getCommitsThatAddChangesets(
     changesets.map((cs) => cs.id),
     cwd,
@@ -392,7 +420,11 @@ async function updateChangelog(
   // Require just 2 version numbers here, assuming `## 1.1` is a valid version heading.
   // Our version headings start with ##, we are more permissive here though.
   // Note: we also need to handle prerelease versions here but that's already covered by the regex.
-  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/mu);
+  // As a best effort to fit common changelog formats, also accept headings
+  // that include extra text (e.g. `## Version 1.2.3`, `## Release v1.2.3`),
+  // bracketed versions (`## [1.2.3]`, Keep a Changelog style), or a `v`
+  // prefix (`## v1.2.3`).
+  const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+.*\d+\.\d+/mu);
 
   let newChangelog: string;
   if (firstVersionHeaderIndex >= 0) {
@@ -400,11 +432,9 @@ async function updateChangelog(
     const suffix = fileData.slice(firstVersionHeaderIndex);
     newChangelog = `${prefix + templateString.trimStart()}\n${suffix}`;
   } else {
-    const index = fileData.indexOf('\n');
-    newChangelog =
-      index === -1
-        ? fileData + templateString // treat the whole file as header
-        : fileData.slice(0, index) + templateString + fileData.slice(index + 1);
+    // No version headers found. Preserve a possible title and/or preamble at
+    // the top by adding the new content at the end.
+    newChangelog = fileData.trimEnd() + templateString;
   }
 
   await fs.writeFile(changelogPath, newChangelog);

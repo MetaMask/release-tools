@@ -1,0 +1,565 @@
+// Tests for the categorized (Keep a Changelog style) changelog mode — the
+// extension this fork adds on top of upstream `@changesets/apply-release-plan`.
+// These are deliberately kept in a separate file from the ported upstream
+// tests (`index.test.ts`) to ease future rebases onto upstream.
+import type { Config, ReleasePlan } from '@changesets/types';
+import { getPackages } from '@manypkg/get-packages';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+import { applyReleasePlan } from './index.js';
+import { temporarilySilenceLogs, testdir } from './test-utils/index.js';
+
+const categorizedFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions.ts',
+);
+const invalidCategorizedFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions-invalid.ts',
+);
+const noHeaderCategorizedFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions-no-header.ts',
+);
+const versionHeaderFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/version-header-functions.ts',
+);
+const invalidVersionHeaderFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/invalid-version-header-functions.ts',
+);
+const duplicateCategoriesFunctionsPath = path.resolve(
+  import.meta.dirname,
+  'test-utils/categorized-functions-duplicates.ts',
+);
+
+const baseConfig: Config = {
+  changelog: [categorizedFunctionsPath, null],
+  commit: false,
+  fixed: [],
+  linked: [],
+  access: 'restricted',
+  changedFilePatterns: ['**'],
+  baseBranch: 'main',
+  updateInternalDependencies: 'patch',
+  ignore: [],
+  format: false,
+  privatePackages: { version: true, tag: false },
+  snapshot: {
+    useCalculatedVersion: false,
+    prereleaseTemplate: null,
+  },
+  ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
+    onlyUpdatePeerDependentsWhenOutOfRange: false,
+    updateInternalDependents: 'out-of-range',
+  },
+};
+
+const kacChangelog = `# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.0.0]
+
+### Added
+
+- Initial release ([#1](https://github.com/example/example/pull/1))
+
+[1.0.0]: https://github.com/example/example/releases/tag/1.0.0
+`;
+
+function buildSinglePackagePlan(summary: string): ReleasePlan {
+  return {
+    changesets: [
+      {
+        id: 'quick-lions-devour',
+        summary,
+        releases: [{ name: 'pkg-a', type: 'minor' }],
+      },
+    ],
+    releases: [
+      {
+        name: 'pkg-a',
+        type: 'minor',
+        oldVersion: '1.0.0',
+        newVersion: '1.1.0',
+        changesets: ['quick-lions-devour'],
+      },
+    ],
+    preState: undefined,
+  };
+}
+
+describe('applyReleasePlan with custom category changelog functions', () => {
+  it('writes a bracketed version header with sections grouped by category', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan(`Added: A new feature
+Fixed: A pesky bug`),
+      packages,
+      baseConfig,
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.1.0]
+
+### Added
+
+- A new feature
+
+### Fixed
+
+- A pesky bug
+
+## [1.0.0]
+
+### Added
+
+- Initial release ([#1](https://github.com/example/example/pull/1))
+
+[1.0.0]: https://github.com/example/example/releases/tag/1.0.0
+`);
+  });
+
+  it("orders sections by the module's categories declaration, not by entry order", async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan(`Fixed: A pesky bug
+Added: A new feature`),
+      packages,
+      baseConfig,
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain(
+      '## [1.1.0]\n\n### Added\n\n- A new feature\n\n### Fixed\n\n- A pesky bug',
+    );
+  });
+
+  it('appends after the preamble when the changelog has no releases yet', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': `# Changelog
+
+All notable changes to this project will be documented in this file.
+`,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan('Added: A new feature'),
+      packages,
+      baseConfig,
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.1.0]
+
+### Added
+
+- A new feature
+`);
+  });
+
+  it('writes dependency updates under the category chosen by the changelog module', async () => {
+    const releasePlan: ReleasePlan = {
+      changesets: [
+        {
+          id: 'quick-lions-devour',
+          summary: 'Added: A new feature',
+          releases: [{ name: 'pkg-b', type: 'minor' }],
+        },
+      ],
+      releases: [
+        {
+          name: 'pkg-b',
+          type: 'minor',
+          oldVersion: '1.0.0',
+          newVersion: '1.1.0',
+          changesets: ['quick-lions-devour'],
+        },
+        {
+          name: 'pkg-a',
+          type: 'patch',
+          oldVersion: '1.0.0',
+          newVersion: '1.0.1',
+          changesets: [],
+        },
+      ],
+      preState: undefined,
+    };
+
+    const fixture = {
+      'package.json': JSON.stringify({
+        private: true,
+        workspaces: ['packages/*'],
+      }),
+      'package-lock.json': '',
+      'packages/pkg-a/package.json': JSON.stringify({
+        name: 'pkg-a',
+        version: '1.0.0',
+        dependencies: { 'pkg-b': '^1.0.0' },
+      }),
+      'packages/pkg-a/CHANGELOG.md': kacChangelog,
+      'packages/pkg-b/package.json': JSON.stringify({
+        name: 'pkg-b',
+        version: '1.0.0',
+      }),
+      'packages/pkg-b/CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(releasePlan, packages, baseConfig);
+
+    const pkgAChangelog = await fs.readFile(
+      path.join(tempDir, 'packages/pkg-a/CHANGELOG.md'),
+      'utf8',
+    );
+    expect(pkgAChangelog).toContain(
+      '## [1.0.1]\n\n### Changed\n\n- Bump `pkg-b` to `1.1.0`',
+    );
+
+    const pkgBChangelog = await fs.readFile(
+      path.join(tempDir, 'packages/pkg-b/CHANGELOG.md'),
+      'utf8',
+    );
+    expect(pkgBChangelog).toContain(
+      '## [1.1.0]\n\n### Added\n\n- A new feature',
+    );
+  });
+
+  it('skips empty release lines before categorizing them', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan(`Added: keep me
+
+Fixed: and me`),
+      packages,
+      baseConfig,
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain(
+      '### Added\n\n- keep me\n\n### Fixed\n\n- and me',
+    );
+  });
+
+  it('passes multiline release lines and keeps repeated categories in order', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan(
+        `Added: first: one
+
+Changed: second line
+FanOut: third`,
+      ),
+      packages,
+      baseConfig,
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('### Added');
+    expect(changelog).toContain('- first: one');
+    expect(changelog).toContain('- third');
+    expect(changelog).toContain('### Changed');
+    expect(changelog).toContain('- second line');
+  });
+
+  it('keeps unknown categories as an error and does not write files', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(
+        buildSinglePackagePlan('Unknown: nope'),
+        packages,
+        baseConfig,
+      ),
+    ).rejects.toThrow(
+      'Unknown changelog category "Unknown" returned by categorizeReleaseLine (known categories: Added, Changed, Fixed)',
+    );
+  });
+
+  it('notes when a release has no changelog entries', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan(''), packages, baseConfig);
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('## [1.1.0]\n\nNo changes in this release.');
+  });
+
+  it(
+    'errors on a category the module does not declare, leaving files untouched',
+    temporarilySilenceLogs(async () => {
+      const fixture = {
+        'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+        'CHANGELOG.md': kacChangelog,
+      };
+      const tempDir = await testdir(fixture);
+      const packages = await getPackages(tempDir);
+
+      await expect(
+        applyReleasePlan(
+          buildSinglePackagePlan('Bogus: An uncategorizable change'),
+          packages,
+          baseConfig,
+        ),
+      ).rejects.toThrow(
+        'Unknown changelog category "Bogus" returned by categorizeReleaseLine (known categories: Added, Changed, Fixed)',
+      );
+
+      const changelog = await fs.readFile(
+        path.join(tempDir, 'CHANGELOG.md'),
+        'utf8',
+      );
+      expect(changelog).toStrictEqual(kacChangelog);
+      const packageJson = await fs.readFile(
+        path.join(tempDir, 'package.json'),
+        'utf8',
+      );
+      const parsedPkg = JSON.parse(packageJson) as { version: string };
+      expect(parsedPkg.version).toBe('1.0.0');
+    }),
+  );
+
+  it('errors when a categorized module lacks the rest of the categorized interface', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(
+        buildSinglePackagePlan('Added: A new feature'),
+        packages,
+        {
+          ...baseConfig,
+          changelog: [invalidCategorizedFunctionsPath, null],
+        },
+      ),
+    ).rejects.toThrow(
+      'Changelog module categories must be a non-empty array of non-empty strings',
+    );
+  });
+
+  it('deduplicates categories and keeps the first occurrence', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan('Added: A new feature'),
+      packages,
+      {
+        ...baseConfig,
+        changelog: [duplicateCategoriesFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('### Added\n\n- line');
+    expect(changelog).not.toContain('### Changed\n\n- line');
+  });
+
+  it('rejects empty or whitespace-only categories', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(
+        buildSinglePackagePlan('Added: A new feature'),
+        packages,
+        {
+          ...baseConfig,
+          changelog: [invalidCategorizedFunctionsPath, null],
+        },
+      ),
+    ).rejects.toThrow(
+      'Changelog module categories must be a non-empty array of non-empty strings',
+    );
+  });
+});
+
+describe('version headings', () => {
+  it('uses the default version heading when a categorized module does not export getVersionHeader', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(
+      buildSinglePackagePlan('Added: A new feature'),
+      packages,
+      {
+        ...baseConfig,
+        changelog: [noHeaderCategorizedFunctionsPath, null],
+      },
+    );
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toContain('## 1.1.0\n\n### Added\n\n- A new feature');
+  });
+
+  it('honors getVersionHeader for modules that are not categorized', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md':
+        '# Changelog\n\nSome prose.\n\n## v1.0.0\n\n- Initial release\n',
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan('A new feature'), packages, {
+      ...baseConfig,
+      changelog: [versionHeaderFunctionsPath, null],
+    });
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+Some prose.
+
+## v1.1.0
+
+### Minor Changes
+
+- A new feature
+
+## v1.0.0
+
+- Initial release
+`);
+  });
+
+  it('appends after the preamble for standard modules when the changelog has no releases yet', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': '# Changelog\n\nSome prose.\n',
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await applyReleasePlan(buildSinglePackagePlan('A new feature'), packages, {
+      ...baseConfig,
+      changelog: [versionHeaderFunctionsPath, null],
+    });
+
+    const changelog = await fs.readFile(
+      path.join(tempDir, 'CHANGELOG.md'),
+      'utf8',
+    );
+    expect(changelog).toBe(`# Changelog
+
+Some prose.
+
+## v1.1.0
+
+### Minor Changes
+
+- A new feature
+`);
+  });
+
+  it('errors when the getVersionHeader export is not a function', async () => {
+    const fixture = {
+      'package.json': JSON.stringify({ name: 'pkg-a', version: '1.0.0' }),
+      'CHANGELOG.md': kacChangelog,
+    };
+    const tempDir = await testdir(fixture);
+    const packages = await getPackages(tempDir);
+
+    await expect(
+      applyReleasePlan(buildSinglePackagePlan('A new feature'), packages, {
+        ...baseConfig,
+        changelog: [invalidVersionHeaderFunctionsPath, null],
+      }),
+    ).rejects.toThrow(
+      'The `getVersionHeader` export of a changelog module must be a function',
+    );
+  });
+});

@@ -11,4 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - This package was forked from [`@changesets/apply-release-plan@8.1.1`](https://github.com/changesets/changesets/tree/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan) in the `changesets/changesets` repository. See [the original changelog](https://github.com/changesets/changesets/blob/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan/CHANGELOG.md) for changes before the fork.
 
+### Added
+
+- Add ability to customize changelog categories ([#25](https://github.com/MetaMask/release-tools/pull/25))
+  - Changelog modules can export `categorizeReleaseLine` and `categorizeDependencyReleaseLine` to assign lines produced by `getReleaseLine` and `getDependencyReleaseLine` to named sections from an ordered `categories` list, instead of the hardcoded `### Major/Minor/Patch Changes`
+- Add support for a `getVersionHeader` changelog module export that controls the heading line of a release entry (e.g. `## [1.2.3]` or `## v1.2.3`) ([#25](https://github.com/MetaMask/release-tools/pull/25))
+
+### Changed
+
+- When inserting new release entries in a changelog, accommodate various changelog formats by preserving a title and/or preamble (especially if no version headings exist yet) and allowing for more flexibility in how versions are formatted in headings ([#25](https://github.com/MetaMask/release-tools/pull/25))
+
 [Unreleased]: https://github.com/MetaMask/release-tools/
