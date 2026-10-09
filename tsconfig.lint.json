@@ -11,6 +11,9 @@
   "references": [
     {
       "path": "./packages/apply-release-plan/tsconfig.lint.json"
+    },
+    {
+      "path": "./packages/changeset-utils/tsconfig.lint.json"
     }
   ]
 }

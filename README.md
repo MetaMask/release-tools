@@ -17,6 +17,7 @@ See the [Contributor Documentation](./docs) for help on:
 <!-- start package list -->
 
 - [`@metamask/apply-release-plan`](packages/apply-release-plan)
+- [`@metamask/changeset-utils`](packages/changeset-utils)
 
 <!-- end package list -->
 
@@ -27,6 +28,7 @@ See the [Contributor Documentation](./docs) for help on:
 graph LR;
 linkStyle default opacity:0.5
   apply_release_plan(["@metamask/apply-release-plan"]);
+  changeset_utils(["@metamask/changeset-utils"]);
 ```
 
 <!-- end dependency graph -->
