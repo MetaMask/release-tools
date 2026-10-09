@@ -432,8 +432,8 @@ async function updateChangelog(
     const suffix = fileData.slice(firstVersionHeaderIndex);
     newChangelog = `${prefix + templateString.trimStart()}\n${suffix}`;
   } else {
-    // No release section yet: append after the title and preamble rather than
-    // splicing the entry after the first line, keeping any prose intact.
+    // No version headers found. Preserve a possible title and/or preamble at
+    // the top by adding the new content at the end.
     newChangelog = fileData.trimEnd() + templateString;
   }
 

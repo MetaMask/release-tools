@@ -19,6 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Insert new release entries after the title and preamble (instead of after the first line) when a changelog has no version headings yet, and recognize any heading containing a version number when placing entries ([#25](https://github.com/MetaMask/release-tools/pull/25))
+- When inserting new release entries in a changelog, accommodate various changelog formats by preserving a title and/or preamble (especially if no version headings exist yet) and allowing for more flexibility in how versions are formatted in headings ([#25](https://github.com/MetaMask/release-tools/pull/25))
 
 [Unreleased]: https://github.com/MetaMask/release-tools/
