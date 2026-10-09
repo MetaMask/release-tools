@@ -488,9 +488,8 @@ function expectWorkspaceDescription(workspace) {
 }
 
 /**
- * Expect that the workspace has a license file, and that the `license` field is
- * set. By default, this should be MIT, although some packages have pre-existing
- * license that we cannot change.
+ * Expect that the workspace has a dual MIT/Apache-2.0 license file and field.
+ * The ported apply-release-plan package is exempt because it retains its upstream MIT license.
  *
  * @param {Workspace} workspace - The workspace to check.
  */
@@ -509,13 +508,12 @@ async function expectWorkspaceLicense(workspace) {
     workspace.manifest.license === null ||
     workspace.manifest.license === undefined
   ) {
-    expectWorkspaceField(workspace, 'license', 'MIT');
+    expectWorkspaceField(workspace, 'license', '(MIT OR Apache-2.0)');
   } else if (
-    !['MIT', '(MIT OR Apache-2.0)'].includes(workspace.manifest.license)
+    workspace.manifest.license !== '(MIT OR Apache-2.0)' &&
+    workspace.manifest.name !== '@metamask/apply-release-plan'
   ) {
-    workspace.error(
-      'Expected license to be either "MIT" or "(MIT OR Apache-2.0)".',
-    );
+    workspace.error('Expected license to be "(MIT OR Apache-2.0)".');
   }
 }
 
