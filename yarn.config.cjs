@@ -34,6 +34,11 @@ const ALLOWED_INCONSISTENT_DEPENDENCIES = {
 const ALLOWED_PEER_DEPENDENCIES = [];
 
 /**
+ * These packages are allowed to use a license other than MIT OR Apache-2.0.
+ */
+const ALLOWED_NON_DUAL_LICENSE_PACKAGES = ['@metamask/apply-release-plan'];
+
+/**
  * These packages are tools and do not ship with APIs.
  */
 const TOOLS = ['@metamask/create-release-branch'];
@@ -511,7 +516,7 @@ async function expectWorkspaceLicense(workspace) {
     expectWorkspaceField(workspace, 'license', '(MIT OR Apache-2.0)');
   } else if (
     workspace.manifest.license !== '(MIT OR Apache-2.0)' &&
-    workspace.manifest.name !== '@metamask/apply-release-plan'
+    !ALLOWED_NON_DUAL_LICENSE_PACKAGES.includes(workspace.manifest.name)
   ) {
     workspace.error('Expected license to be "(MIT OR Apache-2.0)".');
   }
