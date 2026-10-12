@@ -1,4 +1,4 @@
-import { grammarError, GrammarError } from './grammar-error.js';
+import { grammarError } from './grammar-error.js';
 
 export type ChangesetCategory = 'ADDED' | 'CHANGED' | 'REMOVED' | 'FIXED';
 
@@ -8,8 +8,6 @@ export type ParsedEntry = {
   description: string;
 };
 
-export { GrammarError };
-
 const categories = new Set<ChangesetCategory>([
   'ADDED',
   'CHANGED',
@@ -18,10 +16,6 @@ const categories = new Set<ChangesetCategory>([
 ]);
 const categoryPattern = /^([A-Z]+)\s*:\s*(.*)$/u;
 const breakingMarker = /^\*\*BREAKING:\*\*\s*(.*)$/u;
-
-function isTopLevelBullet(line: string): boolean {
-  return /^-\s+/u.test(line);
-}
 
 /**
  * Parses categorized top-level bullets from a changeset summary.
@@ -43,7 +37,7 @@ export function parseChangesetSummary(summary: string): ParsedEntry[] {
       continue;
     }
 
-    if (isTopLevelBullet(line)) {
+    if (/^-\s+/u.test(line)) {
       const content = line.replace(/^\s*-\s+/u, '');
       const categoryMatch = content.match(categoryPattern);
       if (content.startsWith('**BREAKING')) {

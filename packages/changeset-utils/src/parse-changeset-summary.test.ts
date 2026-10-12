@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  GrammarError,
-  parseChangesetSummary,
-} from './parse-changeset-summary.js';
+import { GrammarError } from './grammar-error.js';
+import { parseChangesetSummary } from './parse-changeset-summary.js';
 
-function getThrownError(callback: () => unknown): unknown {
+function getThrownError(fn: () => unknown): unknown {
+  let thrownError: unknown;
   try {
-    return callback();
+    fn();
   } catch (error) {
-    return error;
+    thrownError = error;
   }
+  expect(thrownError).toBeDefined();
+  return thrownError;
 }
 
 describe('parseChangesetSummary', () => {
