@@ -1,3 +1,4 @@
+import type { GrammarError } from './grammar-error.js';
 import { grammarError } from './grammar-error.js';
 
 export type ChangesetCategory = 'ADDED' | 'CHANGED' | 'REMOVED' | 'FIXED';
@@ -8,17 +9,15 @@ export type ParsedEntry = {
   description: string;
 };
 
-const categories = new Set<ChangesetCategory>([
-  'ADDED',
-  'CHANGED',
-  'REMOVED',
-  'FIXED',
-]);
-const categoryPattern = /^([A-Z]+)\s*:\s*(.*)$/u;
-const breakingMarker = /^\*\*BREAKING:\*\*\s*(.*)$/u;
+const categories = ['added', 'changed', 'removed', 'fixed'];
+const headerPattern = /^(added|changed|removed|fixed)(!)?:[ \t]*(\S.*)?$/u;
 
 /**
- * Parses categorized top-level bullets from a changeset summary.
+ * Parses categorized entries from a changeset summary.
+ *
+ * Blank lines separate entries. Each entry starts with a lowercase header such
+ * as `changed: Rename the API`, where an optional `!` before the colon marks a
+ * breaking change. Every other non-blank line extends the entry description.
  *
  * @param summary - The Markdown summary to parse.
  * @returns The parsed entries in source order.
@@ -34,92 +33,88 @@ export function parseChangesetSummary(summary: string): ParsedEntry[] {
     const line = rawLine.trimEnd();
 
     if (line.trim() === '') {
+      current = undefined;
       continue;
     }
 
-    if (/^-\s+/u.test(line)) {
-      const content = line.replace(/^\s*-\s+/u, '');
-      const categoryMatch = content.match(categoryPattern);
-      if (content.startsWith('**BREAKING')) {
+    const headerMatch = line.match(headerPattern);
+    if (current) {
+      if (headerMatch) {
         throw grammarError(
           lineNumber,
-          'malformed-breaking-marker',
-          'Place **BREAKING:** immediately after the category prefix.',
-          'The BREAKING marker is malformed or misplaced.',
+          'missing-blank-line',
+          'Separate entries with an empty line.',
+          'A changeset entry must be separated from the previous entry by a blank line.',
         );
       }
-      if (!categoryMatch) {
-        throw grammarError(
-          lineNumber,
-          'missing-category',
-          'Start the bullet with ADDED, CHANGED, REMOVED, or FIXED followed by a colon.',
-          'A top-level bullet must have a supported category prefix.',
-        );
-      }
-
-      const [, categoryText, categoryContent] = categoryMatch;
-      if (!categories.has(categoryText as ChangesetCategory)) {
-        throw grammarError(
-          lineNumber,
-          'unknown-category',
-          'Use ADDED, CHANGED, REMOVED, or FIXED as the category.',
-          `Unknown changeset category: ${categoryText}.`,
-        );
-      }
-
-      if (categoryContent.includes('**BREAKING')) {
-        const breakingMatch = categoryContent.match(breakingMarker);
-        if (!breakingMatch) {
-          throw grammarError(
-            lineNumber,
-            'malformed-breaking-marker',
-            'Place **BREAKING:** immediately after the category prefix.',
-            'The BREAKING marker is malformed or misplaced.',
-          );
-        }
-      }
-
-      const breakingMatch = categoryContent.match(breakingMarker);
-      const description = (breakingMatch?.[1] ?? categoryContent).trim();
-      if (description === '') {
-        throw grammarError(
-          lineNumber,
-          'empty-description',
-          'Add a description after the category prefix.',
-          'A changeset entry must have a non-empty description.',
-        );
-      }
-
-      current = {
-        category: categoryText as ChangesetCategory,
-        breaking: breakingMatch !== null,
-        description,
-      };
-      entries.push(current);
-      continue;
-    }
-
-    if (current && /^\s+-\s+/u.test(line)) {
       current.description += `\n${line}`;
       continue;
     }
 
-    throw grammarError(
-      lineNumber,
-      'non-bullet-content',
-      'Use a top-level bullet for each entry and indent nested bullets below their parent.',
-      'Summary content must be a bullet or a nested bullet.',
-    );
+    if (!headerMatch) {
+      throw invalidHeaderError(line, lineNumber);
+    }
+
+    const [, category, breakingMarker, description] = headerMatch;
+    if (!description) {
+      throw grammarError(
+        lineNumber,
+        'empty-description',
+        'Put description text on the header line.',
+        'A changeset entry must have a non-empty description on its header line.',
+      );
+    }
+
+    current = {
+      category: category.toUpperCase() as ChangesetCategory,
+      breaking: breakingMarker === '!',
+      description,
+    };
+    entries.push(current);
   }
 
   if (entries.length === 0) {
     throw grammarError(
       1,
       'empty-summary',
-      'Add at least one categorized bullet to the summary.',
+      'Add at least one entry.',
       'The changeset summary is empty.',
     );
   }
 
   return entries;
+}
+
+/**
+ * Classifies an entry header that does not match the header pattern.
+ *
+ * @param line - The offending header line, with trailing whitespace removed.
+ * @param lineNumber - The 1-based line number of the header in the summary.
+ * @returns The grammar error describing why the header is invalid.
+ */
+function invalidHeaderError(line: string, lineNumber: number): GrammarError {
+  const categoryMatch = line.match(/^([A-Za-z]+)[ \t]*(?:!)?[ \t]*:/u);
+  if (categoryMatch) {
+    if (categories.includes(categoryMatch[1].toLowerCase())) {
+      return grammarError(
+        lineNumber,
+        'malformed-header',
+        'Use a lowercase header in the form changed: or changed!:.',
+        'The changeset entry header is malformed.',
+      );
+    }
+    return grammarError(
+      lineNumber,
+      'unknown-category',
+      'Use added, changed, removed, or fixed as the category.',
+      `Unknown changeset category: ${categoryMatch[1]}.`,
+    );
+  }
+
+  return grammarError(
+    lineNumber,
+    'missing-category',
+    'Start the entry with added:, changed:, removed:, or fixed:.',
+    'A changeset entry must start with a supported category.',
+  );
 }

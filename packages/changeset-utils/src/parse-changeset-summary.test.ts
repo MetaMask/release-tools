@@ -3,22 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { GrammarError } from './grammar-error.js';
 import { parseChangesetSummary } from './parse-changeset-summary.js';
 
-function getThrownError(fn: () => unknown): unknown {
+function getThrownError(fn: () => unknown): GrammarError {
   let thrownError: unknown;
   try {
     fn();
   } catch (error) {
     thrownError = error;
   }
-  expect(thrownError).toBeDefined();
-  return thrownError;
+  expect(thrownError).toBeInstanceOf(GrammarError);
+  return thrownError as GrammarError;
 }
 
 describe('parseChangesetSummary', () => {
   it('parses every supported category in source order', () => {
     expect(
       parseChangesetSummary(
-        '- ADDED: New command\n- CHANGED: Updated API\n- REMOVED: Old command\n- FIXED: Corrected bug',
+        'added: New command\n\nchanged: Updated API\n\nremoved: Old command\n\nfixed: Corrected bug',
       ),
     ).toStrictEqual([
       { category: 'ADDED', breaking: false, description: 'New command' },
@@ -28,86 +28,67 @@ describe('parseChangesetSummary', () => {
     ]);
   });
 
-  it('parses breaking markers and nested bullets', () => {
+  it('parses breaking headers and Markdown continuation lines', () => {
     expect(
       parseChangesetSummary(
-        '- CHANGED: **BREAKING:** Rename `getNetworkClient`\n  - Old name remains as an alias\n  - Update callers',
+        'changed!: Rename `getNetworkClient`\nThe old method is no longer available.\n  - Update nested callers',
       ),
     ).toStrictEqual([
       {
         category: 'CHANGED',
         breaking: true,
         description:
-          'Rename `getNetworkClient`\n  - Old name remains as an alias\n  - Update callers',
+          'Rename `getNetworkClient`\nThe old method is no longer available.\n  - Update nested callers',
       },
     ]);
   });
 
-  it('tolerates surrounding whitespace and blank lines', () => {
+  it('tolerates multiple, leading, and trailing blank lines', () => {
     expect(
-      parseChangesetSummary('  \n-   FIXED:   Correct RPC ordering  \r\n\r\n'),
+      parseChangesetSummary(
+        ' \r\n\r\nfixed:\tCorrect RPC ordering  \r\nRequests stop after rejection.\t\r\n \r\n\r\nadded: Add fallback\r\n',
+      ),
     ).toStrictEqual([
       {
         category: 'FIXED',
         breaking: false,
-        description: 'Correct RPC ordering',
+        description: 'Correct RPC ordering\nRequests stop after rejection.',
       },
+      { category: 'ADDED', breaking: false, description: 'Add fallback' },
     ]);
-  });
-
-  it('allows indented nested bullets after a top-level entry', () => {
-    expect(parseChangesetSummary('- FIXED: Fix it\n  - Details')).toStrictEqual(
-      [
-        {
-          category: 'FIXED',
-          breaking: false,
-          description: 'Fix it\n  - Details',
-        },
-      ],
-    );
   });
 
   it.each([
     ['empty summary', '', 1, 'empty-summary'],
     ['blank summary', ' \n\t', 1, 'empty-summary'],
-    ['missing category', '- Fix the bug', 1, 'missing-category'],
-    ['unknown category', '- SECURITY: Fix an issue', 1, 'unknown-category'],
+    ['missing category', '\nDescribe the fix', 2, 'missing-category'],
+    ['unknown category', 'security: Fix an issue', 1, 'unknown-category'],
     [
       'deprecated category',
-      '- DEPRECATED: Use another API',
+      'deprecated: Use another API',
       1,
       'unknown-category',
     ],
-    ['empty description', '- FIXED:', 1, 'empty-description'],
-    ['non-bullet content', 'A paragraph', 1, 'non-bullet-content'],
+    ['misspelled category', 'chnaged: Rename the API', 1, 'unknown-category'],
+    ['uppercase category', 'CHANGED: Rename the API', 1, 'malformed-header'],
+    ['space before marker', 'changed !: Rename the API', 1, 'malformed-header'],
+    ['space before colon', 'changed : Rename the API', 1, 'malformed-header'],
+    ['empty description', 'fixed:', 1, 'empty-description'],
     [
-      'malformed marker',
-      '- CHANGED: **BREAKING** Rename the API',
+      'empty description before continuation',
+      'fixed:\nThis does not supply the header description.',
       1,
-      'malformed-breaking-marker',
+      'empty-description',
     ],
     [
-      'marker before category',
-      '- **BREAKING:** CHANGED: Rename the API',
-      1,
-      'malformed-breaking-marker',
-    ],
-    [
-      'marker not immediate',
-      '- CHANGED: Rename **BREAKING:** the API',
-      1,
-      'malformed-breaking-marker',
-    ],
-    [
-      'invalid content after entry',
-      '- FIXED: Fix it\nnot a bullet',
+      'missing blank line',
+      'fixed: Fix it\nchanged!: Rename the API',
       2,
-      'non-bullet-content',
+      'missing-blank-line',
     ],
   ])('throws GrammarError for %s', (_name, summary, line, rule) => {
     const error = getThrownError(() => parseChangesetSummary(summary));
-    expect(error).toBeInstanceOf(GrammarError);
     expect(error).toMatchObject({ line, rule });
-    expect((error as GrammarError).hint).not.toBe('');
+    expect(error.hint).not.toBe('');
   });
 });
