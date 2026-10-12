@@ -7,4 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `parseChangesetSummary` for parsing categorized Changeset summaries, and `GrammarError` for structured parse failures.
+
 [Unreleased]: https://github.com/MetaMask/release-tools/
