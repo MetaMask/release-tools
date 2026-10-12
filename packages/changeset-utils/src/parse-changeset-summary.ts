@@ -1,7 +1,7 @@
 import type { GrammarError } from './grammar-error.js';
 import { grammarError } from './grammar-error.js';
 
-export type ChangesetCategory = 'ADDED' | 'CHANGED' | 'REMOVED' | 'FIXED';
+export type ChangesetCategory = 'Added' | 'Changed' | 'Removed' | 'Fixed';
 
 export type ParsedEntry = {
   category: ChangesetCategory;
@@ -66,7 +66,8 @@ export function parseChangesetSummary(summary: string): ParsedEntry[] {
     }
 
     current = {
-      category: category.toUpperCase() as ChangesetCategory,
+      category:
+        `${category[0].toUpperCase()}${category.slice(1)}` as ChangesetCategory,
       breaking: breakingMarker === '!',
       description,
     };

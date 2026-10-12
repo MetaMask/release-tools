@@ -21,10 +21,10 @@ describe('parseChangesetSummary', () => {
         'added: New command\n\nchanged: Updated API\n\nremoved: Old command\n\nfixed: Corrected bug',
       ),
     ).toStrictEqual([
-      { category: 'ADDED', breaking: false, description: 'New command' },
-      { category: 'CHANGED', breaking: false, description: 'Updated API' },
-      { category: 'REMOVED', breaking: false, description: 'Old command' },
-      { category: 'FIXED', breaking: false, description: 'Corrected bug' },
+      { category: 'Added', breaking: false, description: 'New command' },
+      { category: 'Changed', breaking: false, description: 'Updated API' },
+      { category: 'Removed', breaking: false, description: 'Old command' },
+      { category: 'Fixed', breaking: false, description: 'Corrected bug' },
     ]);
   });
 
@@ -35,7 +35,7 @@ describe('parseChangesetSummary', () => {
       ),
     ).toStrictEqual([
       {
-        category: 'CHANGED',
+        category: 'Changed',
         breaking: true,
         description:
           'Rename `getNetworkClient`\nThe old method is no longer available.\n  - Update nested callers',
@@ -50,11 +50,11 @@ describe('parseChangesetSummary', () => {
       ),
     ).toStrictEqual([
       {
-        category: 'FIXED',
+        category: 'Fixed',
         breaking: false,
         description: 'Correct RPC ordering\nRequests stop after rejection.',
       },
-      { category: 'ADDED', breaking: false, description: 'Add fallback' },
+      { category: 'Added', breaking: false, description: 'Add fallback' },
     ]);
   });
 
