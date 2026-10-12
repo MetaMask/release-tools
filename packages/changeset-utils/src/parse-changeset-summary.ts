@@ -9,8 +9,8 @@ export type ParsedEntry = {
   description: string;
 };
 
-const categories = ['added', 'changed', 'removed', 'fixed'];
-const headerPattern = /^(added|changed|removed|fixed)(!)?:[ \t]*(\S.*)?$/u;
+const CATEGORIES = ['added', 'changed', 'removed', 'fixed'];
+const HEADER_PATTERN = /^(added|changed|removed|fixed)(!)?:[ \t]*(\S.*)?$/u;
 
 /**
  * Parses categorized entries from a changeset summary.
@@ -37,7 +37,7 @@ export function parseChangesetSummary(summary: string): ParsedEntry[] {
       continue;
     }
 
-    const headerMatch = line.match(headerPattern);
+    const headerMatch = line.match(HEADER_PATTERN);
     if (current) {
       if (headerMatch) {
         throw grammarError(
@@ -96,7 +96,7 @@ export function parseChangesetSummary(summary: string): ParsedEntry[] {
 function invalidHeaderError(line: string, lineNumber: number): GrammarError {
   const categoryMatch = line.match(/^([A-Za-z]+)[ \t]*(?:!)?[ \t]*:/u);
   if (categoryMatch) {
-    if (categories.includes(categoryMatch[1].toLowerCase())) {
+    if (CATEGORIES.includes(categoryMatch[1].toLowerCase())) {
       return grammarError(
         lineNumber,
         'malformed-header',
