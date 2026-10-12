@@ -1,3 +1,5 @@
+import { grammarError, GrammarError } from './grammar-error.js';
+
 export type ChangesetCategory = 'ADDED' | 'CHANGED' | 'REMOVED' | 'FIXED';
 
 export type ParsedEntry = {
@@ -6,21 +8,7 @@ export type ParsedEntry = {
   description: string;
 };
 
-export class GrammarError extends Error {
-  readonly line: number;
-
-  readonly rule: string;
-
-  readonly hint: string;
-
-  constructor(message: string, line: number, rule: string, hint: string) {
-    super(message);
-    this.name = 'GrammarError';
-    this.line = line;
-    this.rule = rule;
-    this.hint = hint;
-  }
-}
+export { GrammarError };
 
 const categories = new Set<ChangesetCategory>([
   'ADDED',
@@ -30,15 +18,6 @@ const categories = new Set<ChangesetCategory>([
 ]);
 const categoryPattern = /^([A-Z]+)\s*:\s*(.*)$/u;
 const breakingMarker = /^\*\*BREAKING:\*\*\s*(.*)$/u;
-
-function grammarError(
-  line: number,
-  rule: string,
-  hint: string,
-  message: string,
-): GrammarError {
-  return new GrammarError(message, line, rule, hint);
-}
 
 function isTopLevelBullet(line: string): boolean {
   return /^-\s+/u.test(line);
