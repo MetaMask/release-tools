@@ -36,39 +36,46 @@ vi.mock('./fs-utils.js', () => ({
   writeFiles: vi.fn(),
 }));
 
+const tsConfig = JSON.stringify({
+  references: [{ path: '../packages/foo' }],
+});
+const tsConfigBuild = JSON.stringify({
+  references: [{ path: '../packages/foo' }],
+});
+const tsConfigLint = JSON.stringify({
+  references: [{ path: '../packages/foo' }],
+});
+
+function readMockMonorepoFile(fileName: string): string {
+  const files: Record<string, string> = {
+    [MonorepoFiles.TsConfig]: JSON.stringify({
+      references: [{ path: '../packages/foo' }],
+    }),
+    [MonorepoFiles.TsConfigBuild]: JSON.stringify({
+      references: [{ path: '../packages/foo' }],
+    }),
+    [MonorepoFiles.TsConfigLint]: JSON.stringify({
+      references: [{ path: '../packages/foo' }],
+    }),
+    [MonorepoFiles.PackageJson]: JSON.stringify({
+      engines: { node: '>=18.0.0' },
+    }),
+  };
+
+  const file = files[fileName];
+  if (!file) {
+    throw new Error(`Unexpected file: ${fileName}`);
+  }
+  return file;
+}
+
 describe('create-package/utils', () => {
   describe('readMonorepoFiles', () => {
-    const tsConfig = JSON.stringify({
-      references: [{ path: '../packages/foo' }],
-    });
-    const tsConfigBuild = JSON.stringify({
-      references: [{ path: '../packages/foo' }],
-    });
-    const tsConfigLint = JSON.stringify({
-      references: [{ path: '../packages/foo' }],
-    });
-    const packageJson = JSON.stringify({
-      engines: { node: '>=18.0.0' },
-    });
-
     it('should read the expected monorepo files', async () => {
       vi.mocked(fs.promises.readFile).mockImplementation(async (filePath) => {
         // `readFile` also accepts file handles, but this mock is only ever
         // called with paths.
-        const fileName = path.basename(filePath as string);
-
-        switch (fileName) {
-          case MonorepoFiles.TsConfig:
-            return tsConfig;
-          case MonorepoFiles.TsConfigBuild:
-            return tsConfigBuild;
-          case MonorepoFiles.TsConfigLint:
-            return tsConfigLint;
-          case MonorepoFiles.PackageJson:
-            return packageJson;
-          default:
-            throw new Error(`Unexpected file: ${fileName}`);
-        }
+        return readMockMonorepoFile(path.basename(filePath as string));
       });
 
       const monorepoFileData = await readMonorepoFiles();

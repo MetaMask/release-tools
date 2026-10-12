@@ -32,6 +32,17 @@ const changesetsCliCommitPath = fileURLToPath(
   resolve('@changesets/cli/commit', import.meta.url),
 );
 
+function findChangedFile(
+  changedFiles: string[],
+  predicate: (filePath: string) => boolean,
+): string {
+  const changedFile = changedFiles.find(predicate);
+  if (!changedFile) {
+    throw new Error('Expected changed file was not found');
+  }
+  return changedFile;
+}
+
 class FakeReleasePlan {
   changesets: NewChangeset[];
 
@@ -165,11 +176,10 @@ describe('apply release plan', () => {
           releasePlan.getReleasePlan(),
           releasePlan.config,
         );
-        const pkgPath = changedFiles.find((a) => a.endsWith(`package.json`));
+        const pkgPath = findChangedFile(changedFiles, (a) =>
+          a.endsWith(`package.json`),
+        );
 
-        if (!pkgPath) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSON = await fs.readFile(pkgPath, { encoding: 'utf-8' });
 
         expect(pkgJSON).toBe(`{
@@ -196,11 +206,10 @@ describe('apply release plan', () => {
           releasePlan.getReleasePlan(),
           releasePlan.config,
         );
-        const pkgPath = changedFiles.find((a) => a.endsWith(`package.json`));
+        const pkgPath = findChangedFile(changedFiles, (a) =>
+          a.endsWith(`package.json`),
+        );
 
-        if (!pkgPath) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSON = await fs.readFile(pkgPath, { encoding: 'utf-8' });
 
         expect(pkgJSON).toBe(`{
@@ -224,11 +233,10 @@ describe('apply release plan', () => {
           releasePlan.getReleasePlan(),
           releasePlan.config,
         );
-        const pkgPath = changedFiles.find((a) => a.endsWith(`package.json`));
+        const pkgPath = findChangedFile(changedFiles, (a) =>
+          a.endsWith(`package.json`),
+        );
 
-        if (!pkgPath) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSON = await fs.readFile(pkgPath, { encoding: 'utf-8' });
 
         expect(pkgJSON).toBe(`{
@@ -252,11 +260,10 @@ describe('apply release plan', () => {
           releasePlan.getReleasePlan(),
           releasePlan.config,
         );
-        const pkgPath = changedFiles.find((a) => a.endsWith(`package.json`));
+        const pkgPath = findChangedFile(changedFiles, (a) =>
+          a.endsWith(`package.json`),
+        );
 
-        if (!pkgPath) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSON = await fs.readFile(pkgPath, { encoding: 'utf-8' });
 
         expect(pkgJSON).toBe(`{
@@ -283,13 +290,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPath = changedFiles.find((a) =>
+      const pkgPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toMatchObject({
@@ -339,13 +343,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPath = changedFiles.find((a) =>
+      const pkgPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toStrictEqual({
@@ -398,13 +399,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPath = changedFiles.find((a) =>
+      const pkgPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toStrictEqual({
@@ -470,13 +468,10 @@ describe('apply release plan', () => {
           releasePlan.getReleasePlan(),
           releasePlan.config,
         );
-        const pkgPath = changedFiles.find((file) =>
+        const pkgPath = findChangedFile(changedFiles, (file) =>
           file.endsWith(`pkg-a${path.sep}package.json`),
         );
 
-        if (!pkgPath) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSON = await readJson(pkgPath);
 
         expect(pkgJSON).toMatchObject({
@@ -520,13 +515,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPath = changedFiles.find((file) =>
+      const pkgPath = findChangedFile(changedFiles, (file) =>
         file.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toMatchObject({
@@ -609,13 +601,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPath = changedFiles.find((a) =>
+      const pkgPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toStrictEqual({
@@ -690,13 +679,10 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgAPath = changedFiles.find((a) =>
+      const pkgAPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgAPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgAJSON = await readJson(pkgAPath);
 
       expect(pkgAJSON).toStrictEqual({
@@ -707,13 +693,10 @@ describe('apply release plan', () => {
         },
       });
 
-      const pkgCPath = changedFiles.find((a) =>
+      const pkgCPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-c${path.sep}package.json`),
       );
 
-      if (!pkgCPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgCJSON = await readJson(pkgCPath);
 
       expect(pkgCJSON).toStrictEqual({
@@ -795,16 +778,13 @@ describe('apply release plan', () => {
         releasePlan.getReleasePlan(),
         releasePlan.config,
       );
-      const pkgPathA = changedFiles.find((a) =>
+      const pkgPathA = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
-      const pkgPathB = changedFiles.find((b) =>
+      const pkgPathB = findChangedFile(changedFiles, (b) =>
         b.endsWith(`pkg-b${path.sep}package.json`),
       );
 
-      if (!pkgPathA || !pkgPathB) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSONA = await readJson(pkgPathA);
       const pkgJSONB = await readJson(pkgPathB);
 
@@ -889,16 +869,13 @@ describe('apply release plan', () => {
           },
         },
       );
-      const pkgPathA = changedFiles.find((a) =>
+      const pkgPathA = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
-      const pkgPathB = changedFiles.find((b) =>
+      const pkgPathB = findChangedFile(changedFiles, (b) =>
         b.endsWith(`pkg-b${path.sep}package.json`),
       );
 
-      if (!pkgPathA || !pkgPathB) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSONA = await readJson(pkgPathA);
       const pkgJSONB = await readJson(pkgPathB);
 
@@ -1023,14 +1000,11 @@ describe('apply release plan', () => {
       const pkgPathA = changedFiles.find((a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
-      const pkgPathB = changedFiles.find((b) =>
+      const pkgPathB = findChangedFile(changedFiles, (b) =>
         b.endsWith(`pkg-b${path.sep}package.json`),
       );
 
       expect(pkgPathA).toBeUndefined();
-      if (!pkgPathB) {
-        throw new Error(`could not find an updated package json`);
-      }
 
       const pkgJSONB = await readJson(pkgPathB);
 
@@ -1084,14 +1058,11 @@ describe('apply release plan', () => {
       const pkgPathA = changedFiles.find((a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
-      const pkgPathB = changedFiles.find((b) =>
+      const pkgPathB = findChangedFile(changedFiles, (b) =>
         b.endsWith(`pkg-b${path.sep}package.json`),
       );
 
       expect(pkgPathA).toBeUndefined();
-      if (!pkgPathB) {
-        throw new Error(`could not find an updated package json`);
-      }
 
       const pkgJSONB = await readJson(pkgPathB);
 
@@ -1144,13 +1115,10 @@ describe('apply release plan', () => {
         'canary',
       );
 
-      const pkgPath = changedFiles.find((a) =>
+      const pkgPath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}package.json`),
       );
 
-      if (!pkgPath) {
-        throw new Error(`could not find an updated package json`);
-      }
       const pkgJSON = await readJson(pkgPath);
 
       expect(pkgJSON).toMatchObject({
@@ -1239,16 +1207,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1357,16 +1322,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1460,16 +1422,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1562,16 +1521,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1664,16 +1620,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1769,16 +1722,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1887,16 +1837,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -1998,16 +1945,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -2100,16 +2044,13 @@ describe('apply release plan', () => {
               },
             },
           );
-          const pkgPathA = changedFiles.find((a) =>
+          const pkgPathA = findChangedFile(changedFiles, (a) =>
             a.endsWith(`pkg-a${path.sep}package.json`),
           );
-          const pkgPathB = changedFiles.find((b) =>
+          const pkgPathB = findChangedFile(changedFiles, (b) =>
             b.endsWith(`pkg-b${path.sep}package.json`),
           );
 
-          if (!pkgPathA || !pkgPathB) {
-            throw new Error(`could not find an updated package json`);
-          }
           const pkgJSONA = await readJson(pkgPathA);
           const pkgJSONB = await readJson(pkgPathB);
 
@@ -2203,16 +2144,13 @@ describe('apply release plan', () => {
             },
           },
         );
-        const pkgPathDependent = changedFiles.find((a) =>
+        const pkgPathDependent = findChangedFile(changedFiles, (a) =>
           a.endsWith(`has-peer-dep${path.sep}package.json`),
         );
-        const pkgPathDepended = changedFiles.find((b) =>
+        const pkgPathDepended = findChangedFile(changedFiles, (b) =>
           b.endsWith(`depended-upon${path.sep}package.json`),
         );
 
-        if (!pkgPathDependent || !pkgPathDepended) {
-          throw new Error(`could not find an updated package json`);
-        }
         const pkgJSONDependent = await readJson(pkgPathDependent);
         const pkgJSONDepended = await readJson(pkgPathDepended);
 
@@ -2279,13 +2217,10 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
 
       expect(readme.trim()).toMatchInlineSnapshot(`
@@ -2322,13 +2257,10 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
 
       expect(readme.trim()).toMatchInlineSnapshot(`
@@ -2375,13 +2307,10 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
 
       expect(readme).toMatchInlineSnapshot(`
@@ -2440,16 +2369,13 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-      const readmePathB = changedFiles.find((a) =>
+      const readmePathB = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-b${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath || !readmePathB) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       const readmeB = await fs.readFile(readmePathB, 'utf-8');
 
@@ -2517,13 +2443,9 @@ describe('apply release plan', () => {
         },
       );
 
-      const changelogPath = changedFiles.find((file) =>
+      const changelogPath = findChangedFile(changedFiles, (file) =>
         file.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-
-      if (!changelogPath) {
-        throw new Error(`could not find an updated changelog`);
-      }
 
       const changelog = await fs.readFile(changelogPath, 'utf-8');
       expect(changelog.trim()).toMatchInlineSnapshot(`
@@ -2649,13 +2571,10 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       expect(readme.trim()).toMatchInlineSnapshot(`
         "# pkg-a
@@ -2749,16 +2668,13 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-      const readmePathB = changedFiles.find((a) =>
+      const readmePathB = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-b${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath || !readmePathB) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       const readmeB = await fs.readFile(readmePathB, 'utf-8');
 
@@ -2862,16 +2778,13 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-      const readmePathB = changedFiles.find((a) =>
+      const readmePathB = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-b${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath || !readmePathB) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       const readmeB = await fs.readFile(readmePathB, 'utf-8');
 
@@ -2987,19 +2900,16 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-      const readmePathB = changedFiles.find((a) =>
+      const readmePathB = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-b${path.sep}CHANGELOG.md`),
       );
-      const readmePathC = changedFiles.find((a) =>
+      const readmePathC = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-c${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath || !readmePathB || !readmePathC) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       const readmeB = await fs.readFile(readmePathB, 'utf-8');
       const readmeC = await fs.readFile(readmePathC, 'utf-8');
@@ -3128,19 +3038,16 @@ describe('apply release plan', () => {
         },
       );
 
-      const readmePath = changedFiles.find((a) =>
+      const readmePath = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-a${path.sep}CHANGELOG.md`),
       );
-      const readmePathB = changedFiles.find((a) =>
+      const readmePathB = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-b${path.sep}CHANGELOG.md`),
       );
-      const readmePathC = changedFiles.find((a) =>
+      const readmePathC = findChangedFile(changedFiles, (a) =>
         a.endsWith(`pkg-c${path.sep}CHANGELOG.md`),
       );
 
-      if (!readmePath || !readmePathB || !readmePathC) {
-        throw new Error(`could not find an updated changelog`);
-      }
       const readme = await fs.readFile(readmePath, 'utf-8');
       const readmeB = await fs.readFile(readmePathB, 'utf-8');
       const readmeC = await fs.readFile(readmePathC, 'utf-8');
@@ -3182,61 +3089,7 @@ describe('apply release plan', () => {
   describe('should error and not write if', () => {
     // This is skipped as *for now* we are assuming we have been passed
     // valid releasePlans - this may get work done on it in the future
-    it.todo('a package appears twice', async () => {
-      let changedFiles;
-      try {
-        const testResults = await testSetup(
-          {
-            'package.json': JSON.stringify({
-              private: true,
-              workspaces: ['packages/*'],
-            }),
-            'package-lock.json': '',
-            'packages/pkg-a/package.json': JSON.stringify({
-              name: 'pkg-a',
-              version: '1.0.0',
-            }),
-          },
-          {
-            changesets: [
-              {
-                id: 'quick-lions-devour',
-                summary: "Hey, let's have fun with testing!",
-                releases: [{ name: 'pkg-a', type: 'minor' }],
-              },
-            ],
-            releases: [
-              {
-                name: 'pkg-a',
-                type: 'minor',
-                oldVersion: '1.0.0',
-                newVersion: '1.1.0',
-                changesets: ['quick-lions-devour'],
-              },
-              {
-                name: 'pkg-a',
-                type: 'minor',
-                oldVersion: '1.0.0',
-                newVersion: '1.1.0',
-                changesets: ['quick-lions-devour'],
-              },
-            ],
-            preState: undefined,
-          },
-        );
-        changedFiles = testResults.changedFiles;
-      } catch (error) {
-        expect((error as Error).message).toBe('some string probably');
-
-        return;
-      }
-
-      throw new Error(
-        `expected error but instead got changed files: \n${changedFiles.join(
-          '\n',
-        )}`,
-      );
-    });
+    it.todo('a package appears twice');
 
     it('a package cannot be found', async () => {
       const releasePlan = new FakeReleasePlan(
@@ -3273,27 +3126,23 @@ describe('apply release plan', () => {
 
       await initGitRepo(tempDir);
 
-      try {
-        const packages = await getPackages(tempDir);
-        await applyReleasePlan(
-          releasePlan.getReleasePlan(),
-          packages,
-          releasePlan.config,
-        );
-      } catch (error) {
-        expect((error as Error).message).toBe(
-          'Could not find matching package for release of: impossible-package',
-        );
+      const packages = await getPackages(tempDir);
+      const error = await applyReleasePlan(
+        releasePlan.getReleasePlan(),
+        packages,
+        releasePlan.config,
+      ).catch((caughtError: unknown) => caughtError);
 
-        const gitCmd = await exec('git', ['status'], {
-          nodeOptions: { cwd: tempDir },
-        });
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
+        'Could not find matching package for release of: impossible-package',
+      );
 
-        expect(gitCmd.stdout.toString()).toContain('nothing to commit');
-        return;
-      }
+      const gitCmd = await exec('git', ['status'], {
+        nodeOptions: { cwd: tempDir },
+      });
 
-      throw new Error('Expected test to exit before this point');
+      expect(gitCmd.stdout.toString()).toContain('nothing to commit');
     });
 
     it(
@@ -3322,10 +3171,11 @@ describe('apply release plan', () => {
 
         await initGitRepo(tempDir);
 
-        try {
-          const packages = await getPackages(tempDir);
-
-          await applyReleasePlan(releasePlan.getReleasePlan(), packages, {
+        const packages = await getPackages(tempDir);
+        const error = await applyReleasePlan(
+          releasePlan.getReleasePlan(),
+          packages,
+          {
             ...releasePlan.config,
             changelog: [
               path.resolve(
@@ -3334,29 +3184,27 @@ describe('apply release plan', () => {
               ),
               null,
             ],
-          });
-        } catch (error) {
-          expect((error as Error).message).toBe('no chance');
+          },
+        ).catch((caughtError: unknown) => caughtError);
 
-          const gitCmd = await exec('git', ['status'], {
-            nodeOptions: { cwd: tempDir },
-          });
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe('no chance');
 
-          expect(gitCmd.stdout.toString()).toContain('nothing to commit');
-          expect(vi.mocked(console.error).mock.calls).toMatchInlineSnapshot(`
+        const gitCmd = await exec('git', ['status'], {
+          nodeOptions: { cwd: tempDir },
+        });
+
+        expect(gitCmd.stdout.toString()).toContain('nothing to commit');
+        expect(vi.mocked(console.error).mock.calls).toMatchInlineSnapshot(`
+          [
             [
-              [
-                "The following error was encountered while generating changelog entries",
-              ],
-              [
-                "We have escaped applying the changesets, and no files should have been affected",
-              ],
-            ]
-          `);
-          return;
-        }
-
-        throw new Error('Expected test to exit before this point');
+              "The following error was encountered while generating changelog entries",
+            ],
+            [
+              "We have escaped applying the changesets, and no files should have been affected",
+            ],
+          ]
+        `);
       }),
     );
   });
@@ -3596,14 +3444,8 @@ describe('apply release plan', () => {
         nodeOptions: { cwd: tempDir },
       });
 
-      const changesetsDeleted = releasePlan.changesets.reduce(
-        (prev, { id }) => {
-          return (
-            prev &&
-            gitCmd.stdout.toString().includes(`deleted:    .changeset/${id}.md`)
-          );
-        },
-        true,
+      const changesetsDeleted = releasePlan.changesets.every(({ id }) =>
+        gitCmd.stdout.toString().includes(`deleted:    .changeset/${id}.md`),
       );
 
       expect(releasePlan.changesets.length).toBeGreaterThan(0);
