@@ -3089,7 +3089,63 @@ describe('apply release plan', () => {
   describe('should error and not write if', () => {
     // This is skipped as *for now* we are assuming we have been passed
     // valid releasePlans - this may get work done on it in the future
-    it.todo('a package appears twice');
+    // oxlint-disable-next-line vitest/no-conditional-in-test -- This skipped test documents a future invalid-plan case.
+    it.todo('a package appears twice', async () => {
+      let changedFiles;
+      try {
+        const testResults = await testSetup(
+          {
+            'package.json': JSON.stringify({
+              private: true,
+              workspaces: ['packages/*'],
+            }),
+            'package-lock.json': '',
+            'packages/pkg-a/package.json': JSON.stringify({
+              name: 'pkg-a',
+              version: '1.0.0',
+            }),
+          },
+          {
+            changesets: [
+              {
+                id: 'quick-lions-devour',
+                summary: "Hey, let's have fun with testing!",
+                releases: [{ name: 'pkg-a', type: 'minor' }],
+              },
+            ],
+            releases: [
+              {
+                name: 'pkg-a',
+                type: 'minor',
+                oldVersion: '1.0.0',
+                newVersion: '1.1.0',
+                changesets: ['quick-lions-devour'],
+              },
+              {
+                name: 'pkg-a',
+                type: 'minor',
+                oldVersion: '1.0.0',
+                newVersion: '1.1.0',
+                changesets: ['quick-lions-devour'],
+              },
+            ],
+            preState: undefined,
+          },
+        );
+        changedFiles = testResults.changedFiles;
+      } catch (error) {
+        // oxlint-disable-next-line vitest/no-conditional-expect -- This skipped test checks the expected failure path.
+        expect((error as Error).message).toBe('some string probably');
+
+        return;
+      }
+
+      throw new Error(
+        `expected error but instead got changed files: \n${changedFiles.join(
+          '\n',
+        )}`,
+      );
+    });
 
     it('a package cannot be found', async () => {
       const releasePlan = new FakeReleasePlan(
