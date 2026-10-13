@@ -22,10 +22,6 @@ const CATEGORIES = [
   'Deprecated',
 ] as const;
 
-const CATEGORY_MAP = new Map<string, ChangesetCategory>(
-  CATEGORIES.map((category) => [category.toLowerCase(), category]),
-);
-
 const HEADING_PATTERN = new RegExp(
   `^##[ \\t]+(${CATEGORIES.join('|')})[ \\t]*$`,
   'iu',
@@ -149,10 +145,10 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
     }
 
     const headingMatch = line.match(HEADING_PATTERN);
-    const headingCategory = headingMatch?.[1].toLowerCase();
-    const canonicalCategory = headingCategory
-      ? CATEGORY_MAP.get(headingCategory)
-      : undefined;
+    const canonicalCategory = CATEGORIES.find(
+      (candidate) =>
+        candidate.toLowerCase() === headingMatch?.[1].toLowerCase(),
+    );
     if (!canonicalCategory) {
       throw grammarError(
         lineNumber,
