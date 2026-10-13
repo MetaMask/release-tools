@@ -15,86 +15,127 @@ function getThrownError(fn: () => unknown): GrammarError {
 }
 
 describe('parseChangesetSummary', () => {
-  it('parses every supported category in source order', () => {
+  it('parses every supported category in canonical spelling', () => {
+    expect(parseChangesetSummary('## Added\n\n- New command')).toStrictEqual({
+      category: 'Added',
+      description: 'New command',
+    });
+    expect(parseChangesetSummary('## Changed\n\n- Updated API')).toStrictEqual({
+      category: 'Changed',
+      description: 'Updated API',
+    });
+    expect(parseChangesetSummary('## Removed\n\n- Old command')).toStrictEqual({
+      category: 'Removed',
+      description: 'Old command',
+    });
+    expect(parseChangesetSummary('## Fixed\n\n- Corrected bug')).toStrictEqual({
+      category: 'Fixed',
+      description: 'Corrected bug',
+    });
     expect(
-      parseChangesetSummary(
-        'added: New command\n\nchanged: Updated API\n\nremoved: Old command\n\nfixed: Corrected bug\n\nsecurity: Address vulnerability\n\ndeprecated: Mark old API',
-      ),
-    ).toStrictEqual([
-      { category: 'Added', breaking: false, description: 'New command' },
-      { category: 'Changed', breaking: false, description: 'Updated API' },
-      { category: 'Removed', breaking: false, description: 'Old command' },
-      { category: 'Fixed', breaking: false, description: 'Corrected bug' },
-      {
-        category: 'Security',
-        breaking: false,
-        description: 'Address vulnerability',
-      },
-      { category: 'Deprecated', breaking: false, description: 'Mark old API' },
-    ]);
+      parseChangesetSummary('## Security\n\n- Patched leak'),
+    ).toStrictEqual({ category: 'Security', description: 'Patched leak' });
+    expect(
+      parseChangesetSummary('## Deprecated\n\n- Replaced API'),
+    ).toStrictEqual({ category: 'Deprecated', description: 'Replaced API' });
   });
 
-  it('parses breaking headers and Markdown continuation lines', () => {
-    expect(
-      parseChangesetSummary(
-        'changed!: Rename `getNetworkClient`\nThe old method is no longer available.\n  - Update nested callers',
-      ),
-    ).toStrictEqual([
-      {
-        category: 'Changed',
-        breaking: true,
-        description:
-          'Rename `getNetworkClient`\nThe old method is no longer available.\n  - Update nested callers',
-      },
-    ]);
+  it('normalizes heading case variants to the canonical spelling', () => {
+    expect(parseChangesetSummary('## added\n\n- New command')).toStrictEqual({
+      category: 'Added',
+      description: 'New command',
+    });
+    expect(parseChangesetSummary('## FIXED\n\n- Corrected bug')).toStrictEqual({
+      category: 'Fixed',
+      description: 'Corrected bug',
+    });
   });
 
-  it('tolerates multiple, leading, and trailing blank lines', () => {
+  it('preserves sub-bullets and plain continuation lines', () => {
     expect(
       parseChangesetSummary(
-        ' \r\n\r\nfixed:\tCorrect RPC ordering  \r\nRequests stop after rejection.\t\r\n \r\n\r\nadded: Add fallback\r\n',
+        '## Changed\n\n- Rename `get-client` to `get-network-client`\n  - The old method is no longer available\nCallers must migrate.',
       ),
-    ).toStrictEqual([
-      {
-        category: 'Fixed',
-        breaking: false,
-        description: 'Correct RPC ordering\nRequests stop after rejection.',
-      },
-      { category: 'Added', breaking: false, description: 'Add fallback' },
-    ]);
+    ).toStrictEqual({
+      category: 'Changed',
+      description:
+        'Rename `get-client` to `get-network-client`\n  - The old method is no longer available\nCallers must migrate.',
+    });
+  });
+
+  it('tolerates leading, trailing, and in-between blank lines', () => {
+    expect(
+      parseChangesetSummary(
+        ' \r\n\r\n## Fixed\r\n\r\n\r\n- Correct RPC ordering  \r\nRequests stop after rejection.\t\r\n \r\n\r\n',
+      ),
+    ).toStrictEqual({
+      category: 'Fixed',
+      description: 'Correct RPC ordering\nRequests stop after rejection.',
+    });
   });
 
   it.each([
     ['empty summary', '', 1, 'empty-summary'],
     ['blank summary', ' \n\t', 1, 'empty-summary'],
-    ['missing category', '\nDescribe the fix', 2, 'missing-category'],
-    ['unknown category', 'unknown: Fix an issue', 1, 'unknown-category'],
+    ['missing heading', 'Add the thing\n\n- New command', 1, 'missing-heading'],
+    ['missing entry', '## Added', 1, 'missing-entry'],
     [
-      'unsupported category',
-      'securityIssue: Fix an issue',
-      1,
-      'unknown-category',
+      'missing bullet',
+      '## Added\n\nDescribe the entry in prose.',
+      3,
+      'missing-entry',
     ],
-    ['misspelled category', 'chnaged: Rename the API', 1, 'unknown-category'],
-    ['uppercase category', 'CHANGED: Rename the API', 1, 'malformed-header'],
-    ['space before marker', 'changed !: Rename the API', 1, 'malformed-header'],
-    ['space before colon', 'changed : Rename the API', 1, 'malformed-header'],
-    ['empty description', 'fixed:', 1, 'empty-description'],
+    ['empty entry', '## Added\n\n-', 3, 'empty-entry'],
     [
-      'empty description before continuation',
-      'fixed:\nThis does not supply the header description.',
-      1,
-      'empty-description',
+      'multiple entries',
+      '## Added\n\n- First\n- Second',
+      4,
+      'multiple-entries',
     ],
     [
-      'missing blank line',
-      'fixed: Fix it\nchanged!: Rename the API',
+      'multiple headings before the entry',
+      '## Added\n## Fixed',
       2,
-      'missing-blank-line',
+      'multiple-headings',
+    ],
+    [
+      'multiple headings after the entry',
+      '## Added\n\n- First\n\n## Fixed',
+      5,
+      'multiple-headings',
     ],
   ])('throws GrammarError for %s', (_name, summary, line, rule) => {
     const error = getThrownError(() => parseChangesetSummary(summary));
     expect(error).toMatchObject({ line, rule });
     expect(error.hint).not.toBe('');
+  });
+
+  it('throws GrammarError for unsupported and malformed headings', () => {
+    for (const summary of [
+      '## Uncategorized\n\n- New command',
+      '# Added\n\n- New command',
+      '### Added\n\n- New command',
+      '## Added extra\n\n- New command',
+    ]) {
+      const error = getThrownError(() => parseChangesetSummary(summary));
+      expect(error.hint).not.toBe('');
+      expect(['malformed-heading', 'unknown-category']).toContain(error.rule);
+    }
+  });
+
+  it('throws unknown-category for unsupported categories', () => {
+    const error = getThrownError(() =>
+      parseChangesetSummary('## Uncategorized\n\n- New command'),
+    );
+    expect(error).toMatchObject({ line: 1, rule: 'unknown-category' });
+  });
+
+  it('throws malformed-heading for headings that are not level two', () => {
+    expect(
+      getThrownError(() => parseChangesetSummary('# Added\n\n- New command')),
+    ).toMatchObject({ line: 1, rule: 'malformed-heading' });
+    expect(
+      getThrownError(() => parseChangesetSummary('### Added\n\n- New command')),
+    ).toMatchObject({ line: 1, rule: 'malformed-heading' });
   });
 });

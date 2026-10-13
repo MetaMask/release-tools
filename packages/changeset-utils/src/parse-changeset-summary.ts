@@ -1,4 +1,3 @@
-import type { GrammarError } from './grammar-error.js';
 import { grammarError } from './grammar-error.js';
 
 export type ChangesetCategory =
@@ -11,125 +10,178 @@ export type ChangesetCategory =
 
 export type ParsedEntry = {
   category: ChangesetCategory;
-  breaking: boolean;
   description: string;
 };
 
 const CATEGORIES = [
-  'added',
-  'changed',
-  'removed',
-  'fixed',
-  'security',
-  'deprecated',
-];
-const HEADER_PATTERN =
-  /^(added|changed|removed|fixed|security|deprecated)(!)?:[ \t]*(\S.*)?$/u;
+  'Added',
+  'Changed',
+  'Removed',
+  'Fixed',
+  'Security',
+  'Deprecated',
+] as const;
+
+const CATEGORY_MAP = new Map<string, ChangesetCategory>(
+  CATEGORIES.map((category) => [category.toLowerCase(), category]),
+);
+
+const HEADING_PATTERN = new RegExp(
+  `^##[ \\t]+(${CATEGORIES.join('|')})[ \\t]*$`,
+  'iu',
+);
+const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \t]+|$)/u;
+const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \t].*)?$/u;
 
 /**
- * Parses categorized entries from a changeset summary.
+ * Formats a list of items as a human-readable disjunction, e.g.
+ * `` "`Added`, `Changed`, or `Fixed`" ``.
  *
- * Blank lines separate entries. Each entry starts with a lowercase header such
- * as `changed: Rename the API`, where an optional `!` before the colon marks a
- * breaking change. Every other non-blank line extends the entry description.
+ * @param items - The items to format.
+ * @returns The formatted list.
+ */
+function formatList(items: readonly string[]): string {
+  return new Intl.ListFormat('en', {
+    style: 'long',
+    type: 'disjunction',
+  }).format(items);
+}
+
+/**
+ * Parses the single categorized entry from a changeset summary.
+ *
+ * The summary must start with a level-two `## <category>` heading followed by
+ * exactly one top-level bullet. Sub-bullets and plain continuation lines are
+ * preserved in the entry description.
  *
  * @param summary - The Markdown summary to parse.
- * @returns The parsed entries in source order.
+ * @returns The parsed entry.
  * @throws {GrammarError} If the summary does not follow the supported grammar.
  */
-export function parseChangesetSummary(summary: string): ParsedEntry[] {
+export function parseChangesetSummary(summary: string): ParsedEntry {
   const lines = summary.split(/\r?\n/u);
-  const entries: ParsedEntry[] = [];
-  let current: ParsedEntry | undefined;
+  let category: ChangesetCategory | undefined;
+  let headingLine = 1;
+  let entry: ParsedEntry | undefined;
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
     const line = rawLine.trimEnd();
 
     if (line.trim() === '') {
-      current = undefined;
       continue;
     }
 
-    const headerMatch = line.match(HEADER_PATTERN);
-    if (current) {
-      if (headerMatch) {
+    if (entry) {
+      if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
         throw grammarError(
           lineNumber,
-          'missing-blank-line',
-          'Separate entries with an empty line.',
-          'A changeset entry must be separated from the previous entry by a blank line.',
+          'multiple-entries',
+          'Put each entry in a separate changeset file.',
+          'A changeset summary must contain exactly one top-level bullet.',
         );
       }
-      current.description += `\n${line}`;
+      if (HEADING_LINE_PATTERN.test(line)) {
+        throw grammarError(
+          lineNumber,
+          'multiple-headings',
+          'Put each entry in a separate changeset file.',
+          'A changeset summary must contain exactly one category heading.',
+        );
+      }
+      entry.description += `\n${line}`;
       continue;
     }
 
-    if (!headerMatch) {
-      throw invalidHeaderError(line, lineNumber);
-    }
-
-    const [, category, breakingMarker, description] = headerMatch;
-    if (!description) {
+    if (category) {
+      if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
+        entry = {
+          category,
+          description: line.slice(1).replace(/^[ \t]+/u, ''),
+        };
+        if (entry.description === '') {
+          throw grammarError(
+            lineNumber,
+            'empty-entry',
+            'Add entry text after `-`.',
+            'The top-level bullet must contain non-empty entry text.',
+          );
+        }
+        continue;
+      }
+      if (HEADING_LINE_PATTERN.test(line)) {
+        throw grammarError(
+          lineNumber,
+          'multiple-headings',
+          'Put each entry in a separate changeset file.',
+          'A changeset summary must contain exactly one category heading.',
+        );
+      }
       throw grammarError(
         lineNumber,
-        'empty-description',
-        'Put description text on the header line.',
-        'A changeset entry must have a non-empty description on its header line.',
+        'missing-entry',
+        'Add exactly one top-level bullet.',
+        'The category heading must be followed by one top-level bullet.',
       );
     }
 
-    current = {
-      category:
-        `${category[0].toUpperCase()}${category.slice(1)}` as ChangesetCategory,
-      breaking: breakingMarker === '!',
-      description,
-    };
-    entries.push(current);
+    if (!HEADING_LINE_PATTERN.test(line)) {
+      throw grammarError(
+        lineNumber,
+        'missing-heading',
+        `Start with a level-two heading such as ${formatList([
+          '`## Added`',
+          '`## Changed`',
+          '`## Removed`',
+          '`## Fixed`',
+        ])}.`,
+        'The summary must start with a level-two category heading.',
+      );
+    }
+
+    if (!/^##[ \t]/u.test(line)) {
+      throw grammarError(
+        lineNumber,
+        'malformed-heading',
+        'Use a level-two heading such as `## Added`.',
+        'The category heading must use exactly two leading hashes.',
+      );
+    }
+
+    const headingMatch = line.match(HEADING_PATTERN);
+    const headingCategory = headingMatch?.[1].toLowerCase();
+    const canonicalCategory = headingCategory
+      ? CATEGORY_MAP.get(headingCategory)
+      : undefined;
+    if (!canonicalCategory) {
+      throw grammarError(
+        lineNumber,
+        'unknown-category',
+        `Use ${formatList(CATEGORIES.map((name) => `\`${name}\``))} as the category.`,
+        'The category heading must name a supported category.',
+      );
+    }
+
+    category = canonicalCategory;
+    headingLine = lineNumber;
   }
 
-  if (entries.length === 0) {
+  if (!entry) {
+    if (category) {
+      throw grammarError(
+        headingLine,
+        'missing-entry',
+        'Add exactly one top-level bullet.',
+        'The category heading must be followed by one top-level bullet.',
+      );
+    }
     throw grammarError(
       1,
       'empty-summary',
-      'Add at least one entry.',
+      'Add a category heading and one entry bullet.',
       'The changeset summary is empty.',
     );
   }
 
-  return entries;
-}
-
-/**
- * Classifies an entry header that does not match the header pattern.
- *
- * @param line - The offending header line, with trailing whitespace removed.
- * @param lineNumber - The 1-based line number of the header in the summary.
- * @returns The grammar error describing why the header is invalid.
- */
-function invalidHeaderError(line: string, lineNumber: number): GrammarError {
-  const categoryMatch = line.match(/^([A-Za-z]+)[ \t]*(?:!)?[ \t]*:/u);
-  if (categoryMatch) {
-    if (CATEGORIES.includes(categoryMatch[1].toLowerCase())) {
-      return grammarError(
-        lineNumber,
-        'malformed-header',
-        'Use a lowercase header in the form changed: or changed!:.',
-        'The changeset entry header is malformed.',
-      );
-    }
-    return grammarError(
-      lineNumber,
-      'unknown-category',
-      'Use added, changed, removed, fixed, security, or deprecated as the category.',
-      `Unknown changeset category: ${categoryMatch[1]}.`,
-    );
-  }
-
-  return grammarError(
-    lineNumber,
-    'missing-category',
-    'Start the entry with added:, changed:, removed:, fixed:, security:, or deprecated:.',
-    'A changeset entry must start with a supported category.',
-  );
+  return entry;
 }
