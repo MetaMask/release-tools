@@ -27,6 +27,7 @@ const HEADING_PATTERN = new RegExp(
   'iu',
 );
 const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \t]+|$)/u;
+const LEVEL_TWO_HEADING_PATTERN = /^##[ \t]/u;
 const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \t].*)?$/u;
 
 /**
@@ -123,7 +124,7 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
       );
     }
 
-    if (!/^##[ \t]/u.test(line)) {
+    if (!LEVEL_TWO_HEADING_PATTERN.test(line)) {
       throw grammarError(
         lineNumber,
         'malformed-heading',
