@@ -18,13 +18,19 @@ describe('parseChangesetSummary', () => {
   it('parses every supported category in source order', () => {
     expect(
       parseChangesetSummary(
-        'added: New command\n\nchanged: Updated API\n\nremoved: Old command\n\nfixed: Corrected bug',
+        'added: New command\n\nchanged: Updated API\n\nremoved: Old command\n\nfixed: Corrected bug\n\nsecurity: Address vulnerability\n\ndeprecated: Mark old API',
       ),
     ).toStrictEqual([
       { category: 'Added', breaking: false, description: 'New command' },
       { category: 'Changed', breaking: false, description: 'Updated API' },
       { category: 'Removed', breaking: false, description: 'Old command' },
       { category: 'Fixed', breaking: false, description: 'Corrected bug' },
+      {
+        category: 'Security',
+        breaking: false,
+        description: 'Address vulnerability',
+      },
+      { category: 'Deprecated', breaking: false, description: 'Mark old API' },
     ]);
   });
 
@@ -62,10 +68,10 @@ describe('parseChangesetSummary', () => {
     ['empty summary', '', 1, 'empty-summary'],
     ['blank summary', ' \n\t', 1, 'empty-summary'],
     ['missing category', '\nDescribe the fix', 2, 'missing-category'],
-    ['unknown category', 'security: Fix an issue', 1, 'unknown-category'],
+    ['unknown category', 'unknown: Fix an issue', 1, 'unknown-category'],
     [
-      'deprecated category',
-      'deprecated: Use another API',
+      'unsupported category',
+      'securityIssue: Fix an issue',
       1,
       'unknown-category',
     ],

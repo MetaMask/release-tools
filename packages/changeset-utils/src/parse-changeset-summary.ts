@@ -1,7 +1,13 @@
 import type { GrammarError } from './grammar-error.js';
 import { grammarError } from './grammar-error.js';
 
-export type ChangesetCategory = 'Added' | 'Changed' | 'Removed' | 'Fixed';
+export type ChangesetCategory =
+  | 'Added'
+  | 'Changed'
+  | 'Removed'
+  | 'Fixed'
+  | 'Security'
+  | 'Deprecated';
 
 export type ParsedEntry = {
   category: ChangesetCategory;
@@ -9,8 +15,16 @@ export type ParsedEntry = {
   description: string;
 };
 
-const CATEGORIES = ['added', 'changed', 'removed', 'fixed'];
-const HEADER_PATTERN = /^(added|changed|removed|fixed)(!)?:[ \t]*(\S.*)?$/u;
+const CATEGORIES = [
+  'added',
+  'changed',
+  'removed',
+  'fixed',
+  'security',
+  'deprecated',
+];
+const HEADER_PATTERN =
+  /^(added|changed|removed|fixed|security|deprecated)(!)?:[ \t]*(\S.*)?$/u;
 
 /**
  * Parses categorized entries from a changeset summary.
@@ -107,7 +121,7 @@ function invalidHeaderError(line: string, lineNumber: number): GrammarError {
     return grammarError(
       lineNumber,
       'unknown-category',
-      'Use added, changed, removed, or fixed as the category.',
+      'Use added, changed, removed, fixed, security, or deprecated as the category.',
       `Unknown changeset category: ${categoryMatch[1]}.`,
     );
   }
@@ -115,7 +129,7 @@ function invalidHeaderError(line: string, lineNumber: number): GrammarError {
   return grammarError(
     lineNumber,
     'missing-category',
-    'Start the entry with added:, changed:, removed:, or fixed:.',
+    'Start the entry with added:, changed:, removed:, fixed:, security:, or deprecated:.',
     'A changeset entry must start with a supported category.',
   );
 }
