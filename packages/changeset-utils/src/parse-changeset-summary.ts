@@ -125,12 +125,9 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
       throw grammarError(
         lineNumber,
         'missing-heading',
-        `Start with a level-two heading such as ${formatList([
-          '`## Added`',
-          '`## Changed`',
-          '`## Removed`',
-          '`## Fixed`',
-        ])}.`,
+        `Start with a level-two heading such as ${formatList(
+          CATEGORIES.map((name) => `\`## ${name}\``),
+        )}.`,
         'The summary must start with a level-two category heading.',
       );
     }
