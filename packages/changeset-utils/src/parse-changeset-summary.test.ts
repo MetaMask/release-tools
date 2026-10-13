@@ -15,29 +15,17 @@ function getThrownError(fn: () => unknown): GrammarError {
 }
 
 describe('parseChangesetSummary', () => {
-  it('parses every supported category in canonical spelling', () => {
-    expect(parseChangesetSummary('## Added\n\n- New command')).toStrictEqual({
-      category: 'Added',
-      description: 'New command',
-    });
-    expect(parseChangesetSummary('## Changed\n\n- Updated API')).toStrictEqual({
-      category: 'Changed',
-      description: 'Updated API',
-    });
-    expect(parseChangesetSummary('## Removed\n\n- Old command')).toStrictEqual({
-      category: 'Removed',
-      description: 'Old command',
-    });
-    expect(parseChangesetSummary('## Fixed\n\n- Corrected bug')).toStrictEqual({
-      category: 'Fixed',
-      description: 'Corrected bug',
-    });
+  it.each([
+    ['Added', 'New command'],
+    ['Changed', 'Updated API'],
+    ['Removed', 'Old command'],
+    ['Fixed', 'Corrected bug'],
+    ['Security', 'Patched leak'],
+    ['Deprecated', 'Replaced API'],
+  ])('parses the %s category', (category, description) => {
     expect(
-      parseChangesetSummary('## Security\n\n- Patched leak'),
-    ).toStrictEqual({ category: 'Security', description: 'Patched leak' });
-    expect(
-      parseChangesetSummary('## Deprecated\n\n- Replaced API'),
-    ).toStrictEqual({ category: 'Deprecated', description: 'Replaced API' });
+      parseChangesetSummary(`## ${category}\n\n- ${description}`),
+    ).toStrictEqual({ category, description });
   });
 
   it('normalizes heading case variants to the canonical spelling', () => {
