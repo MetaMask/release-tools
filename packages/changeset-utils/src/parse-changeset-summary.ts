@@ -68,6 +68,15 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
       continue;
     }
 
+    if ((entry || category) && HEADING_LINE_PATTERN.test(line)) {
+      throw grammarError(
+        lineNumber,
+        'multiple-headings',
+        'Put each entry in a separate changeset file.',
+        'A changeset summary must contain exactly one category heading.',
+      );
+    }
+
     if (entry) {
       if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
         throw grammarError(
@@ -77,25 +86,14 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
           'A changeset summary must contain exactly one top-level bullet.',
         );
       }
-      if (HEADING_LINE_PATTERN.test(line)) {
-        throw grammarError(
-          lineNumber,
-          'multiple-headings',
-          'Put each entry in a separate changeset file.',
-          'A changeset summary must contain exactly one category heading.',
-        );
-      }
       entry.description += `\n${line}`;
       continue;
     }
 
     if (category) {
       if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
-        entry = {
-          category,
-          description: line.slice(1).replace(/^[ \t]+/u, ''),
-        };
-        if (entry.description === '') {
+        const description = line.slice(1).replace(/^[ \t]+/u, '');
+        if (description === '') {
           throw grammarError(
             lineNumber,
             'empty-entry',
@@ -103,15 +101,8 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
             'The top-level bullet must contain non-empty entry text.',
           );
         }
+        entry = { category, description };
         continue;
-      }
-      if (HEADING_LINE_PATTERN.test(line)) {
-        throw grammarError(
-          lineNumber,
-          'multiple-headings',
-          'Put each entry in a separate changeset file.',
-          'A changeset summary must contain exactly one category heading.',
-        );
       }
       throw grammarError(
         lineNumber,

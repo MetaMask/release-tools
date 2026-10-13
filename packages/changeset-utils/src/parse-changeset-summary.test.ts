@@ -78,6 +78,30 @@ describe('parseChangesetSummary', () => {
     ['empty summary', '', 1, 'empty-summary'],
     ['blank summary', ' \n\t', 1, 'empty-summary'],
     ['missing heading', 'Add the thing\n\n- New command', 1, 'missing-heading'],
+    [
+      'unknown category',
+      '## Uncategorized\n\n- New command',
+      1,
+      'unknown-category',
+    ],
+    [
+      'unknown category with suffix',
+      '## Added extra\n\n- New command',
+      1,
+      'unknown-category',
+    ],
+    [
+      'malformed heading above level two',
+      '# Added\n\n- New command',
+      1,
+      'malformed-heading',
+    ],
+    [
+      'malformed heading below level two',
+      '### Added\n\n- New command',
+      1,
+      'malformed-heading',
+    ],
     ['missing entry', '## Added', 1, 'missing-entry'],
     [
       'missing bullet',
@@ -108,34 +132,5 @@ describe('parseChangesetSummary', () => {
     const error = getThrownError(() => parseChangesetSummary(summary));
     expect(error).toMatchObject({ line, rule });
     expect(error.hint).not.toBe('');
-  });
-
-  it('throws GrammarError for unsupported and malformed headings', () => {
-    for (const summary of [
-      '## Uncategorized\n\n- New command',
-      '# Added\n\n- New command',
-      '### Added\n\n- New command',
-      '## Added extra\n\n- New command',
-    ]) {
-      const error = getThrownError(() => parseChangesetSummary(summary));
-      expect(error.hint).not.toBe('');
-      expect(['malformed-heading', 'unknown-category']).toContain(error.rule);
-    }
-  });
-
-  it('throws unknown-category for unsupported categories', () => {
-    const error = getThrownError(() =>
-      parseChangesetSummary('## Uncategorized\n\n- New command'),
-    );
-    expect(error).toMatchObject({ line: 1, rule: 'unknown-category' });
-  });
-
-  it('throws malformed-heading for headings that are not level two', () => {
-    expect(
-      getThrownError(() => parseChangesetSummary('# Added\n\n- New command')),
-    ).toMatchObject({ line: 1, rule: 'malformed-heading' });
-    expect(
-      getThrownError(() => parseChangesetSummary('### Added\n\n- New command')),
-    ).toMatchObject({ line: 1, rule: 'malformed-heading' });
   });
 });
