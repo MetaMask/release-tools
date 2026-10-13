@@ -1,18 +1,5 @@
 import { grammarError } from './grammar-error.js';
 
-export type ChangesetCategory =
-  | 'Added'
-  | 'Changed'
-  | 'Removed'
-  | 'Fixed'
-  | 'Security'
-  | 'Deprecated';
-
-export type ParsedEntry = {
-  category: ChangesetCategory;
-  description: string;
-};
-
 const CATEGORIES = [
   'Added',
   'Changed',
@@ -21,6 +8,13 @@ const CATEGORIES = [
   'Security',
   'Deprecated',
 ] as const;
+
+export type ChangesetCategory = (typeof CATEGORIES)[number];
+
+export type ParsedEntry = {
+  category: ChangesetCategory;
+  description: string;
+};
 
 const HEADING_PATTERN = new RegExp(
   `^##[ \\t]+(${CATEGORIES.join('|')})[ \\t]*$`,
