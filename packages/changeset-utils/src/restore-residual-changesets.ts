@@ -2,12 +2,10 @@ import type { NewChangesetWithCommit } from '@changesets/types';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { filterChangesets } from './filter-changesets.js';
-
 export type RestoreOptions = {
   changesetDir: string;
-  changesets: NewChangesetWithCommit[];
-  releasedPackageNames: string[];
+  changesets: readonly NewChangesetWithCommit[];
+  releasedPackageNames: readonly string[];
 };
 
 /**
@@ -30,19 +28,19 @@ export async function restoreResidualChangesets({
 }: RestoreOptions): Promise<void> {
   const released = new Set(releasedPackageNames);
   const residualChangesets = changesets.flatMap((changeset) => {
-    const wasReleased = changeset.releases.some(({ name }) =>
-      released.has(name),
+    const residualReleases = changeset.releases.filter(
+      ({ name }) => !released.has(name),
     );
 
-    if (!wasReleased) {
-      return [];
-    }
-
-    const residualPackageNames = changeset.releases
-      .map(({ name }) => name)
-      .filter((name) => !released.has(name));
-
-    return filterChangesets([changeset], residualPackageNames);
+    return residualReleases.length > 0 &&
+      residualReleases.length < changeset.releases.length
+      ? [
+          {
+            ...changeset,
+            releases: residualReleases.map((release) => ({ ...release })),
+          },
+        ]
+      : [];
   });
 
   await Promise.all(
