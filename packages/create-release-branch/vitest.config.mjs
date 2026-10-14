@@ -7,6 +7,8 @@ export default mergeConfig(baseConfig, {
   test: {
     name: basename(import.meta.dirname),
     include: ['src/**/*.test.ts'],
+    // integration tests have a long setup time.
+    testTimeout: 6000,
     coverage: {
       exclude: [
         'src/cli.ts',
