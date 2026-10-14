@@ -66,6 +66,25 @@ describe('restoreResidualChangesets', () => {
     });
   });
 
+  it('leaves changesets unrelated to the release untouched', async () => {
+    const changesetDir = await createChangesetDirectory();
+    const changeset: NewChangesetWithCommit = {
+      id: 'unrelated-entry',
+      summary: 'Original content',
+      releases: [{ name: '@scope/unreleased', type: 'patch' }],
+    };
+    const filePath = join(changesetDir, 'unrelated-entry.md');
+    await writeFile(filePath, 'Original file content');
+
+    await restoreResidualChangesets({
+      changesetDir,
+      changesets: [changeset],
+      releasedPackageNames: ['@scope/released'],
+    });
+
+    expect(await readFile(filePath, 'utf8')).toBe('Original file content');
+  });
+
   it('rewrites an existing residual file and is idempotent', async () => {
     const changesetDir = await createChangesetDirectory();
     const changeset: NewChangesetWithCommit = {

@@ -29,13 +29,21 @@ export async function restoreResidualChangesets({
   releasedPackageNames,
 }: RestoreOptions): Promise<void> {
   const released = new Set(releasedPackageNames);
-  const packageNames = changesets.flatMap((changeset) =>
-    changeset.releases.map(({ name }) => name),
-  );
-  const residualPackageNames = packageNames.filter(
-    (name) => !released.has(name),
-  );
-  const residualChangesets = filterChangesets(changesets, residualPackageNames);
+  const residualChangesets = changesets.flatMap((changeset) => {
+    const wasReleased = changeset.releases.some(({ name }) =>
+      released.has(name),
+    );
+
+    if (!wasReleased) {
+      return [];
+    }
+
+    const residualPackageNames = changeset.releases
+      .map(({ name }) => name)
+      .filter((name) => !released.has(name));
+
+    return filterChangesets([changeset], residualPackageNames);
+  });
 
   await Promise.all(
     residualChangesets.map(async (changeset) => {
