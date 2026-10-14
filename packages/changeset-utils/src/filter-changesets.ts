@@ -11,12 +11,14 @@ import type { NewChangesetWithCommit } from '@changesets/types';
  * @returns Changesets that retain at least one selected release.
  */
 export function filterChangesets(
-  changesets: NewChangesetWithCommit[],
-  selected: string[],
+  changesets: readonly NewChangesetWithCommit[],
+  selected: readonly string[],
 ): NewChangesetWithCommit[] {
+  const selectedNames = new Set(selected);
+
   return changesets.flatMap((changeset) => {
     const releases = changeset.releases
-      .filter(({ name }) => selected.includes(name))
+      .filter(({ name }) => selectedNames.has(name))
       .map((release) => ({ ...release }));
 
     return releases.length > 0 ? [{ ...changeset, releases }] : [];

@@ -4,6 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { filterChangesets } from './filter-changesets.js';
 
 describe('filterChangesets', () => {
+  it('accepts readonly inputs', () => {
+    const changesets: readonly NewChangesetWithCommit[] = [];
+    const selected: readonly string[] = [];
+
+    expect(filterChangesets(changesets, selected)).toStrictEqual([]);
+  });
+
   it('keeps releases for selected packages', () => {
     const changeset: NewChangesetWithCommit = {
       id: 'entry-one',
