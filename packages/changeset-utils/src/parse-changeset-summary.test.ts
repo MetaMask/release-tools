@@ -3,17 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { GrammarError } from './grammar-error.js';
 import { parseChangesetSummary } from './parse-changeset-summary.js';
 
-function getThrownError(fn: () => unknown): GrammarError {
-  let thrownError: unknown;
-  try {
-    fn();
-  } catch (error) {
-    thrownError = error;
-  }
-  expect(thrownError).toBeInstanceOf(GrammarError);
-  return thrownError as GrammarError;
-}
-
 describe('parseChangesetSummary', () => {
   it.each([
     ['Added', 'New command'],
@@ -63,62 +52,137 @@ describe('parseChangesetSummary', () => {
   });
 
   it.each([
-    ['empty summary', '', 1, 'empty-summary'],
-    ['blank summary', ' \n\t', 1, 'empty-summary'],
-    ['missing heading', 'Add the thing\n\n- New command', 1, 'missing-heading'],
+    [
+      'empty summary',
+      '',
+      new GrammarError(
+        'The changeset summary is empty.',
+        1,
+        'empty-summary',
+        'Add a category heading and one entry bullet.',
+      ),
+    ],
+    [
+      'blank summary',
+      ' \n\t',
+      new GrammarError(
+        'The changeset summary is empty.',
+        1,
+        'empty-summary',
+        'Add a category heading and one entry bullet.',
+      ),
+    ],
+    [
+      'missing heading',
+      'Add the thing\n\n- New command',
+      new GrammarError(
+        'The summary must start with a level-two category heading.',
+        1,
+        'missing-heading',
+        'Start with a level-two heading such as `## Added`, `## Changed`, `## Removed`, `## Fixed`, `## Security`, or `## Deprecated`.',
+      ),
+    ],
     [
       'unknown category',
       '## Uncategorized\n\n- New command',
-      1,
-      'unknown-category',
+      new GrammarError(
+        'The category heading must name a supported category.',
+        1,
+        'unknown-category',
+        'Use `Added`, `Changed`, `Removed`, `Fixed`, `Security`, or `Deprecated` as the category.',
+      ),
     ],
     [
       'unknown category with suffix',
       '## Added extra\n\n- New command',
-      1,
-      'unknown-category',
+      new GrammarError(
+        'The category heading must name a supported category.',
+        1,
+        'unknown-category',
+        'Use `Added`, `Changed`, `Removed`, `Fixed`, `Security`, or `Deprecated` as the category.',
+      ),
     ],
     [
       'malformed heading above level two',
       '# Added\n\n- New command',
-      1,
-      'malformed-heading',
+      new GrammarError(
+        'The category heading must use exactly two leading hashes.',
+        1,
+        'malformed-heading',
+        'Use a level-two heading such as `## Added`.',
+      ),
     ],
     [
       'malformed heading below level two',
       '### Added\n\n- New command',
-      1,
-      'malformed-heading',
+      new GrammarError(
+        'The category heading must use exactly two leading hashes.',
+        1,
+        'malformed-heading',
+        'Use a level-two heading such as `## Added`.',
+      ),
     ],
-    ['missing entry', '## Added', 1, 'missing-entry'],
+    [
+      'missing entry',
+      '## Added',
+      new GrammarError(
+        'The category heading must be followed by one top-level bullet.',
+        1,
+        'missing-entry',
+        'Add exactly one top-level bullet.',
+      ),
+    ],
     [
       'missing bullet',
       '## Added\n\nDescribe the entry in prose.',
-      3,
-      'missing-entry',
+      new GrammarError(
+        'The category heading must be followed by one top-level bullet.',
+        3,
+        'missing-entry',
+        'Add exactly one top-level bullet.',
+      ),
     ],
-    ['empty entry', '## Added\n\n-', 3, 'empty-entry'],
+    [
+      'empty entry',
+      '## Added\n\n-',
+      new GrammarError(
+        'The top-level bullet must contain non-empty entry text.',
+        3,
+        'empty-entry',
+        'Add entry text after `-`.',
+      ),
+    ],
     [
       'multiple entries',
       '## Added\n\n- First\n- Second',
-      4,
-      'multiple-entries',
+      new GrammarError(
+        'A changeset summary must contain exactly one top-level bullet.',
+        4,
+        'multiple-entries',
+        'Put each entry in a separate changeset file.',
+      ),
     ],
     [
       'multiple headings before the entry',
       '## Added\n## Fixed',
-      2,
-      'multiple-headings',
+      new GrammarError(
+        'A changeset summary must contain exactly one category heading.',
+        2,
+        'multiple-headings',
+        'Put each entry in a separate changeset file.',
+      ),
     ],
     [
       'multiple headings after the entry',
       '## Added\n\n- First\n\n## Fixed',
-      5,
-      'multiple-headings',
+      new GrammarError(
+        'A changeset summary must contain exactly one category heading.',
+        5,
+        'multiple-headings',
+        'Put each entry in a separate changeset file.',
+      ),
     ],
-  ])('throws GrammarError for %s', (_name, summary, line, rule) => {
-    const error = getThrownError(() => parseChangesetSummary(summary));
-    expect(error).toMatchObject({ line, rule });
-    expect(error.hint).not.toBe('');
+  ])('throws GrammarError for %s', (_name, summary, expectedError) => {
+    expect(() => parseChangesetSummary(summary)).toThrow(expectedError);
   });
 });

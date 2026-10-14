@@ -1,4 +1,4 @@
-import { grammarError } from './grammar-error.js';
+import { GrammarError } from './grammar-error.js';
 
 const CATEGORIES = [
   'Added',
@@ -20,9 +20,9 @@ const HEADING_PATTERN = new RegExp(
   `^##[ \\t]+(${CATEGORIES.join('|')})[ \\t]*$`,
   'iu',
 );
-const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \t]+|$)/u;
-const LEVEL_TWO_HEADING_PATTERN = /^##[ \t]/u;
-const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \t].*)?$/u;
+const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \\t]+|$)/u;
+const LEVEL_TWO_HEADING_PATTERN = /^##[ \\t]/u;
+const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \\t].*)?$/u;
 
 /**
  * Formats a list of items as a human-readable disjunction, e.g.
@@ -64,21 +64,21 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
     }
 
     if ((entry || category) && HEADING_LINE_PATTERN.test(line)) {
-      throw grammarError(
+      throw new GrammarError(
+        'A changeset summary must contain exactly one category heading.',
         lineNumber,
         'multiple-headings',
         'Put each entry in a separate changeset file.',
-        'A changeset summary must contain exactly one category heading.',
       );
     }
 
     if (entry) {
       if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
-        throw grammarError(
+        throw new GrammarError(
+          'A changeset summary must contain exactly one top-level bullet.',
           lineNumber,
           'multiple-entries',
           'Put each entry in a separate changeset file.',
-          'A changeset summary must contain exactly one top-level bullet.',
         );
       }
       entry.description += `\n${line}`;
@@ -89,41 +89,41 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
       if (TOP_LEVEL_BULLET_PATTERN.test(line)) {
         const description = line.slice(1).replace(/^[ \t]+/u, '');
         if (description === '') {
-          throw grammarError(
+          throw new GrammarError(
+            'The top-level bullet must contain non-empty entry text.',
             lineNumber,
             'empty-entry',
             'Add entry text after `-`.',
-            'The top-level bullet must contain non-empty entry text.',
           );
         }
         entry = { category, description };
         continue;
       }
-      throw grammarError(
+      throw new GrammarError(
+        'The category heading must be followed by one top-level bullet.',
         lineNumber,
         'missing-entry',
         'Add exactly one top-level bullet.',
-        'The category heading must be followed by one top-level bullet.',
       );
     }
 
     if (!HEADING_LINE_PATTERN.test(line)) {
-      throw grammarError(
+      throw new GrammarError(
+        'The summary must start with a level-two category heading.',
         lineNumber,
         'missing-heading',
         `Start with a level-two heading such as ${formatList(
           CATEGORIES.map((name) => `\`## ${name}\``),
         )}.`,
-        'The summary must start with a level-two category heading.',
       );
     }
 
     if (!LEVEL_TWO_HEADING_PATTERN.test(line)) {
-      throw grammarError(
+      throw new GrammarError(
+        'The category heading must use exactly two leading hashes.',
         lineNumber,
         'malformed-heading',
         'Use a level-two heading such as `## Added`.',
-        'The category heading must use exactly two leading hashes.',
       );
     }
 
@@ -133,11 +133,11 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
         candidate.toLowerCase() === headingMatch?.[1].toLowerCase(),
     );
     if (!canonicalCategory) {
-      throw grammarError(
+      throw new GrammarError(
+        'The category heading must name a supported category.',
         lineNumber,
         'unknown-category',
         `Use ${formatList(CATEGORIES.map((name) => `\`${name}\``))} as the category.`,
-        'The category heading must name a supported category.',
       );
     }
 
@@ -147,18 +147,18 @@ export function parseChangesetSummary(summary: string): ParsedEntry {
 
   if (!entry) {
     if (category) {
-      throw grammarError(
+      throw new GrammarError(
+        'The category heading must be followed by one top-level bullet.',
         headingLine,
         'missing-entry',
         'Add exactly one top-level bullet.',
-        'The category heading must be followed by one top-level bullet.',
       );
     }
-    throw grammarError(
+    throw new GrammarError(
+      'The changeset summary is empty.',
       1,
       'empty-summary',
       'Add a category heading and one entry bullet.',
-      'The changeset summary is empty.',
     );
   }
 

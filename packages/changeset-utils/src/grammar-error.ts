@@ -30,21 +30,3 @@ export class GrammarError extends Error {
     this.hint = hint;
   }
 }
-
-/**
- * Creates a {@link GrammarError} for the given grammar violation.
- *
- * @param line - The 1-based line number where the violation occurred.
- * @param rule - The stable rule identifier.
- * @param hint - A suggestion for how to fix the violation.
- * @param message - The human-readable error message.
- * @returns The constructed grammar error.
- */
-export function grammarError(
-  line: number,
-  rule: string,
-  hint: string,
-  message: string,
-): GrammarError {
-  return new GrammarError(message, line, rule, hint);
-}
