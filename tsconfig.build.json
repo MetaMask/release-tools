@@ -11,7 +11,7 @@
       "path": "./packages/apply-release-plan/tsconfig.build.json"
     },
     {
-      "path": "./packages/changeset-utils/tsconfig.build.json"
+      "path": "./packages/changesets-utils/tsconfig.build.json"
     },
     {
       "path": "./packages/create-release-branch/tsconfig.build.json"

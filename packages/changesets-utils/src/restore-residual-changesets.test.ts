@@ -10,7 +10,7 @@ describe('restoreResidualChangesets', () => {
   const directories: string[] = [];
 
   async function createChangesetDirectory(): Promise<string> {
-    const directory = await mkdtemp(join(tmpdir(), 'changeset-utils-'));
+    const directory = await mkdtemp(join(tmpdir(), 'changesets-utils-'));
     directories.push(directory);
     return directory;
   }
