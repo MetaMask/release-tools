@@ -29,7 +29,7 @@ See the [Contributor Documentation](./docs) for help on:
 graph LR;
 linkStyle default opacity:0.5
   apply_release_plan(["@metamask/apply-release-plan"]);
-  changeset_utils(["@metamask/changesets-utils"]);
+  changesets_utils(["@metamask/changesets-utils"]);
   create_release_branch(["@metamask/create-release-branch"]);
 ```
 
