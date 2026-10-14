@@ -1,14 +1,14 @@
-# `@metamask/changeset-utils`
+# `@metamask/changesets-utils`
 
 Utilities for parsing and partially releasing Changesets
 
 ## Installation
 
-`yarn add @metamask/changeset-utils`
+`yarn add @metamask/changesets-utils`
 
 or
 
-`npm install @metamask/changeset-utils`
+`npm install @metamask/changesets-utils`
 
 ## Contributing
 

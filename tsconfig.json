@@ -12,7 +12,7 @@
       "path": "./packages/apply-release-plan"
     },
     {
-      "path": "./packages/changeset-utils"
+      "path": "./packages/changesets-utils"
     },
     {
       "path": "./packages/create-release-branch"

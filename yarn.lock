@@ -1248,9 +1248,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/changeset-utils@workspace:packages/changeset-utils":
+"@metamask/changesets-utils@workspace:packages/changesets-utils":
   version: 0.0.0-use.local
-  resolution: "@metamask/changeset-utils@workspace:packages/changeset-utils"
+  resolution: "@metamask/changesets-utils@workspace:packages/changesets-utils"
   dependencies:
     "@changesets/types": "npm:^7.0.0"
     "@metamask/auto-changelog": "npm:^6.1.0"
