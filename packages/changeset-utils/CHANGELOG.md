@@ -13,5 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Summaries contain one entry: a level-two `## <category>` heading followed by exactly one top-level bullet. Heading categories match case-insensitively and are returned in canonical spelling as `Added`, `Changed`, `Removed`, `Fixed`, `Security`, or `Deprecated` for plugin use.
 - Add `filterChangesets` for filtering changesets down to selected package releases ([#76](https://github.com/MetaMask/release-tools/pull/76))
   - Returns new changeset and release objects, preserves summaries and metadata, drops changesets with no selected releases, and does not mutate its inputs.
+- Add `restoreResidualChangesets` for rewriting Changeset files after a partial release ([#77](https://github.com/MetaMask/release-tools/pull/77))
+  - Writes back only the releases for packages that were not released, preserves the original summary and bump types, leaves fully consumed Changeset files deleted, and is safe to run more than once.
 
 [Unreleased]: https://github.com/MetaMask/release-tools/
