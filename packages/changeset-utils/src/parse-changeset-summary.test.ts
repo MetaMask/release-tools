@@ -51,6 +51,13 @@ describe('parseChangesetSummary', () => {
     });
   });
 
+  it('accepts tabs in heading and bullet syntax', () => {
+    expect(parseChangesetSummary('##\tAdded\n\n-\tNew command')).toStrictEqual({
+      category: 'Added',
+      description: 'New command',
+    });
+  });
+
   it.each([
     [
       'empty summary',

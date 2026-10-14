@@ -20,9 +20,9 @@ const HEADING_PATTERN = new RegExp(
   `^##[ \\t]+(${CATEGORIES.join('|')})[ \\t]*$`,
   'iu',
 );
-const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \\t]+|$)/u;
-const LEVEL_TWO_HEADING_PATTERN = /^##[ \\t]/u;
-const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \\t].*)?$/u;
+const HEADING_LINE_PATTERN = /^#{1,6}(?:[ \t]+|$)/u;
+const LEVEL_TWO_HEADING_PATTERN = /^##[ \t]/u;
+const TOP_LEVEL_BULLET_PATTERN = /^-(?:[ \t].*)?$/u;
 
 /**
  * Formats a list of items as a human-readable disjunction, e.g.
