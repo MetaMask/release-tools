@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0]
+
 ### Uncategorized
 
 - refactor: rename changeset utils package ([#79](https://github.com/MetaMask/release-tools/pull/79))
@@ -20,4 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `restoreResidualChangesets` for rewriting Changeset files after a partial release ([#78](https://github.com/MetaMask/release-tools/pull/78))
   - Writes back only the releases for packages that were not released, preserves the original summary and bump types, leaves fully consumed Changeset files deleted, and is safe to run more than once.
 
-[Unreleased]: https://github.com/MetaMask/release-tools/
+[Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/changesets-utils@1.0.0...HEAD
+[1.0.0]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/changesets-utils@1.0.0
