@@ -7,4 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add local pull request resolution from Git commit subjects. The resolver supports squash and merge commit subjects and avoids GitHub API calls ([#84](https://github.com/MetaMask/release-tools/pull/84)).
+
 [Unreleased]: https://github.com/MetaMask/release-tools/
