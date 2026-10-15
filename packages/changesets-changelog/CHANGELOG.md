@@ -7,4 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- chore: scaffold changesets-changelog package ([#82](https://github.com/MetaMask/release-tools/pull/82))
+
 [Unreleased]: https://github.com/MetaMask/release-tools/
