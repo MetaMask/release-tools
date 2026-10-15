@@ -16,6 +16,9 @@
     },
     {
       "path": "./packages/create-release-branch"
+    },
+    {
+      "path": "./packages/changesets-changelog"
     }
   ],
   "files": [],
