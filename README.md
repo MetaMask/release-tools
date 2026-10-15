@@ -17,6 +17,7 @@ See the [Contributor Documentation](./docs) for help on:
 <!-- start package list -->
 
 - [`@metamask/apply-release-plan`](packages/apply-release-plan)
+- [`@metamask/changesets-changelog`](packages/changesets-changelog)
 - [`@metamask/changesets-utils`](packages/changesets-utils)
 - [`@metamask/create-release-branch`](packages/create-release-branch)
 
@@ -29,6 +30,7 @@ See the [Contributor Documentation](./docs) for help on:
 graph LR;
 linkStyle default opacity:0.5
   apply_release_plan(["@metamask/apply-release-plan"]);
+  changesets_changelog(["@metamask/changesets-changelog"]);
   changesets_utils(["@metamask/changesets-utils"]);
   create_release_branch(["@metamask/create-release-branch"]);
 ```

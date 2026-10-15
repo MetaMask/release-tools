@@ -17,6 +17,9 @@
     },
     {
       "path": "./packages/create-release-branch/tsconfig.lint.json"
+    },
+    {
+      "path": "./packages/changesets-changelog/tsconfig.lint.json"
     }
   ]
 }
