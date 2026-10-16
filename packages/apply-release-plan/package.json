@@ -1,6 +1,6 @@
 {
   "name": "@metamask/apply-release-plan",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Fork of @changesets/apply-release-plan, which takes a release plan and applies it to packages",
   "keywords": [
     "Ethereum",
