@@ -15,5 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Returns new changeset and release objects, preserves summaries and metadata, drops changesets with no selected releases, and does not mutate its inputs.
 - Add `restoreResidualChangesets` for rewriting Changeset files after a partial release ([#78](https://github.com/MetaMask/release-tools/pull/78))
   - Writes back only the releases for packages that were not released, preserves the original summary and bump types, leaves fully consumed Changeset files deleted, and is safe to run more than once.
+- Export the supported changeset categories for changelog plugins ([#87](https://github.com/MetaMask/release-tools/pull/87)).
 
 [Unreleased]: https://github.com/MetaMask/release-tools/

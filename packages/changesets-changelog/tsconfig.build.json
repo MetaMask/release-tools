@@ -5,6 +5,6 @@
     "rootDir": "./src",
     "types": ["node"]
   },
-  "references": [],
+  "references": [{ "path": "../changesets-utils/tsconfig.build.json" }],
   "include": ["./src"]
 }

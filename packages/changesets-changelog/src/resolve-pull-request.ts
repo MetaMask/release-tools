@@ -28,12 +28,12 @@ export function extractPullRequestNumber(subject: string): string {
  * Resolves the pull request link for a changeset using its local Git commit.
  *
  * @param changeset - The changeset whose commit should be inspected.
- * @param repo - The GitHub repository in `owner/repo` form.
+ * @param repository - The GitHub repository in `owner/repo` form.
  * @returns The Markdown pull request link.
  */
 export async function getPullRequestLink(
   changeset: NewChangesetWithCommit,
-  repo: string,
+  repository: string,
 ): Promise<string> {
   if (!changeset.commit) {
     throw new Error(`Changeset ${changeset.id} has no commit`);
@@ -61,5 +61,5 @@ export async function getPullRequestLink(
   }
 
   const pullRequestNumber = extractPullRequestNumber(subject.trim());
-  return `[#${pullRequestNumber}](https://github.com/${repo}/pull/${pullRequestNumber})`;
+  return `[#${pullRequestNumber}](https://github.com/${repository}/pull/${pullRequestNumber})`;
 }
