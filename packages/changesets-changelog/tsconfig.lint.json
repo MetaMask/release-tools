@@ -4,5 +4,5 @@
     "outDir": "./.tsc-lint-cache",
     "tsBuildInfoFile": "./.tsc-lint-cache/tsconfig.tsbuildinfo"
   },
-  "references": []
+  "references": [{ "path": "../changesets-utils/tsconfig.lint.json" }]
 }

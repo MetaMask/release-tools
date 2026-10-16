@@ -1,15 +1,6 @@
+import { CATEGORIES } from './categories.js';
+import type { ChangesetCategory } from './categories.js';
 import { GrammarError } from './grammar-error.js';
-
-const CATEGORIES = [
-  'Added',
-  'Changed',
-  'Removed',
-  'Fixed',
-  'Security',
-  'Deprecated',
-] as const;
-
-export type ChangesetCategory = (typeof CATEGORIES)[number];
 
 export type ParsedEntry = {
   category: ChangesetCategory;
