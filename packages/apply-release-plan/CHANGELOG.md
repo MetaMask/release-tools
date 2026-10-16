@@ -9,15 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0]
 
-### Uncategorized
-
-- test: remove Oxlint suppressions ([#75](https://github.com/MetaMask/release-tools/pull/75))
-- chore: use shared Vitest Oxlint config ([#38](https://github.com/MetaMask/release-tools/pull/38))
-- chore(lint): replace ESLint with Oxlint ([#30](https://github.com/MetaMask/release-tools/pull/30))
-- Upgrade Vitest to v5 ([#29](https://github.com/MetaMask/release-tools/pull/29))
-- chore: move `apply-release-plan` to `packages` ([#19](https://github.com/MetaMask/release-tools/pull/19))
-- This package was forked from [`@changesets/apply-release-plan@8.1.1`](https://github.com/changesets/changesets/tree/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan) in the `changesets/changesets` repository. See [the original changelog](https://github.com/changesets/changesets/blob/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan/CHANGELOG.md) for changes before the fork.
-
 ### Added
 
 - Add ability to customize changelog categories ([#25](https://github.com/MetaMask/release-tools/pull/25))
@@ -27,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - When inserting new release entries in a changelog, accommodate various changelog formats by preserving a title and/or preamble (especially if no version headings exist yet) and allowing for more flexibility in how versions are formatted in headings ([#25](https://github.com/MetaMask/release-tools/pull/25))
+- This package was forked from [`@changesets/apply-release-plan@8.1.1`](https://github.com/changesets/changesets/tree/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan) in the `changesets/changesets` repository. See [the original changelog](https://github.com/changesets/changesets/blob/%40changesets%2Fapply-release-plan%408.1.1/packages/apply-release-plan/CHANGELOG.md) for changes before the fork.
 
 [Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/apply-release-plan@1.0.0...HEAD
 [1.0.0]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/apply-release-plan@1.0.0

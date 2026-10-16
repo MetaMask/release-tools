@@ -9,10 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0]
 
-### Uncategorized
-
-- refactor: rename changeset utils package ([#79](https://github.com/MetaMask/release-tools/pull/79))
-
 ### Added
 
 - Add `parseChangesetSummary` for parsing categorized Changeset summaries, and `GrammarError` for structured parse failures ([#41](https://github.com/MetaMask/release-tools/pull/41))
