@@ -9,7 +9,8 @@ import {
   categorizeReleaseLine,
   getDependencyReleaseLine,
   getReleaseLine,
-} from './release-line.js';
+  getVersionHeader,
+} from './changelog-functions.js';
 import { getPullRequestLink } from './resolve-pull-request.js';
 
 vi.mock('./resolve-pull-request.js', () => ({
@@ -92,5 +93,11 @@ describe('categorizeDependencyReleaseLine', () => {
         line: '- Bump `@metamask/example` from `1.0.0` to `2.0.0`',
       },
     ]);
+  });
+});
+
+describe('getVersionHeader', () => {
+  it('formats a Keep a Changelog version heading', () => {
+    expect(getVersionHeader(dependency)).toBe('## [2.0.0]');
   });
 });

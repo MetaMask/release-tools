@@ -1,6 +1,7 @@
 import type {
   GetDependencyReleaseLine,
   GetReleaseLine,
+  ModCompWithPackage,
   NewChangesetWithCommit,
 } from '@changesets/types';
 import { parseChangesetSummary } from '@metamask/changesets-utils';
@@ -78,4 +79,14 @@ export function categorizeDependencyReleaseLine(
   line: string,
 ): { category: string; line: string }[] {
   return [{ category: 'Changed', line }];
+}
+
+/**
+ * Formats a Keep a Changelog version heading.
+ *
+ * @param release - The release to format.
+ * @returns The formatted version heading.
+ */
+export function getVersionHeader(release: ModCompWithPackage): string {
+  return `## [${release.newVersion}]`;
 }

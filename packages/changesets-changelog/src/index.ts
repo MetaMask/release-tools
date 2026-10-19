@@ -5,7 +5,8 @@ import {
   categorizeReleaseLine,
   getDependencyReleaseLine,
   getReleaseLine,
-} from './release-line.js';
+  getVersionHeader,
+} from './changelog-functions.js';
 
 // `applyReleasePlan` loads the default export as the changelog module and
 // expects all categorized changelog functions and metadata on that object.
@@ -15,6 +16,7 @@ const changelogFunctions = {
   categorizeReleaseLine,
   getDependencyReleaseLine,
   getReleaseLine,
+  getVersionHeader,
 };
 
 export default changelogFunctions;
