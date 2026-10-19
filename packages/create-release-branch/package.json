@@ -70,7 +70,7 @@
     "@types/which": "^3.0.0",
     "@types/yargs": "^17.0.33",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "@vitest/coverage-istanbul": "^5.0.1",
     "deepmerge": "^4.2.2",
     "nanoid": "^3.3.4",
@@ -84,7 +84,7 @@
     "tailwindcss": "^4.0.9",
     "tsx": "^4.20.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^6.4.0",
+    "vite": "^8.3.4",
     "vitest": "^5.0.1"
   },
   "peerDependencies": {
