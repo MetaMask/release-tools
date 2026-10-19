@@ -11,6 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add local pull request resolution from Git commit subjects ([#84](https://github.com/MetaMask/release-tools/pull/84))
 - Add Keep a Changelog categories and repository option validation ([#87](https://github.com/MetaMask/release-tools/pull/87))
-- Add categorized release and dependency changelog lines ([#88](https://github.com/MetaMask/release-tools/pull/88))
+- Generate categorized changelog entries with pull request links, `**BREAKING:**` labels for major releases, preserved nested content, and dependency version changes ([#88](https://github.com/MetaMask/release-tools/pull/88))
 
 [Unreleased]: https://github.com/MetaMask/release-tools/
