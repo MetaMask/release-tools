@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "references": [],
+  "references": [{ "path": "../changesets-utils/tsconfig.json" }],
   "include": ["./src"]
 }

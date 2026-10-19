@@ -86,7 +86,7 @@ describe('parseChangesetSummary', () => {
         'The summary must start with a level-two category heading.',
         1,
         'missing-heading',
-        'Start with a level-two heading such as `## Added`, `## Changed`, `## Removed`, `## Fixed`, `## Security`, or `## Deprecated`.',
+        'Start with a level-two heading such as `## Added`, `## Changed`, `## Deprecated`, `## Removed`, `## Fixed`, or `## Security`.',
       ),
     ],
     [
@@ -96,7 +96,7 @@ describe('parseChangesetSummary', () => {
         'The category heading must name a supported category.',
         1,
         'unknown-category',
-        'Use `Added`, `Changed`, `Removed`, `Fixed`, `Security`, or `Deprecated` as the category.',
+        'Use `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, or `Security` as the category.',
       ),
     ],
     [
@@ -106,7 +106,7 @@ describe('parseChangesetSummary', () => {
         'The category heading must name a supported category.',
         1,
         'unknown-category',
-        'Use `Added`, `Changed`, `Removed`, `Fixed`, `Security`, or `Deprecated` as the category.',
+        'Use `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, or `Security` as the category.',
       ),
     ],
     [
