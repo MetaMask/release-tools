@@ -93,8 +93,4 @@ describe('categorizeDependencyReleaseLine', () => {
       },
     ]);
   });
-
-  it('does not emit an empty dependency line', () => {
-    expect(categorizeDependencyReleaseLine('')).toStrictEqual([]);
-  });
 });

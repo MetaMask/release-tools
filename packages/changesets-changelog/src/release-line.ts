@@ -77,5 +77,5 @@ export const getDependencyReleaseLine: GetDependencyReleaseLine = (
 export function categorizeDependencyReleaseLine(
   line: string,
 ): { category: string; line: string }[] {
-  return line ? [{ category: 'Changed', line }] : [];
+  return [{ category: 'Changed', line }];
 }
