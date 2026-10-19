@@ -7,19 +7,10 @@ import {
   getReleaseLine,
 } from './release-line.js';
 
-// Exported as `categories` because the categorized changelog interface in
-// `@metamask/apply-release-plan` requires a `categories` export.
-export const categories = CATEGORIES;
-
-export {
-  categorizeDependencyReleaseLine,
-  categorizeReleaseLine,
-  getDependencyReleaseLine,
-  getReleaseLine,
-};
-
+// `applyReleasePlan` loads the default export as the changelog module and
+// expects all categorized changelog functions and metadata on that object.
 const changelogFunctions = {
-  categories,
+  categories: CATEGORIES,
   categorizeDependencyReleaseLine,
   categorizeReleaseLine,
   getDependencyReleaseLine,

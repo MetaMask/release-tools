@@ -1,17 +1,18 @@
+import { CATEGORIES } from '@metamask/changesets-utils';
 import { describe, expect, it } from 'vitest';
 
-import changelogFunctions, {
-  categories,
+import changelogFunctions from './index.js';
+import {
   categorizeDependencyReleaseLine,
   categorizeReleaseLine,
   getDependencyReleaseLine,
   getReleaseLine,
-} from './index.js';
+} from './release-line.js';
 
 describe('changelog functions', () => {
   it('exports the interface expected by applyReleasePlan', () => {
     expect(changelogFunctions).toStrictEqual({
-      categories,
+      categories: CATEGORIES,
       categorizeDependencyReleaseLine,
       categorizeReleaseLine,
       getDependencyReleaseLine,
