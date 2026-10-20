@@ -26,6 +26,21 @@ function getLineNumber(source: string, offset: number): number {
   return source.slice(0, offset).split(/\r?\n/u).length;
 }
 
+/**
+ * Reports whether the installed Changesets parser accepts the file.
+ *
+ * @param contents - The complete Changeset file contents.
+ * @returns The parser error, or `undefined` when the parser accepts the file.
+ */
+function getChangesetsParserError(contents: string): Error | undefined {
+  try {
+    parseWithChangesets(contents);
+    return undefined;
+  } catch (error) {
+    return error as Error;
+  }
+}
+
 function yamlDiagnostic(
   source: string,
   sourceStartLine: number,
@@ -66,7 +81,8 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
           hint: 'Start the file with a `---` frontmatter delimiter.',
         },
       ],
-      compatibleWithChangesetsParser: false,
+      compatibleWithChangesetsParser:
+        getChangesetsParserError(contents) === undefined,
     };
   }
 
@@ -86,7 +102,8 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
           hint: 'Add a closing `---` frontmatter delimiter.',
         },
       ],
-      compatibleWithChangesetsParser: false,
+      compatibleWithChangesetsParser:
+        getChangesetsParserError(contents) === undefined,
     };
   }
 
@@ -133,18 +150,14 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
     }
   }
 
-  let compatibleWithChangesetsParser = diagnostics.length === 0;
-  if (compatibleWithChangesetsParser) {
-    try {
-      parseWithChangesets(contents);
-    } catch (error) {
-      compatibleWithChangesetsParser = false;
-      diagnostics.push({
-        rule: 'changesets-parser',
-        message: (error as Error).message,
-        hint: 'Use frontmatter accepted by the installed Changesets parser.',
-      });
-    }
+  const changesetsParserError = getChangesetsParserError(contents);
+  const compatibleWithChangesetsParser = changesetsParserError === undefined;
+  if (diagnostics.length === 0 && changesetsParserError) {
+    diagnostics.push({
+      rule: 'changesets-parser',
+      message: changesetsParserError.message,
+      hint: 'Use frontmatter accepted by the installed Changesets parser.',
+    });
   }
 
   return {

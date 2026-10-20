@@ -105,6 +105,26 @@ describe('parseChangesetFile', () => {
     ]);
   });
 
+  it('reports stray content before the frontmatter that the Changesets parser accepts', () => {
+    const result = parseChangesetFile(
+      [
+        'Stray prose',
+        '---',
+        "'@metamask/example': patch",
+        '---',
+        '',
+        '## Added',
+        '',
+        '- Add an example',
+      ].join('\n'),
+    );
+
+    expect(result.diagnostics).toStrictEqual([
+      expect.objectContaining({ rule: 'missing-frontmatter' }),
+    ]);
+    expect(result.compatibleWithChangesetsParser).toBe(true);
+  });
+
   it('includes leading blank lines in YAML diagnostic locations', () => {
     const result = parseChangesetFile(
       [
