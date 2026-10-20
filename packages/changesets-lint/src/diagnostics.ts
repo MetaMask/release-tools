@@ -38,16 +38,12 @@ export function formatDiagnostic(diagnostic: LintDiagnostic): string {
   const location = [diagnostic.path, diagnostic.line]
     .filter((value) => value !== undefined)
     .join(':');
-  const labels = [
-    diagnostic.rule && `[${diagnostic.rule}]`,
-    diagnostic.packageName && `[package: ${diagnostic.packageName}]`,
-    diagnostic.bumpType && `[bump: ${diagnostic.bumpType}]`,
-  ].filter(isNotEmpty);
-  const prefix = [location, ...labels].filter(isNotEmpty).join(' ');
   const message = singleLine(diagnostic.message);
-  const hint = diagnostic.hint ? ` Hint: ${singleLine(diagnostic.hint)}` : '';
+  const fix = diagnostic.hint
+    ? `(Fix: ${singleLine(diagnostic.hint)})`
+    : undefined;
 
-  return [prefix ? `${prefix}:` : '', message, hint.trim()]
+  return [location ? `${location}:` : '', message, fix]
     .filter(isNotEmpty)
     .join(' ');
 }

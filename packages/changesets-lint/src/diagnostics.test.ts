@@ -18,7 +18,7 @@ describe('formatDiagnostic', () => {
     ).toBe('.changeset/example.md: The frontmatter is invalid.');
   });
 
-  it('formats all structured details on one line', () => {
+  it('formats a problem and fix with the location first', () => {
     expect(
       formatDiagnostic({
         path: '.changeset/example.md',
@@ -30,7 +30,7 @@ describe('formatDiagnostic', () => {
         hint: 'Use Added\nor Fixed.',
       }),
     ).toBe(
-      '.changeset/example.md:6 [unknown-category] [package: @metamask/example] [bump: invalid]: Unsupported category. Hint: Use Added or Fixed.',
+      '.changeset/example.md:6: Unsupported category. (Fix: Use Added or Fixed.)',
     );
   });
 });
