@@ -1,0 +1,81 @@
+import { parseChangesetSummary } from '@metamask/changesets-utils';
+import type { GrammarError } from '@metamask/changesets-utils';
+
+import type { LintDiagnostic } from './diagnostics.js';
+import { parseChangesetFile } from './parse-changeset-file.js';
+
+const VALID_BUMP_TYPES = new Set(['major', 'minor', 'patch']);
+
+export type ValidateChangesetFileOptions = {
+  path: string;
+  contents: string;
+  workspacePackageNames: ReadonlySet<string>;
+};
+
+/**
+ * Validates one Changeset file against MetaMask conventions.
+ *
+ * @param options - The file and workspace information to validate.
+ * @param options.path - The path to report in diagnostics.
+ * @param options.contents - The complete Changeset file contents.
+ * @param options.workspacePackageNames - The valid workspace package names.
+ * @returns All diagnostics that can be recovered from the file.
+ */
+export function validateChangesetFile({
+  path,
+  contents,
+  workspacePackageNames,
+}: ValidateChangesetFileOptions): LintDiagnostic[] {
+  const parsed = parseChangesetFile(contents);
+  const diagnostics: LintDiagnostic[] = parsed.diagnostics.map(
+    (diagnostic) => ({ path, ...diagnostic }),
+  );
+
+  if (parsed.packageChanges.length === 0) {
+    diagnostics.push({
+      path,
+      rule: 'missing-package-changes',
+      message: 'The Changeset must include at least one package change.',
+      hint: 'Add a workspace package and its major, minor, or patch bump type.',
+    });
+  }
+
+  for (const packageChange of parsed.packageChanges) {
+    const { packageName, bumpType } = packageChange;
+    if (!workspacePackageNames.has(packageName)) {
+      diagnostics.push({
+        path,
+        rule: 'unknown-package',
+        packageName,
+        message: `The package ${packageName} is not in this workspace.`,
+        hint: 'Use the name of a package in the current workspace.',
+      });
+    }
+
+    if (typeof bumpType !== 'string' || !VALID_BUMP_TYPES.has(bumpType)) {
+      diagnostics.push({
+        path,
+        rule: 'invalid-bump-type',
+        packageName,
+        bumpType: String(bumpType),
+        message: `The bump type for ${packageName} is not supported.`,
+        hint: 'Use major, minor, or patch.',
+      });
+    }
+  }
+
+  try {
+    parseChangesetSummary(parsed.summary);
+  } catch (error) {
+    const grammarError = error as GrammarError;
+    diagnostics.push({
+      path,
+      line: parsed.summaryStartLine + grammarError.line - 1,
+      rule: grammarError.rule,
+      message: grammarError.message,
+      hint: grammarError.hint,
+    });
+  }
+
+  return diagnostics;
+}

@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.packages.json",
-  "references": [],
+  "references": [{ "path": "../changesets-utils" }],
   "include": ["./src"]
 }

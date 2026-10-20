@@ -36,6 +36,7 @@ linkStyle default opacity:0.5
   changesets_utils(["@metamask/changesets-utils"]);
   create_release_branch(["@metamask/create-release-branch"]);
   changesets_changelog --> changesets_utils;
+  changesets_lint --> changesets_utils;
 ```
 
 <!-- end dependency graph -->
