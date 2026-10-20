@@ -13,6 +13,16 @@ function singleLine(value: string): string {
 }
 
 /**
+ * Checks whether a value is a non-empty string.
+ *
+ * @param value - The value to check.
+ * @returns Whether the value is a non-empty string.
+ */
+function isNotEmpty(value: string | undefined): value is string {
+  return value !== undefined && value !== '';
+}
+
+/**
  * Formats a lint diagnostic as one human-readable line.
  *
  * @param diagnostic - The diagnostic to format.
@@ -26,12 +36,12 @@ export function formatDiagnostic(diagnostic: LintDiagnostic): string {
     diagnostic.rule && `[${diagnostic.rule}]`,
     diagnostic.packageName && `[package: ${diagnostic.packageName}]`,
     diagnostic.bumpType && `[bump: ${diagnostic.bumpType}]`,
-  ].filter(Boolean);
-  const prefix = [location, ...labels].filter(Boolean).join(' ');
+  ].filter(isNotEmpty);
+  const prefix = [location, ...labels].filter(isNotEmpty).join(' ');
   const message = singleLine(diagnostic.message);
   const hint = diagnostic.hint ? ` Hint: ${singleLine(diagnostic.hint)}` : '';
 
   return [prefix ? `${prefix}:` : '', message, hint.trim()]
-    .filter(Boolean)
+    .filter(isNotEmpty)
     .join(' ');
 }
