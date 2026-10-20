@@ -42,7 +42,7 @@ export default createConfig({
         '**/scripts/**',
         'packages/apply-release-plan/**',
         'packages/*/vitest.config.mjs',
-        'scripts/create-package/package-template/vitest.config.mjs',
+        'packages/*/vitest.config.ts',
         'packages/create-release-branch/**',
         '!packages/create-release-branch/src/ui/**',
         'yarn.config.cjs',

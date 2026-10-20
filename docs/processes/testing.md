@@ -10,7 +10,7 @@ Vitest does not add `describe`, `it`, and `expect` as globals, so import them fr
 import { describe, expect, it } from 'vitest';
 ```
 
-Every package shares the configuration in `vitest.config.packages.mjs` at the root. If you need to customize the behavior of Vitest for a package, see `vitest.config.mjs` within that package. It is also where the package sets its coverage thresholds.
+Every package shares the configuration in `vitest.config.packages.mjs` at the root. If you need to customize the behavior of Vitest for a package, see the `vitest.config` file within that package. It is also where the package sets its coverage thresholds.
 
 - Run `yarn workspace <workspaceName> run test` to run all tests for a package.
 - Run `yarn workspace <workspaceName> run test <file>` to run a single test file within the context of a package.
