@@ -8,6 +8,14 @@ import { parseChangesetFile } from './parse-changeset-file.js';
 
 const VALID_BUMP_TYPES = new Set(['major', 'minor', 'patch']);
 
+function formatBumpType(bumpType: unknown): string {
+  if (typeof bumpType === 'string') {
+    return bumpType === '' ? JSON.stringify(bumpType) : bumpType;
+  }
+
+  return String(JSON.stringify(bumpType));
+}
+
 export type ValidateChangesetFileOptions = {
   path: string;
   contents: string;
@@ -33,6 +41,16 @@ export function validateChangesetFile({
     (diagnostic) => ({ path, ...diagnostic }),
   );
 
+  if (
+    parsed.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.rule === 'missing-frontmatter' ||
+        diagnostic.rule === 'missing-frontmatter-end',
+    )
+  ) {
+    return diagnostics;
+  }
+
   if (parsed.packageChanges.length === 0) {
     diagnostics.push({
       path,
@@ -42,6 +60,7 @@ export function validateChangesetFile({
     });
   }
 
+  let hasInvalidBumpType = false;
   for (const packageChange of parsed.packageChanges) {
     const { packageName, bumpType } = packageChange;
     if (!workspacePackageNames.has(packageName)) {
@@ -55,14 +74,26 @@ export function validateChangesetFile({
     }
 
     if (typeof bumpType !== 'string' || !VALID_BUMP_TYPES.has(bumpType)) {
+      hasInvalidBumpType = true;
       diagnostics.push({
         path,
         rule: 'invalid-bump-type',
         packageName,
-        bumpType: String(bumpType),
+        bumpType: formatBumpType(bumpType),
         message: `The bump type for ${packageName} is not supported.`,
         hint: 'Use major, minor, or patch.',
       });
+    }
+  }
+
+  if (hasInvalidBumpType) {
+    const parserDiagnosticIndex = diagnostics.findIndex(
+      (diagnostic) =>
+        diagnostic.rule === 'changesets-parser' &&
+        /invalid (?:release|version) type/u.test(diagnostic.message),
+    );
+    if (parserDiagnosticIndex !== -1) {
+      diagnostics.splice(parserDiagnosticIndex, 1);
     }
   }
 

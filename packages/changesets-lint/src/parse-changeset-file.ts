@@ -122,7 +122,6 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
     .trimEnd();
   const document = parseDocument(frontmatter, {
     prettyErrors: false,
-    uniqueKeys: true,
   });
   const diagnostics = document.errors.map((error) =>
     yamlDiagnostic(frontmatter, firstContentLine + 2, error),
@@ -132,12 +131,14 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
   if (document.contents !== null) {
     if (isMap(document.contents)) {
       for (const pair of document.contents.items) {
-        if (isScalar(pair.key) && typeof pair.key.value === 'string') {
-          packageChanges.push({
-            packageName: pair.key.value,
-            bumpType: pair.value?.toJSON() ?? null,
-          });
-        }
+        const packageName =
+          isScalar(pair.key) && typeof pair.key.value === 'string'
+            ? pair.key.value
+            : String(pair.key?.toJSON());
+        packageChanges.push({
+          packageName,
+          bumpType: pair.value?.toJSON() ?? null,
+        });
       }
     } else {
       diagnostics.push({

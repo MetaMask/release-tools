@@ -66,6 +66,46 @@ describe('validateChangesetFile', () => {
     ).toStrictEqual([]);
   });
 
+  it('stops after reporting content before frontmatter', () => {
+    expect(
+      validateChangesetFile({
+        path,
+        contents: [
+          'Stray prose',
+          '---',
+          "'@metamask/example': patch",
+          '---',
+          '## Added',
+          '- Add an example',
+        ].join('\n'),
+        workspacePackageNames,
+      }),
+    ).toStrictEqual([
+      expect.objectContaining({
+        path,
+        line: 1,
+        rule: 'missing-frontmatter',
+      }),
+    ]);
+  });
+
+  it('stops after reporting unclosed frontmatter', () => {
+    expect(
+      validateChangesetFile({
+        path,
+        contents:
+          "---\n'@metamask/example': patch\n\n## Fixed\n\n- Fix an example",
+        workspacePackageNames,
+      }),
+    ).toStrictEqual([
+      expect.objectContaining({
+        path,
+        line: 1,
+        rule: 'missing-frontmatter-end',
+      }),
+    ]);
+  });
+
   it('reports missing package changes', () => {
     expect(
       validateChangesetFile({
@@ -75,6 +115,22 @@ describe('validateChangesetFile', () => {
       }),
     ).toContainEqual(
       expect.objectContaining({ path, rule: 'missing-package-changes' }),
+    );
+  });
+
+  it('reports a non-string package key as an unknown package', () => {
+    expect(
+      validateChangesetFile({
+        path,
+        contents: changeset('1: patch', '## Added\n- Add an example'),
+        workspacePackageNames,
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        path,
+        rule: 'unknown-package',
+        packageName: '1',
+      }),
     );
   });
 
@@ -100,16 +156,19 @@ describe('validateChangesetFile', () => {
   it.each(['none', 'invalid'])(
     'reports the unsupported %s bump',
     (bumpType) => {
-      expect(
-        validateChangesetFile({
-          path,
-          contents: changeset(
-            `'@metamask/example': ${bumpType}`,
-            '## Added\n- Add an example',
-          ),
-          workspacePackageNames,
-        }),
-      ).toContainEqual(
+      const diagnostics = validateChangesetFile({
+        path,
+        contents: changeset(
+          `'@metamask/example': ${bumpType}`,
+          '## Added\n- Add an example',
+        ),
+        workspacePackageNames,
+      });
+
+      expect(diagnostics).not.toContainEqual(
+        expect.objectContaining({ rule: 'changesets-parser' }),
+      );
+      expect(diagnostics).toContainEqual(
         expect.objectContaining({
           path,
           rule: 'invalid-bump-type',
@@ -120,12 +179,34 @@ describe('validateChangesetFile', () => {
     },
   );
 
-  it('reports a non-string bump', () => {
+  it('keeps an unrelated parser diagnostic when another package has an invalid bump', () => {
+    const diagnostics = validateChangesetFile({
+      path,
+      contents: changeset(
+        "'': patch\n'@metamask/example': invalid",
+        '## Added\n- Add an example',
+      ),
+      workspacePackageNames,
+    });
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ rule: 'changesets-parser' }),
+    );
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ rule: 'invalid-bump-type' }),
+    );
+  });
+
+  it.each([
+    ['a number', '1', '1'],
+    ['a list', '[patch]', '["patch"]'],
+    ['an empty string', "''", '""'],
+  ])('reports %s bump without hiding its shape', (_name, yaml, bumpType) => {
     expect(
       validateChangesetFile({
         path,
         contents: changeset(
-          "'@metamask/example': 1",
+          `'@metamask/example': ${yaml}`,
           '## Added\n- Add an example',
         ),
         workspacePackageNames,
@@ -135,7 +216,7 @@ describe('validateChangesetFile', () => {
         path,
         rule: 'invalid-bump-type',
         packageName: '@metamask/example',
-        bumpType: '1',
+        bumpType,
       }),
     );
   });

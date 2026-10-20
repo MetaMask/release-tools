@@ -190,12 +190,14 @@ describe('parseChangesetFile', () => {
     expect(result.summaryStartLine).toBe(4);
   });
 
-  it('ignores non-string frontmatter keys', () => {
+  it('recovers non-string frontmatter keys as package names', () => {
     const result = parseChangesetFile(
       ['---', '1: patch', '---', '## Added', '- Add an example'].join('\n'),
     );
 
-    expect(result.packageChanges).toStrictEqual([]);
+    expect(result.packageChanges).toStrictEqual([
+      { packageName: '1', bumpType: 'patch' },
+    ]);
   });
 
   it('recovers a null bump value', () => {
