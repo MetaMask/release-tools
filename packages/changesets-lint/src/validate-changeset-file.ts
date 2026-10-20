@@ -1,5 +1,7 @@
-import { parseChangesetSummary } from '@metamask/changesets-utils';
-import type { GrammarError } from '@metamask/changesets-utils';
+import {
+  GrammarError,
+  parseChangesetSummary,
+} from '@metamask/changesets-utils';
 
 import type { LintDiagnostic } from './diagnostics.js';
 import { parseChangesetFile } from './parse-changeset-file.js';
@@ -67,13 +69,17 @@ export function validateChangesetFile({
   try {
     parseChangesetSummary(parsed.summary);
   } catch (error) {
-    const grammarError = error as GrammarError;
+    /* istanbul ignore if -- The summary parser's public contract only throws GrammarError. */
+    if (!(error instanceof GrammarError)) {
+      throw error;
+    }
+
     diagnostics.push({
       path,
-      line: parsed.summaryStartLine + grammarError.line - 1,
-      rule: grammarError.rule,
-      message: grammarError.message,
-      hint: grammarError.hint,
+      line: parsed.summaryStartLine + error.line - 1,
+      rule: error.rule,
+      message: error.message,
+      hint: error.hint,
     });
   }
 

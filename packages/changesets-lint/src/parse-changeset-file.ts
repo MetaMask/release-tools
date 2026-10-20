@@ -18,16 +18,21 @@ export type RecoveredChangesetFile = {
 
 const FRONTMATTER_DELIMITER = '---';
 
+function isFrontmatterDelimiter(line: string): boolean {
+  return line.trim() === FRONTMATTER_DELIMITER;
+}
+
 function getLineNumber(source: string, offset: number): number {
   return source.slice(0, offset).split(/\r?\n/u).length;
 }
 
 function yamlDiagnostic(
   source: string,
+  sourceStartLine: number,
   error: { message: string; pos: readonly [number, number] },
 ): Omit<LintDiagnostic, 'path'> {
   return {
-    line: getLineNumber(source, error.pos[0]) + 1,
+    line: getLineNumber(source, error.pos[0]) + sourceStartLine - 1,
     rule: 'invalid-yaml',
     message: error.message,
     hint: 'Fix the YAML between the frontmatter delimiters.',
@@ -47,7 +52,7 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
 
   if (
     firstContentLine === -1 ||
-    lines[firstContentLine] !== FRONTMATTER_DELIMITER
+    !isFrontmatterDelimiter(lines[firstContentLine])
   ) {
     return {
       packageChanges: [],
@@ -65,9 +70,8 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
     };
   }
 
-  const closingDelimiter = lines.indexOf(
-    FRONTMATTER_DELIMITER,
-    firstContentLine + 1,
+  const closingDelimiter = lines.findIndex(
+    (line, index) => index > firstContentLine && isFrontmatterDelimiter(line),
   );
   if (closingDelimiter === -1) {
     return {
@@ -104,7 +108,7 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
     uniqueKeys: true,
   });
   const diagnostics = document.errors.map((error) =>
-    yamlDiagnostic(frontmatter, error),
+    yamlDiagnostic(frontmatter, firstContentLine + 2, error),
   );
   const packageChanges: PackageChange[] = [];
 

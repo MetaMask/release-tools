@@ -15,6 +15,25 @@ describe('parseChangesetFile', () => {
     );
   });
 
+  it.each([
+    ['indented delimiters', "  ---\n'@metamask/example': patch\n  ---"],
+    ['a byte order mark', "\uFEFF---\n'@metamask/example': patch\n---"],
+  ])('parses frontmatter with %s', (_name, frontmatter) => {
+    const result = parseChangesetFile(
+      `${frontmatter}\n## Fixed\n- Fix an example`,
+    );
+
+    expect(result).toStrictEqual(
+      expect.objectContaining({
+        packageChanges: [
+          { packageName: '@metamask/example', bumpType: 'patch' },
+        ],
+        summary: '## Fixed\n- Fix an example',
+        compatibleWithChangesetsParser: true,
+      }),
+    );
+  });
+
   it.each(['\n', '\r\n'])('parses a valid file with %j newlines', (newline) => {
     const result = parseChangesetFile(
       [
@@ -81,6 +100,23 @@ describe('parseChangesetFile', () => {
       bumpType: 'patch',
     });
     expect(result.compatibleWithChangesetsParser).toBe(false);
+    expect(result.diagnostics).toStrictEqual([
+      expect.objectContaining({ rule: 'invalid-yaml', line: 3 }),
+    ]);
+  });
+
+  it('includes leading blank lines in YAML diagnostic locations', () => {
+    const result = parseChangesetFile(
+      [
+        '',
+        '---',
+        "'@metamask/broken': [",
+        '---',
+        '## Fixed',
+        '- Fix an example',
+      ].join('\n'),
+    );
+
     expect(result.diagnostics).toStrictEqual([
       expect.objectContaining({ rule: 'invalid-yaml', line: 3 }),
     ]);
