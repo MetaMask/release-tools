@@ -8,6 +8,12 @@ import { parseChangesetFile } from './parse-changeset-file.js';
 
 const VALID_BUMP_TYPES = new Set(['major', 'minor', 'patch']);
 
+/**
+ * Formats an invalid bump type without hiding its data type.
+ *
+ * @param bumpType - The invalid bump type.
+ * @returns The formatted bump type.
+ */
 function formatBumpType(bumpType: unknown): string {
   if (typeof bumpType === 'string') {
     return bumpType === '' ? JSON.stringify(bumpType) : bumpType;

@@ -8,6 +8,12 @@ export type LintDiagnostic = {
   hint?: string;
 };
 
+/**
+ * Replaces whitespace sequences with single spaces.
+ *
+ * @param value - The value to normalize.
+ * @returns The normalized single-line value.
+ */
 function singleLine(value: string): string {
   return value.replace(/\s+/gu, ' ').trim();
 }

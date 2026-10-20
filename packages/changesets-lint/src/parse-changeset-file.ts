@@ -18,10 +18,23 @@ export type RecoveredChangesetFile = {
 
 const FRONTMATTER_DELIMITER = '---';
 
+/**
+ * Checks whether a line is a frontmatter delimiter.
+ *
+ * @param line - The line to check.
+ * @returns Whether the line is a frontmatter delimiter.
+ */
 function isFrontmatterDelimiter(line: string): boolean {
   return line.trim() === FRONTMATTER_DELIMITER;
 }
 
+/**
+ * Gets the 1-based line number at a source offset.
+ *
+ * @param source - The source text.
+ * @param offset - The zero-based character offset.
+ * @returns The 1-based line number.
+ */
 function getLineNumber(source: string, offset: number): number {
   return source.slice(0, offset).split(/\r?\n/u).length;
 }
@@ -41,6 +54,14 @@ function getChangesetsParserError(contents: string): Error | undefined {
   }
 }
 
+/**
+ * Converts a YAML parser error to a lint diagnostic.
+ *
+ * @param source - The parsed YAML source.
+ * @param sourceStartLine - The source's 1-based starting line in the file.
+ * @param error - The YAML parser error.
+ * @returns The lint diagnostic.
+ */
 function yamlDiagnostic(
   source: string,
   sourceStartLine: number,
