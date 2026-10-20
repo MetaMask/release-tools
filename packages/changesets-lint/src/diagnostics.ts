@@ -22,15 +22,16 @@ export function formatDiagnostic(diagnostic: LintDiagnostic): string {
   const location = [diagnostic.path, diagnostic.line]
     .filter((value) => value !== undefined)
     .join(':');
-  const details = [
-    diagnostic.rule ? `[${diagnostic.rule}]` : undefined,
-    diagnostic.packageName ? `[package: ${diagnostic.packageName}]` : undefined,
-    diagnostic.bumpType ? `[bump: ${diagnostic.bumpType}]` : undefined,
-  ].filter((value) => value !== undefined);
-  const prefix = [location, ...details].filter(Boolean).join(' ');
+  const labels = [
+    diagnostic.rule && `[${diagnostic.rule}]`,
+    diagnostic.packageName && `[package: ${diagnostic.packageName}]`,
+    diagnostic.bumpType && `[bump: ${diagnostic.bumpType}]`,
+  ].filter(Boolean);
+  const prefix = [location, ...labels].filter(Boolean).join(' ');
+  const message = singleLine(diagnostic.message);
   const hint = diagnostic.hint ? ` Hint: ${singleLine(diagnostic.hint)}` : '';
 
-  return `${prefix ? `${prefix}: ` : ''}${singleLine(
-    diagnostic.message,
-  )}${hint}`;
+  return [prefix ? `${prefix}:` : '', message, hint.trim()]
+    .filter(Boolean)
+    .join(' ');
 }
