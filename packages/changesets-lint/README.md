@@ -1,6 +1,6 @@
 # `@metamask/changesets-lint`
 
-Lint Changeset files
+A CLI for validating Changeset files against MetaMask conventions
 
 ## Installation
 

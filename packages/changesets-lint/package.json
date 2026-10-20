@@ -1,7 +1,7 @@
 {
   "name": "@metamask/changesets-lint",
   "version": "0.0.0",
-  "description": "Lint Changeset files",
+  "description": "A CLI for validating Changeset files against MetaMask conventions",
   "keywords": [
     "Ethereum",
     "MetaMask"
