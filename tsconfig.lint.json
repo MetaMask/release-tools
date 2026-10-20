@@ -13,13 +13,16 @@
       "path": "./packages/apply-release-plan/tsconfig.lint.json"
     },
     {
+      "path": "./packages/changesets-changelog/tsconfig.lint.json"
+    },
+    {
+      "path": "./packages/changesets-lint/tsconfig.lint.json"
+    },
+    {
       "path": "./packages/changesets-utils/tsconfig.lint.json"
     },
     {
       "path": "./packages/create-release-branch/tsconfig.lint.json"
-    },
-    {
-      "path": "./packages/changesets-changelog/tsconfig.lint.json"
     }
   ]
 }
