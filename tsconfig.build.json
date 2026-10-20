@@ -11,13 +11,16 @@
       "path": "./packages/apply-release-plan/tsconfig.build.json"
     },
     {
+      "path": "./packages/changesets-changelog/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/changesets-lint/tsconfig.build.json"
+    },
+    {
       "path": "./packages/changesets-utils/tsconfig.build.json"
     },
     {
       "path": "./packages/create-release-branch/tsconfig.build.json"
-    },
-    {
-      "path": "./packages/changesets-changelog/tsconfig.build.json"
     }
   ],
   "files": [],
