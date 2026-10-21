@@ -59,7 +59,7 @@ jobs:
         **/*.test.js*
         **/*.test.ts*
         **/fixtures/
-        **/vitest.config.mjs
+        **/vitest.config.ts
         **/mocks/
         **/test*/
         docs/

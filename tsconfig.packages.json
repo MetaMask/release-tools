@@ -10,7 +10,7 @@
      * uncompiled source code for packages that live in this repo.
      *
      * Vitest applies these same paths through the `resolve.tsconfigPaths`
-     * option in `vitest.config.packages.mjs`, so there is nothing to keep in
+     * option in `vitest.config.packages.ts`, so there is nothing to keep in
      * sync by hand.
      *
      * `${configDir}` is the directory of the package itself.

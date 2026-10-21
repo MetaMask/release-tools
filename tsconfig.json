@@ -25,5 +25,6 @@
     }
   ],
   "files": [],
-  "include": ["./scripts", "./tests", "./knip.config.mts"]
+  "include": ["./scripts", "./tests", "./knip.config.mts"],
+  "exclude": ["./scripts/create-package/package-template"]
 }
