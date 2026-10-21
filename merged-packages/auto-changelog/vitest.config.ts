@@ -8,9 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       name: basename(import.meta.dirname),
-      testTimeout: 2500,
       coverage: {
-        reporter: ['text', 'html'],
         thresholds: {
           branches: 66,
           functions: 77,
