@@ -1,21 +1,25 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import execa from 'execa';
+import { execa } from 'execa';
+import { describe, expect, it, vi } from 'vitest';
+import type { MockedFunction } from 'vitest';
 
-import { getDependencyChanges } from './get-dependency-changes';
+import { getDependencyChanges } from './get-dependency-changes.js';
 
-jest.mock('execa');
+vi.mock('execa');
 
-const execaMock = execa as jest.MockedFunction<typeof execa>;
+const execaMock = execa as MockedFunction<typeof execa>;
 
 /**
  * Helper to build a mock for execa calls. Enqueues responses in order.
  *
  * @param responses - The mock responses to enqueue.
  */
-function mockExecaResponses(...responses: ({ stdout: string } | Error)[]) {
+function mockExecaResponses(
+  ...responses: ({ stdout: string } | Error)[]
+): void {
   for (const response of responses) {
     if (response instanceof Error) {
-      execaMock.mockRejectedValueOnce(response as never);
+      execaMock.mockRejectedValueOnce(response);
     } else {
       execaMock.mockResolvedValueOnce(response as never);
     }

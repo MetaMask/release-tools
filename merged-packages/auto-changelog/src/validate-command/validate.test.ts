@@ -1,26 +1,31 @@
 import { promises as fs } from 'fs';
 import os from 'os';
-import _outdent from 'outdent';
+import { outdent as outdentFactory } from 'outdent';
 import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockedFunction } from 'vitest';
 
 import {
   BaseRefNotFoundError,
   getDependencyChanges,
-} from '../get-dependency-changes';
-import { validate } from './validate';
+} from '../get-dependency-changes.js';
+import { validate } from './validate.js';
+import type { ValidateOptions } from './validate.js';
 
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 // Only mock the getDependencyChanges function — keep BaseRefNotFoundError real.
-jest.mock('../get-dependency-changes', () => {
-  const actual = jest.requireActual('../get-dependency-changes');
+vi.mock('../get-dependency-changes.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../get-dependency-changes.js')
+  >('../get-dependency-changes.js');
   return {
     ...actual,
-    getDependencyChanges: jest.fn(),
+    getDependencyChanges: vi.fn(),
   };
 });
 
-const getDependencyChangesMock = getDependencyChanges as jest.MockedFunction<
+const getDependencyChangesMock = getDependencyChanges as MockedFunction<
   typeof getDependencyChanges
 >;
 
@@ -47,7 +52,7 @@ describe('validate', () => {
    *
    * @param content - The changelog content.
    */
-  async function writeChangelog(content: string) {
+  async function writeChangelog(content: string): Promise<void> {
     await fs.writeFile(changelogPath, content, 'utf-8');
   }
 
@@ -74,7 +79,7 @@ describe('validate', () => {
    *
    * @returns Default validate options.
    */
-  function defaultOptions() {
+  function defaultOptions(): ValidateOptions {
     return {
       changelogPath,
       currentVersion: '1.0.0' as const,
@@ -82,7 +87,7 @@ describe('validate', () => {
       repoUrl,
       tagPrefix: 'v',
       fix: false,
-      formatter: async (input: string) => input,
+      formatter: async (input: string): Promise<string> => input,
       ensureValidPrLinksPresent: false,
       manifestPath: '/repo/package.json',
     };
@@ -122,7 +127,7 @@ describe('validate', () => {
       getDependencyChangesMock.mockRejectedValue(
         new BaseRefNotFoundError('on base branch'),
       );
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Do nothing
       });
 
@@ -209,7 +214,7 @@ describe('validate', () => {
 
     it('prints diff and sets exitCode=1 when fix=false', async () => {
       await writeChangelog(poorlyFormattedChangelog);
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Do nothing
       });
 
@@ -243,13 +248,15 @@ describe('validate', () => {
         prNumbers: ['100'],
         versionChanged: false,
       });
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
         // Do nothing
       });
 
+      // Omit currentVersion to exercise the no-version path.
+      const { currentVersion, ...optionsWithoutVersion } = defaultOptions();
+
       await validate({
-        ...defaultOptions(),
-        currentVersion: undefined,
+        ...optionsWithoutVersion,
         checkDeps: true,
         fix: true,
         currentPr: '200',
@@ -270,7 +277,7 @@ describe('validate', () => {
         prNumbers: ['100'],
         versionChanged: false,
       });
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
         // Do nothing
       });
 
@@ -299,7 +306,7 @@ describe('validate', () => {
         prNumbers: ['100'],
         versionChanged: true,
       });
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
         // Do nothing
       });
 
@@ -329,13 +336,15 @@ describe('validate', () => {
         prNumbers: [],
         versionChanged: false,
       });
-      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
         // Do nothing
       });
 
+      // Omit currentVersion to exercise the no-version path.
+      const { currentVersion, ...optionsWithoutVersion } = defaultOptions();
+
       await validate({
-        ...defaultOptions(),
-        currentVersion: undefined,
+        ...optionsWithoutVersion,
         checkDeps: true,
         fix: true,
         currentPr: '200',
@@ -353,7 +362,7 @@ describe('validate', () => {
         prNumbers: [],
         versionChanged: false,
       });
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Do nothing
       });
 
@@ -380,7 +389,7 @@ describe('validate', () => {
         prNumbers: [],
         versionChanged: false,
       });
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Do nothing
       });
 
@@ -417,7 +426,7 @@ describe('validate', () => {
         [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
       `;
       await writeChangelog(changelogWithUnreleasedAndRelease);
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Do nothing
       });
 

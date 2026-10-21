@@ -1,9 +1,9 @@
-import type Changelog from './changelog';
-import type { Change, DependencyBump, Formatter } from './changelog';
-import { ChangeCategory } from './constants';
-import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry';
-import { readFile, writeFile } from './fs';
-import { parseChangelog } from './parse-changelog';
+import type Changelog from './changelog.js';
+import type { Change, DependencyBump, Formatter } from './changelog.js';
+import { ChangeCategory } from './constants.js';
+import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry.js';
+import { readFile, writeFile } from './fs.js';
+import { parseChangelog } from './parse-changelog.js';
 
 /**
  * Extracts PR numbers from a change entry's description text.
@@ -141,7 +141,7 @@ export async function updateChangelogWithDependencyBumps({
       const existingOldVersion =
         entryCheck.existingEntry.dependencyBump?.oldVersion;
       changelog.updateChange({
-        version: currentVersion,
+        ...(currentVersion !== undefined && { version: currentVersion }),
         category: ChangeCategory.Changed,
         entryIndex: entryCheck.entryIndex,
         dependencyBump: {

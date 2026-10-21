@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { readFile, writeFile } from './fs';
+import { readFile, writeFile } from './fs.js';
 
 describe('fs', () => {
   describe('readFile', () => {

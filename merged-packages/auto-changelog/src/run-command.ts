@@ -1,4 +1,5 @@
-import execa from 'execa';
+import { execa } from 'execa';
+import type { Options } from 'execa';
 
 /**
  * Executes a shell command in a child process and returns what it wrote to
@@ -12,7 +13,7 @@ import execa from 'execa';
 export async function runCommand(
   command: string,
   args: string[],
-  options?: execa.Options,
+  options?: Options,
 ): Promise<string> {
   return (await execa(command, [...args], options)).stdout;
 }
@@ -30,7 +31,7 @@ export async function runCommand(
 export async function runCommandAndSplit(
   command: string,
   args: string[],
-  options?: execa.Options,
+  options?: Options,
 ): Promise<string[]> {
   return (await execa(command, [...args], options)).stdout
     .trim()

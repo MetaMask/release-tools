@@ -3,7 +3,7 @@
  *
  * @param errorMessage - The error message to log.
  */
-export function error(errorMessage: string) {
+export function error(errorMessage: string): void {
   console.error(errorMessage);
   process.exitCode = 1;
 }

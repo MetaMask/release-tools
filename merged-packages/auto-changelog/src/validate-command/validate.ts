@@ -1,21 +1,21 @@
-import { Formatter } from '../changelog';
-import { Version } from '../constants';
-import { readFile, writeFile } from '../fs';
-import { generateDiff } from '../generate-diff';
+import type { Formatter } from '../changelog.js';
+import type { Version } from '../constants.js';
+import { readFile, writeFile } from '../fs.js';
+import { generateDiff } from '../generate-diff.js';
 import {
   BaseRefNotFoundError,
   getDependencyChanges,
-  type DependencyCheckResult,
-} from '../get-dependency-changes';
-import { PackageRename } from '../shared-types';
-import { updateChangelogWithDependencyBumps } from '../update-changelog-with-dependency-bumps';
+} from '../get-dependency-changes.js';
+import type { DependencyCheckResult } from '../get-dependency-changes.js';
+import type { PackageRename } from '../shared-types.js';
+import { updateChangelogWithDependencyBumps } from '../update-changelog-with-dependency-bumps.js';
 import {
   ChangelogFormattingError,
   InvalidChangelogError,
   MissingDependencyEntriesError,
   validateChangelog,
-} from '../validate-changelog';
-import { error } from './cli-utils';
+} from '../validate-changelog.js';
+import { error } from './cli-utils.js';
 
 /**
  * Options for validating a changelog.
@@ -89,25 +89,28 @@ export type ValidateOptions = {
  * @param options.remote - Remote name for auto-detection.
  * @param options.baseBranch - Base branch for auto-detection.
  * @param options.currentPr - PR number to use when fixing missing entries.
+ * @returns A promise that resolves to nothing once the changelog is validated, or
+ * rejects with an error if the changelog is invalid.
  */
-export async function validate({
-  changelogPath,
-  currentVersion,
-  isReleaseCandidate,
-  repoUrl,
-  tagPrefix,
-  fix,
-  formatter,
-  packageRename,
-  ensureValidPrLinksPresent,
-  checkDeps,
-  manifestPath,
-  fromRef,
-  toRef,
-  remote,
-  baseBranch,
-  currentPr,
-}: ValidateOptions) {
+export async function validate(options: ValidateOptions): Promise<void> {
+  const {
+    changelogPath,
+    currentVersion,
+    isReleaseCandidate,
+    repoUrl,
+    tagPrefix,
+    fix,
+    formatter,
+    packageRename,
+    ensureValidPrLinksPresent,
+    checkDeps,
+    manifestPath,
+    fromRef,
+    toRef,
+    remote,
+    baseBranch,
+    currentPr,
+  } = options;
   const changelogContent = await readFile(changelogPath);
 
   let dependencyCheckResult: DependencyCheckResult | undefined;
@@ -115,10 +118,10 @@ export async function validate({
     try {
       dependencyCheckResult = await getDependencyChanges({
         manifestPath,
-        fromRef,
-        toRef,
-        remote,
-        baseBranch,
+        ...(fromRef !== undefined && { fromRef }),
+        ...(toRef !== undefined && { toRef }),
+        ...(remote !== undefined && { remote }),
+        ...(baseBranch !== undefined && { baseBranch }),
       });
     } catch (caughtError) {
       if (caughtError instanceof BaseRefNotFoundError) {
@@ -133,22 +136,21 @@ export async function validate({
   try {
     await validateChangelog({
       changelogContent,
-      currentVersion,
+      ...(currentVersion !== undefined && { currentVersion }),
       repoUrl,
       isReleaseCandidate,
       tagPrefix,
       formatter,
-      packageRename,
+      ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent,
-      dependencyCheckResult,
+      ...(dependencyCheckResult !== undefined && { dependencyCheckResult }),
     });
-    return undefined;
   } catch (caughtError) {
     if (caughtError instanceof ChangelogFormattingError) {
       const { validChangelog, invalidChangelog } = caughtError.data;
       if (fix) {
         await writeFile(changelogPath, validChangelog);
-        return undefined;
+        return;
       }
 
       const diff = generateDiff(validChangelog, invalidChangelog);
@@ -169,22 +171,21 @@ export async function validate({
         await updateChangelogWithDependencyBumps({
           changelogPath,
           dependencyBumps: caughtError.missingEntries,
-          currentVersion:
-            dependencyCheckResult?.versionChanged && hasReleaseHeader
-              ? currentVersion
-              : undefined,
+          ...(dependencyCheckResult?.versionChanged &&
+            hasReleaseHeader &&
+            currentVersion !== undefined && { currentVersion }),
           prNumbers,
           repoUrl,
           formatter,
           tagPrefix,
-          packageRename,
+          ...(packageRename !== undefined && { packageRename }),
           changelog: caughtError.changelog,
         });
         const count = caughtError.missingEntries.length;
         console.log(
           `Fixed ${count} dependency changelog ${count === 1 ? 'entry' : 'entries'} (added or updated).`,
         );
-        return undefined;
+        return;
       }
       const deps = caughtError.missingEntries
         .map((entry) => entry.dependency)

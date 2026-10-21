@@ -1,4 +1,6 @@
-import { prettier } from './formatters';
+import { describe, expect, it } from 'vitest';
+
+import { prettier } from './formatters.js';
 
 describe('oxfmt', () => {
   // Oxfmt is ESM-only, and Jest doesn't work well with ESM. We'll want to

@@ -1,12 +1,23 @@
 import nock from 'nock';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import type { MockedFunction } from 'vitest';
 
-import { getNewChangeEntries } from './get-new-changes';
-import { runCommand, runCommandAndSplit } from './run-command';
+import { getNewChangeEntries } from './get-new-changes.js';
+import { runCommand, runCommandAndSplit } from './run-command.js';
 
-jest.mock('./run-command');
+vi.mock('./run-command');
 
-const mockRunCommand = runCommand as jest.MockedFunction<typeof runCommand>;
-const mockRunCommandAndSplit = runCommandAndSplit as jest.MockedFunction<
+const mockRunCommand = runCommand as MockedFunction<typeof runCommand>;
+const mockRunCommandAndSplit = runCommandAndSplit as MockedFunction<
   typeof runCommandAndSplit
 >;
 
@@ -18,7 +29,7 @@ const repoUrl = 'https://github.com/MetaMask/metamask-mobile';
  * @param labels - The label names to return.
  * @returns The Nock scope for the mocked endpoint.
  */
-function mockPrLabels(labels: string[] = []) {
+function mockPrLabels(labels: string[] = []): ReturnType<typeof nock> {
   return nock('https://api.github.com')
     .persist()
     .get(/\/repos\/MetaMask\/metamask-mobile\/pulls\/\d+/u)
@@ -77,7 +88,7 @@ describe('getNewChangeEntries', () => {
     it('logs commit decisions when verbose is enabled', async () => {
       mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
       mockRunCommand.mockResolvedValueOnce('add feature (#12345)');
-      const errorSpy = jest
+      const errorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => undefined);
 
@@ -103,7 +114,7 @@ describe('getNewChangeEntries', () => {
     it('does not log commit decisions by default', async () => {
       mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
       mockRunCommand.mockResolvedValueOnce('add feature (#12345)');
-      const errorSpy = jest
+      const errorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => undefined);
 
@@ -228,7 +239,7 @@ describe('getNewChangeEntries', () => {
       mockRunCommand.mockResolvedValueOnce(
         'fix: resolve a historical issue (#12345)',
       );
-      const errorSpy = jest
+      const errorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => undefined);
 
@@ -417,7 +428,7 @@ describe('getNewChangeEntries', () => {
       originalSubject: string,
       cherryPickSubject: string,
       entry: string,
-    ) {
+    ): ReturnType<typeof getNewChangeEntries> {
       mockRunCommandAndSplit.mockResolvedValueOnce(['original', 'cherrypick']);
       mockRunCommand
         .mockResolvedValueOnce(originalSubject) // original %s
@@ -910,7 +921,10 @@ describe('getNewChangeEntries', () => {
      * @param body - The commit body (`git show %b`).
      * @returns The resulting change entries.
      */
-    async function runWithEntry(subject: string, body: string) {
+    async function runWithEntry(
+      subject: string,
+      body: string,
+    ): ReturnType<typeof getNewChangeEntries> {
       mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
       mockRunCommand
         .mockResolvedValueOnce(subject) // %s
@@ -1856,7 +1870,7 @@ describe('getNewChangeEntries', () => {
      *
      * @returns The resulting change entries.
      */
-    async function run() {
+    async function run(): ReturnType<typeof getNewChangeEntries> {
       mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
       return getNewChangeEntries({
         mostRecentTag: 'v1.0.0',

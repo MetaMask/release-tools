@@ -6,91 +6,68 @@
     "Ethereum",
     "MetaMask"
   ],
-  "homepage": "https://github.com/MetaMask/auto-changelog#readme",
+  "homepage": "https://github.com/MetaMask/release-tools/tree/main/packages/auto-changelog#readme",
   "bugs": {
-    "url": "https://github.com/MetaMask/auto-changelog/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/MetaMask/auto-changelog.git"
+    "url": "https://github.com/MetaMask/release-tools/issues"
   },
   "license": "(MIT OR Apache-2.0)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MetaMask/release-tools.git"
+  },
+  "bin": "dist/cli.js",
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
-  "bin": "dist/cli.mjs",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "ts-bridge --project tsconfig.build.json --clean",
-    "changelog": "node dist/cli.mjs",
-    "lint": "yarn lint:eslint && yarn lint:misc --check",
-    "lint:eslint": "eslint . --cache --ext js,ts",
-    "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
-    "lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' '**/*.yml' '!.yarnrc.yml' --ignore-path .gitignore",
-    "prepack": "./scripts/prepack.sh",
-    "test": "jest && attw --pack",
-    "test:watch": "jest --watch"
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
-  "resolutions": {
-    "fflate": "0.8.2"
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "build:all": "tsc --build tsconfig.build.json --verbose",
+    "build:clean": "yarn build:only-clean && yarn build",
+    "build:docs": "typedoc",
+    "build:only-clean": "rimraf './dist' './tsconfig.build.tsbuildinfo'",
+    "changelog:update": "../../scripts/update-changelog.sh @metamask/auto-changelog",
+    "changelog:validate": "../../scripts/validate-changelog.sh @metamask/auto-changelog",
+    "since-latest-release": "../../scripts/since-latest-release.sh",
+    "test": "vitest",
+    "test:clean": "vitest --clearCache",
+    "test:package": "attw --pack",
+    "test:verbose": "vitest --reporter=verbose",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",
     "diff": "^5.0.0",
-    "execa": "^5.1.1",
-    "semver": "^7.3.5",
-    "yargs": "^17.0.1"
+    "execa": "^8.0.1",
+    "semver": "^7.8.5",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.15.3",
-    "@lavamoat/allow-scripts": "^2.1.0",
-    "@vitest/coverage-istanbul": "^5.0.1",
-    "@metamask/eslint-config": "^11.1.0",
-    "@metamask/eslint-config-jest": "^11.1.0",
-    "@metamask/eslint-config-nodejs": "^11.1.0",
-    "@metamask/eslint-config-typescript": "^11.1.0",
-    "@ts-bridge/cli": "^0.6.3",
-    "@types/cross-spawn": "^6.0.2",
     "@types/diff": "^5.0.0",
-    "@types/jest": "^26.0.23",
     "@types/node": "^22.18.0",
-    "@types/semver": "^7.3.6",
-    "@types/yargs": "^16.0.1",
-    "@typescript-eslint/eslint-plugin": "^5.42.1",
-    "@typescript-eslint/parser": "^5.42.1",
-    "eslint": "^8.40.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-jest": "^27.1.5",
-    "eslint-plugin-jsdoc": "^39.6.2",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "jest": "^29.7.0",
+    "@types/semver": "^7",
+    "@types/yargs": "^17.0.33",
+    "@vitest/coverage-istanbul": "^5.0.1",
     "nock": "^14.0.17",
     "outdent": "^0.8.0",
     "oxfmt": "^0.45.0",
     "prettier": "^3.3.3",
-    "prettier-plugin-packagejson": "^2.5.2",
-    "rimraf": "^3.0.2",
-    "ts-jest": "^29.2.5",
+    "rimraf": "^5.0.5",
     "typedoc": "^0.25.13",
-    "typescript": "~4.8.4",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.1"
   },
   "peerDependencies": {
@@ -105,17 +82,7 @@
       "optional": true
     }
   },
-  "packageManager": "yarn@4.16.0",
   "engines": {
-    "node": "^18.20 || ^20.17 || >=22"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "lavamoat": {
-    "allowScripts": {
-      "@lavamoat/preinstall-always-fail": false
-    }
+    "node": "^22.16.0 || ^24"
   }
 }

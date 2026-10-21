@@ -1,8 +1,9 @@
-import _outdent from 'outdent';
+import { outdent as outdentFactory } from 'outdent';
+import { describe, expect, it } from 'vitest';
 
-import { generateDiff } from './generate-diff';
+import { generateDiff } from './generate-diff.js';
 
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 const testCases = [
   {

@@ -1,8 +1,9 @@
 import semver from 'semver';
 
-import Changelog, { DependencyBump, Formatter } from './changelog';
-import { ChangeCategory, unreleased } from './constants';
-import { PackageRename } from './shared-types';
+import Changelog from './changelog.js';
+import type { DependencyBump, Formatter } from './changelog.js';
+import { ChangeCategory, unreleased } from './constants.js';
+import type { PackageRename } from './shared-types.js';
 
 /**
  * Parse a dependency bump description into structured data.
@@ -24,6 +25,7 @@ import { PackageRename } from './shared-types';
  * @param description - The change description to parse.
  * @returns A DependencyBump if the description matches, undefined otherwise.
  */
+/* oxlint-disable jsdoc/require-param, jsdoc/require-returns -- Oxlint does not recognize the existing tags for this multiline signature. */
 function parsePossibleDependencyBumpDescription(
   description: string,
 ): DependencyBump | undefined {
@@ -62,7 +64,7 @@ function parsePossibleDependencyBumpDescription(
  * @param line - The string to truncate.
  * @returns The truncated string.
  */
-function truncated(line: string) {
+function truncated(line: string): string {
   return line.length > 80 ? `${line.slice(0, 80)}...` : line;
 }
 
@@ -106,7 +108,7 @@ export function parseChangelog({
   changelogContent,
   repoUrl,
   tagPrefix = 'v',
-  formatter = undefined,
+  formatter,
   packageRename,
   shouldExtractPrLinks = false,
 }: {
@@ -116,13 +118,13 @@ export function parseChangelog({
   formatter?: Formatter;
   packageRename?: PackageRename;
   shouldExtractPrLinks?: boolean;
-}) {
+}): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
   const changelog = new Changelog({
     repoUrl,
     tagPrefix,
-    formatter,
-    packageRename,
+    ...(formatter !== undefined && { formatter }),
+    ...(packageRename !== undefined && { packageRename }),
   });
   const repoName = extractRepoName(repoUrl);
 
@@ -159,7 +161,7 @@ export function parseChangelog({
     removeTrailingNewline = false,
   }: {
     removeTrailingNewline?: boolean;
-  } = {}) {
+  } = {}): void {
     if (!currentChangeEntry) {
       return;
     }

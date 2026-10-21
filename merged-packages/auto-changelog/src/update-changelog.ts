@@ -1,16 +1,17 @@
-import type Changelog from './changelog';
-import { Formatter, getKnownPropertyNames } from './changelog';
+import type Changelog from './changelog.js';
+import { getKnownPropertyNames } from './changelog.js';
+import type { Change, Formatter } from './changelog.js';
 import {
   ChangeCategory,
   ConventionalCommitType,
-  Version,
   CHANGELOG_VERB_TO_CATEGORY,
   keywordsToIndicateExcluded,
-} from './constants';
-import { getNewChangeEntries } from './get-new-changes';
-import { parseChangelog } from './parse-changelog';
-import { runCommandAndSplit } from './run-command';
-import { PackageRename } from './shared-types';
+} from './constants.js';
+import type { Version } from './constants.js';
+import { getNewChangeEntries } from './get-new-changes.js';
+import { parseChangelog } from './parse-changelog.js';
+import { runCommandAndSplit } from './run-command.js';
+import type { PackageRename } from './shared-types.js';
 
 /**
  * Get the most recent tag for a project.
@@ -24,7 +25,7 @@ async function getMostRecentTag({
   tagPrefixes,
 }: {
   tagPrefixes: [string, ...string[]];
-}) {
+}): Promise<string | null> {
   // Ensure we have all tags on remote (overwrite if necessary)
   await runCommandAndSplit('git', ['fetch', '--tags', '--force']);
 
@@ -60,7 +61,7 @@ async function getMostRecentTag({
  * @param changelog - The changelog.
  * @returns All commit descriptions included in the given changelog.
  */
-function getAllChanges(changelog: Changelog) {
+function getAllChanges(changelog: Changelog): Change[] {
   const releases = changelog.getReleases();
   const changes = Object.values(changelog.getUnreleasedChanges()).flat();
   for (const release of releases) {
@@ -77,7 +78,7 @@ function getAllChanges(changelog: Changelog) {
  * @param changelog - The changelog.
  * @returns All pull request numbers included in the given changelog.
  */
-function getAllLoggedPrNumbers(changelog: Changelog) {
+function getAllLoggedPrNumbers(changelog: Changelog): string[] {
   return getAllChanges(changelog).flatMap((change) => change.prNumbers);
 }
 
@@ -88,7 +89,7 @@ function getAllLoggedPrNumbers(changelog: Changelog) {
  * @param changelog - The changelog.
  * @returns All change descriptions included in the given changelog, trimmed.
  */
-function getAllLoggedDescriptions(changelog: Changelog) {
+function getAllLoggedDescriptions(changelog: Changelog): string[] {
   return getAllChanges(changelog).map((change) => change.description.trim());
 }
 
@@ -191,8 +192,8 @@ export async function updateChangelog({
     changelogContent,
     repoUrl,
     tagPrefix: tagPrefixes[0],
-    formatter,
-    packageRename,
+    ...(formatter !== undefined && { formatter }),
+    ...(packageRename !== undefined && { packageRename }),
     shouldExtractPrLinks: true, // By setting this to true, we ensure we don't re-add a PR to the changelog if it was already added in previous releases
   });
 
@@ -241,7 +242,7 @@ export async function updateChangelog({
     loggedPrNumbers: getAllLoggedPrNumbers(changelog),
     loggedDescriptions: getAllLoggedDescriptions(changelog),
     targetSectionPrNumbers,
-    projectRootDirectory,
+    ...(projectRootDirectory !== undefined && { projectRootDirectory }),
     useChangelogEntry,
     useShortPrLink,
     requirePrNumbers,
@@ -261,7 +262,9 @@ export async function updateChangelog({
 
     if (category !== ChangeCategory.Excluded) {
       changelog.addChange({
-        version: isReleaseCandidate ? currentVersion : undefined,
+        ...(isReleaseCandidate && currentVersion !== undefined
+          ? { version: currentVersion }
+          : {}),
         category,
         description: entry.description,
       });
