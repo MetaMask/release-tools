@@ -83,69 +83,69 @@ function yamlDiagnostic(
  * @returns The recovered file structure and parser diagnostics.
  */
 export function parseChangesetFile(contents: string): RecoveredChangesetFile {
+  const changesetsParserError = getChangesetsParserError(contents);
   const lines = contents.split(/\r?\n/u);
-  const firstContentLine = lines.findIndex((line) => line.trim() !== '');
+  const firstContentLineIndex = lines.findIndex((line) => line.trim() !== '');
 
   if (
-    firstContentLine === -1 ||
-    !isFrontmatterDelimiter(lines[firstContentLine])
+    firstContentLineIndex === -1 ||
+    !isFrontmatterDelimiter(lines[firstContentLineIndex])
   ) {
     return {
       packageChanges: [],
       summary: contents.trim(),
-      summaryStartLine: Math.max(firstContentLine + 1, 1),
+      summaryStartLine: Math.max(firstContentLineIndex + 1, 1),
       diagnostics: [
         {
-          line: Math.max(firstContentLine + 1, 1),
+          line: Math.max(firstContentLineIndex + 1, 1),
           rule: 'missing-frontmatter',
           message: 'The Changeset file must start with YAML frontmatter.',
           hint: 'Start the file with a `---` frontmatter delimiter.',
         },
       ],
-      compatibleWithChangesetsParser:
-        getChangesetsParserError(contents) === undefined,
+      compatibleWithChangesetsParser: changesetsParserError === undefined,
     };
   }
 
-  const closingDelimiter = lines.findIndex(
-    (line, index) => index > firstContentLine && isFrontmatterDelimiter(line),
+  const closingDelimiterLineIndex = lines.findIndex(
+    (line, index) =>
+      index > firstContentLineIndex && isFrontmatterDelimiter(line),
   );
-  if (closingDelimiter === -1) {
+  if (closingDelimiterLineIndex === -1) {
     return {
       packageChanges: [],
       summary: '',
       summaryStartLine: lines.length + 1,
       diagnostics: [
         {
-          line: firstContentLine + 1,
+          line: firstContentLineIndex + 1,
           rule: 'missing-frontmatter-end',
           message: 'The Changeset frontmatter is not closed.',
           hint: 'Add a closing `---` frontmatter delimiter.',
         },
       ],
-      compatibleWithChangesetsParser:
-        getChangesetsParserError(contents) === undefined,
+      compatibleWithChangesetsParser: changesetsParserError === undefined,
     };
   }
 
   const frontmatter = lines
-    .slice(firstContentLine + 1, closingDelimiter)
+    .slice(firstContentLineIndex + 1, closingDelimiterLineIndex)
     .join('\n');
-  const summaryLines = lines.slice(closingDelimiter + 1);
-  const firstSummaryContent = summaryLines.findIndex(
+  const summaryLines = lines.slice(closingDelimiterLineIndex + 1);
+  const firstSummaryContentLineIndex = summaryLines.findIndex(
     (line) => line.trim() !== '',
   );
   const summaryStartLine =
-    closingDelimiter + 2 + Math.max(firstSummaryContent, 0);
+    closingDelimiterLineIndex + 2 + Math.max(firstSummaryContentLineIndex, 0);
   const summary = summaryLines
-    .slice(Math.max(firstSummaryContent, 0))
+    .slice(Math.max(firstSummaryContentLineIndex, 0))
     .join('\n')
     .trimEnd();
   const document = parseDocument(frontmatter, {
     prettyErrors: false,
   });
   const diagnostics = document.errors.map((error) =>
-    yamlDiagnostic(frontmatter, firstContentLine + 2, error),
+    yamlDiagnostic(frontmatter, firstContentLineIndex + 2, error),
   );
   const packageChanges: PackageChange[] = [];
 
@@ -163,7 +163,7 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
       }
     } else {
       diagnostics.push({
-        line: firstContentLine + 2,
+        line: firstContentLineIndex + 2,
         rule: 'invalid-frontmatter',
         message:
           'The Changeset frontmatter must map package names to bump types.',
@@ -172,7 +172,6 @@ export function parseChangesetFile(contents: string): RecoveredChangesetFile {
     }
   }
 
-  const changesetsParserError = getChangesetsParserError(contents);
   const compatibleWithChangesetsParser = changesetsParserError === undefined;
   if (diagnostics.length === 0 && changesetsParserError) {
     diagnostics.push({

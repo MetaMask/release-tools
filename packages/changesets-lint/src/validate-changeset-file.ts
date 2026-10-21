@@ -1,3 +1,4 @@
+import type { VersionType } from '@changesets/types';
 import {
   GrammarError,
   parseChangesetSummary,
@@ -6,7 +7,13 @@ import {
 import type { LintDiagnostic } from './diagnostics.js';
 import { parseChangesetFile } from './parse-changeset-file.js';
 
-const VALID_BUMP_TYPES = new Set(['major', 'minor', 'patch']);
+type SupportedBumpType = Exclude<VersionType, 'none'>;
+
+const VALID_BUMP_TYPES = new Set<string>([
+  'major',
+  'minor',
+  'patch',
+] satisfies SupportedBumpType[]);
 
 /**
  * Formats an invalid bump type without hiding its data type.
