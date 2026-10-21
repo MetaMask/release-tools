@@ -45,6 +45,12 @@
     "test:verbose": "vitest --reporter=verbose",
     "test:watch": "vitest --watch"
   },
+  "dependencies": {
+    "@changesets/parse": "^1.0.0",
+    "@changesets/types": "^7.0.0",
+    "@metamask/changesets-utils": "^0.0.0",
+    "yaml": "^2.2.2"
+  },
   "devDependencies": {
     "@metamask/auto-changelog": "^6.1.0",
     "@typescript/native": "npm:typescript@^7.0.2",

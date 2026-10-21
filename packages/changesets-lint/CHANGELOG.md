@@ -7,4 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add Changeset file validation against MetaMask conventions ([#93](https://github.com/MetaMask/release-tools/pull/93))
+
 [Unreleased]: https://github.com/MetaMask/release-tools/

@@ -1,0 +1,191 @@
+import { parseChangesetFile as parseWithChangesets } from '@changesets/parse';
+import { isMap, isScalar, parseDocument } from 'yaml';
+
+import type { LintDiagnostic } from './diagnostics.js';
+
+export type PackageChange = {
+  packageName: string;
+  bumpType: unknown;
+};
+
+export type RecoveredChangesetFile = {
+  packageChanges: PackageChange[];
+  summary: string;
+  summaryStartLine: number;
+  diagnostics: Omit<LintDiagnostic, 'path'>[];
+  compatibleWithChangesetsParser: boolean;
+};
+
+const FRONTMATTER_DELIMITER = '---';
+
+/**
+ * Checks whether a line is a frontmatter delimiter.
+ *
+ * @param line - The line to check.
+ * @returns Whether the line is a frontmatter delimiter.
+ */
+function isFrontmatterDelimiter(line: string): boolean {
+  return line.trim() === FRONTMATTER_DELIMITER;
+}
+
+/**
+ * Gets the 1-based line number at a source offset.
+ *
+ * @param source - The source text.
+ * @param offset - The zero-based character offset.
+ * @returns The 1-based line number.
+ */
+function getLineNumber(source: string, offset: number): number {
+  return source.slice(0, offset).split(/\r?\n/u).length;
+}
+
+/**
+ * Reports whether the installed Changesets parser accepts the file.
+ *
+ * @param contents - The complete Changeset file contents.
+ * @returns The parser error, or `undefined` when the parser accepts the file.
+ */
+function getChangesetsParserError(contents: string): Error | undefined {
+  try {
+    parseWithChangesets(contents);
+    return undefined;
+  } catch (error) {
+    return error as Error;
+  }
+}
+
+/**
+ * Converts a YAML parser error to a lint diagnostic.
+ *
+ * @param source - The parsed YAML source.
+ * @param sourceStartLine - The source's 1-based starting line in the file.
+ * @param error - The YAML parser error.
+ * @returns The lint diagnostic.
+ */
+function yamlDiagnostic(
+  source: string,
+  sourceStartLine: number,
+  error: { message: string; pos: readonly [number, number] },
+): Omit<LintDiagnostic, 'path'> {
+  return {
+    line: getLineNumber(source, error.pos[0]) + sourceStartLine - 1,
+    rule: 'invalid-yaml',
+    message: error.message,
+    hint: 'Fix the YAML between the frontmatter delimiters.',
+  };
+}
+
+/**
+ * Parses a Changeset file while recovering enough structure to report multiple
+ * diagnostics from malformed input.
+ *
+ * @param contents - The complete Changeset file contents.
+ * @returns The recovered file structure and parser diagnostics.
+ */
+export function parseChangesetFile(contents: string): RecoveredChangesetFile {
+  const changesetsParserError = getChangesetsParserError(contents);
+  const lines = contents.split(/\r?\n/u);
+  const firstContentLineIndex = lines.findIndex((line) => line.trim() !== '');
+
+  if (
+    firstContentLineIndex === -1 ||
+    !isFrontmatterDelimiter(lines[firstContentLineIndex])
+  ) {
+    return {
+      packageChanges: [],
+      summary: contents.trim(),
+      summaryStartLine: Math.max(firstContentLineIndex + 1, 1),
+      diagnostics: [
+        {
+          line: Math.max(firstContentLineIndex + 1, 1),
+          rule: 'missing-frontmatter',
+          message: 'The Changeset file must start with YAML frontmatter.',
+          hint: 'Start the file with a `---` frontmatter delimiter.',
+        },
+      ],
+      compatibleWithChangesetsParser: changesetsParserError === undefined,
+    };
+  }
+
+  const closingDelimiterLineIndex = lines.findIndex(
+    (line, index) =>
+      index > firstContentLineIndex && isFrontmatterDelimiter(line),
+  );
+  if (closingDelimiterLineIndex === -1) {
+    return {
+      packageChanges: [],
+      summary: '',
+      summaryStartLine: lines.length + 1,
+      diagnostics: [
+        {
+          line: firstContentLineIndex + 1,
+          rule: 'missing-frontmatter-end',
+          message: 'The Changeset frontmatter is not closed.',
+          hint: 'Add a closing `---` frontmatter delimiter.',
+        },
+      ],
+      compatibleWithChangesetsParser: changesetsParserError === undefined,
+    };
+  }
+
+  const frontmatter = lines
+    .slice(firstContentLineIndex + 1, closingDelimiterLineIndex)
+    .join('\n');
+  const summaryLines = lines.slice(closingDelimiterLineIndex + 1);
+  const firstSummaryContentLineIndex = summaryLines.findIndex(
+    (line) => line.trim() !== '',
+  );
+  const summaryStartLine =
+    closingDelimiterLineIndex + 2 + Math.max(firstSummaryContentLineIndex, 0);
+  const summary = summaryLines
+    .slice(Math.max(firstSummaryContentLineIndex, 0))
+    .join('\n')
+    .trimEnd();
+  const document = parseDocument(frontmatter, {
+    prettyErrors: false,
+  });
+  const diagnostics = document.errors.map((error) =>
+    yamlDiagnostic(frontmatter, firstContentLineIndex + 2, error),
+  );
+  const packageChanges: PackageChange[] = [];
+
+  if (document.contents !== null) {
+    if (isMap(document.contents)) {
+      for (const pair of document.contents.items) {
+        const packageName =
+          isScalar(pair.key) && typeof pair.key.value === 'string'
+            ? pair.key.value
+            : String(pair.key?.toJSON());
+        packageChanges.push({
+          packageName,
+          bumpType: pair.value?.toJSON() ?? null,
+        });
+      }
+    } else {
+      diagnostics.push({
+        line: firstContentLineIndex + 2,
+        rule: 'invalid-frontmatter',
+        message:
+          'The Changeset frontmatter must map package names to bump types.',
+        hint: 'Use entries such as `"@metamask/example": patch`.',
+      });
+    }
+  }
+
+  const compatibleWithChangesetsParser = changesetsParserError === undefined;
+  if (diagnostics.length === 0 && changesetsParserError) {
+    diagnostics.push({
+      rule: 'changesets-parser',
+      message: changesetsParserError.message,
+      hint: 'Use frontmatter accepted by the installed Changesets parser.',
+    });
+  }
+
+  return {
+    packageChanges,
+    summary,
+    summaryStartLine,
+    diagnostics,
+    compatibleWithChangesetsParser,
+  };
+}

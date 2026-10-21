@@ -4,6 +4,6 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "references": [],
+  "references": [{ "path": "../changesets-utils/tsconfig.build.json" }],
   "include": ["./src"]
 }
