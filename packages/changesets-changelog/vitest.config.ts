@@ -1,20 +1,23 @@
-import { mergeConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
 import baseConfig from '../../vitest.config.packages.js';
 
-export default mergeConfig(baseConfig, {
-  test: {
-    // The display name when running multiple projects.
-    name: '@metamask/changesets-changelog',
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      // The display name when running multiple projects.
+      name: '@metamask/changesets-changelog',
 
-    coverage: {
-      // The test run fails when coverage drops below these.
-      thresholds: {
-        branches: 100,
-        functions: 100,
-        lines: 100,
-        statements: 100,
+      coverage: {
+        // The test run fails when coverage drops below these.
+        thresholds: {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100,
+        },
       },
     },
-  },
-});
+  }),
+);
