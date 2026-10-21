@@ -11,21 +11,21 @@ export type LintChangesetsOptions = {
 };
 
 /**
- * Selects and validates Changeset files in a repository.
+ * Validates all Changeset files in a repository.
  *
  * @param options - The repository and validation options.
  * @param options.repositoryDirectory - The repository directory.
  * @param options.workspacePackageNames - The valid workspace package names.
- * @returns Diagnostics for all selected Changeset files.
+ * @returns Diagnostics for all Changeset files.
  */
 export async function lintChangesets({
   repositoryDirectory,
   workspacePackageNames,
 }: LintChangesetsOptions): Promise<LintDiagnostic[]> {
-  const selectedPaths = await getChangesetPaths(repositoryDirectory);
+  const changesetPaths = await getChangesetPaths(repositoryDirectory);
   const diagnostics: LintDiagnostic[] = [];
 
-  for (const filePath of selectedPaths.sort()) {
+  for (const filePath of changesetPaths) {
     let contents: string;
     try {
       contents = await readFile(
@@ -42,7 +42,7 @@ export async function lintChangesets({
         path: filePath,
         contents,
         workspacePackageNames,
-      }).map((diagnostic) => ({ ...diagnostic, path: filePath })),
+      }),
     );
   }
 

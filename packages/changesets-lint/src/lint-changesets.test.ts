@@ -25,12 +25,20 @@ describe('lintChangesets', () => {
 
   it('validates every current Changeset', async () => {
     mockedGetChangesetPaths.mockResolvedValue([
-      '.changeset/zebra.md',
       '.changeset/alpha.md',
+      '.changeset/zebra.md',
     ]);
     mockedValidateChangesetFile
-      .mockReturnValueOnce([{ message: 'Alpha problem.' }])
-      .mockReturnValueOnce([{ line: 2, message: 'Zebra problem.' }]);
+      .mockReturnValueOnce([
+        { path: '.changeset/alpha.md', message: 'Alpha problem.' },
+      ])
+      .mockReturnValueOnce([
+        {
+          path: '.changeset/zebra.md',
+          line: 2,
+          message: 'Zebra problem.',
+        },
+      ]);
 
     expect(
       await lintChangesets({

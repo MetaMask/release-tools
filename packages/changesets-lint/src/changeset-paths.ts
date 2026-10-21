@@ -5,7 +5,7 @@ const CHANGESET_DIRECTORY = '.changeset';
 const README_FILE = 'README.md';
 
 /**
- * Gets all Changeset Markdown paths from the current working tree.
+ * Gets all Changeset Markdown paths from a repository.
  *
  * @param repositoryDirectory - The repository directory.
  * @returns Sorted repository-relative Changeset paths.
