@@ -1,0 +1,361 @@
+import semver from 'semver';
+
+import Changelog, { DependencyBump, Formatter } from './changelog';
+import { ChangeCategory, unreleased } from './constants';
+import { PackageRename } from './shared-types';
+
+/**
+ * Parse a dependency bump description into structured data.
+ *
+ * Detects the following patterns (case-insensitive verb):
+ * - `[**BREAKING:** ]Bump \`dep\` from \`old\` to \`new\``
+ * - `[**BREAKING:** ]Update \`dep\` from \`old\` to \`new\``
+ * - `[**BREAKING:** ]Upgrade \`dep\` from \`old\` to \`new\``
+ * - `[**BREAKING:** ]Update \`dep\` to \`new\`` (oldVersion omitted)
+ * - `[**BREAKING:** ]Upgrade \`dep\` to \`new\`` (oldVersion omitted)
+ *
+ * Note: The dependency type is inferred heuristically from the description:
+ * entries with `**BREAKING:**` prefix are classified as `peerDependencies`,
+ * all others as `dependencies`. This can be incorrect if a peerDependency
+ * bump was manually written without the prefix, or a regular dependency
+ * bump was manually given the prefix. This is an inherent limitation of
+ * round-tripping structured data through free-text descriptions.
+ *
+ * @param description - The change description to parse.
+ * @returns A DependencyBump if the description matches, undefined otherwise.
+ */
+function parsePossibleDependencyBumpDescription(
+  description: string,
+): DependencyBump | undefined {
+  // Full form: Bump/Update/Upgrade `dep` from `old` to `new`
+  const fullMatch = description.match(
+    /^(\*\*BREAKING:\*\*\s+)?(?:Bump|Update|Upgrade) `([^`]+)` from `([^`]+)` to `([^`]+)`/u,
+  );
+  if (fullMatch) {
+    return {
+      dependency: fullMatch[2],
+      isBreaking: Boolean(fullMatch[1]),
+      oldVersion: fullMatch[3],
+      newVersion: fullMatch[4],
+    };
+  }
+
+  // Short form: Update/Upgrade `dep` to `new` (no "from")
+  const shortMatch = description.match(
+    /^(\*\*BREAKING:\*\*\s+)?(?:Bump|Update|Upgrade) `([^`]+)` to `([^`]+)`/u,
+  );
+  if (shortMatch) {
+    return {
+      dependency: shortMatch[2],
+      isBreaking: Boolean(shortMatch[1]),
+      oldVersion: '',
+      newVersion: shortMatch[3],
+    };
+  }
+
+  return undefined;
+}
+
+/**
+ * Truncate the given string at 80 characters.
+ *
+ * @param line - The string to truncate.
+ * @returns The truncated string.
+ */
+function truncated(line: string) {
+  return line.length > 80 ? `${line.slice(0, 80)}...` : line;
+}
+
+/**
+ * Returns whether the given string is recognized as a valid change category.
+ *
+ * @param category - The string to validate.
+ * @returns Whether the given string is a valid change category.
+ */
+function isValidChangeCategory(category: string): category is ChangeCategory {
+  return ChangeCategory[category as ChangeCategory] !== undefined;
+}
+
+/**
+ * Returns the repository name from a GitHub repository URL.
+ *
+ * @param repoUrl - The URL for the GitHub repository.
+ * @returns The repository name, or null if it could not be determined.
+ */
+function extractRepoName(repoUrl: string): string {
+  const match = repoUrl?.match(/github\.com\/[^/]+\/([^/]+)/u); // Match and capture the repo name
+  return match ? match[1] : '';
+}
+
+/**
+ * Constructs a Changelog instance that represents the given changelog, which
+ * is parsed for release and change information.
+ *
+ * @param options - Options.
+ * @param options.changelogContent - The changelog to parse.
+ * @param options.repoUrl - The GitHub repository URL for the current project.
+ * @param options.tagPrefix - The prefix used in tags before the version number.
+ * @param options.formatter - A custom Markdown formatter to use.
+ * @param options.packageRename - The package rename properties
+ * An optional, which is required only in case of package renamed.
+ * @param options.shouldExtractPrLinks - When true, look for and parse pull
+ * request links at the end of change entries.
+ * @returns A changelog instance that reflects the changelog text provided.
+ */
+export function parseChangelog({
+  changelogContent,
+  repoUrl,
+  tagPrefix = 'v',
+  formatter = undefined,
+  packageRename,
+  shouldExtractPrLinks = false,
+}: {
+  changelogContent: string;
+  repoUrl: string;
+  tagPrefix?: string;
+  formatter?: Formatter;
+  packageRename?: PackageRename;
+  shouldExtractPrLinks?: boolean;
+}) {
+  const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
+  const changelog = new Changelog({
+    repoUrl,
+    tagPrefix,
+    formatter,
+    packageRename,
+  });
+  const repoName = extractRepoName(repoUrl);
+
+  const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
+  if (unreleasedHeaderIndex === -1) {
+    throw new Error(`Failed to find ${unreleased} header`);
+  }
+  const unreleasedLinkReferenceDefinition = changelogLines.findIndex((line) => {
+    return line.startsWith(`[${unreleased}]:`);
+  });
+  if (unreleasedLinkReferenceDefinition === -1) {
+    throw new Error(`Failed to find ${unreleased} link reference definition`);
+  }
+
+  const contentfulChangelogLines = changelogLines.slice(
+    unreleasedHeaderIndex + 1,
+    unreleasedLinkReferenceDefinition,
+  );
+
+  let mostRecentRelease: string;
+  let mostRecentCategory: ChangeCategory | undefined | null;
+  let currentChangeEntry: string | undefined;
+
+  /**
+   * Finalize a change entry, adding it to the changelog.
+   *
+   * This is required because change entries can span multiple lines.
+   *
+   * @param options - Options.
+   * @param options.removeTrailingNewline - Indicates that the trailing newline
+   * is not a part of the change description, and should therefore be removed.
+   */
+  function finalizePreviousChange({
+    removeTrailingNewline = false,
+  }: {
+    removeTrailingNewline?: boolean;
+  } = {}) {
+    if (!currentChangeEntry) {
+      return;
+    }
+
+    // This should never happen in practice, because `mostRecentCategory` is
+    // guaranteed to be set if `currentChangeEntry` is set.
+    /* istanbul ignore next */
+    if (!mostRecentCategory) {
+      throw new Error('Cannot finalize change without most recent category.');
+    }
+
+    if (removeTrailingNewline && currentChangeEntry.endsWith('\n')) {
+      currentChangeEntry = currentChangeEntry.slice(
+        0,
+        currentChangeEntry.length - 1,
+      );
+    }
+
+    const { description, prNumbers } = shouldExtractPrLinks
+      ? extractPrLinks(currentChangeEntry, repoName)
+      : {
+          description: currentChangeEntry,
+          prNumbers: [],
+        };
+
+    const dependencyBump = parsePossibleDependencyBumpDescription(description);
+
+    changelog.addChange({
+      addToStart: false,
+      category: mostRecentCategory,
+      description,
+      version: mostRecentRelease,
+      prNumbers,
+      ...(dependencyBump !== undefined && { dependencyBump }),
+    });
+    currentChangeEntry = undefined;
+  }
+
+  for (const line of contentfulChangelogLines) {
+    if (line.startsWith('## [')) {
+      const results = line.match(
+        /^## \[([^[\]]+)\](?: - (\d\d\d\d-\d\d-\d\d))?(?: \[(\w+)\])?/u,
+      );
+      if (results === null) {
+        throw new Error(`Malformed release header: '${truncated(line)}'`);
+      }
+
+      if (semver.valid(results[1]) === null) {
+        throw new Error(
+          `Invalid SemVer version in release header: '${truncated(line)}'`,
+        );
+      }
+
+      // Trailing newline removed because the release section is expected to
+      // be prefixed by a newline.
+      finalizePreviousChange({
+        removeTrailingNewline: true,
+      });
+      mostRecentRelease = results[1];
+      mostRecentCategory = undefined;
+      const date = results[2];
+      const status = results[3];
+      changelog.addRelease({
+        addToStart: false,
+        date,
+        status,
+        version: mostRecentRelease,
+      });
+    } else if (line.startsWith('### ')) {
+      const results = line.match(/^### (\w+)$\b/u);
+      if (results === null) {
+        throw new Error(`Malformed category header: '${truncated(line)}'`);
+      }
+      const isFirstCategory = mostRecentCategory === null;
+      finalizePreviousChange({
+        removeTrailingNewline: !isFirstCategory,
+      });
+
+      if (!isValidChangeCategory(results[1])) {
+        throw new Error(`Invalid change category: '${results[1]}'`);
+      }
+      mostRecentCategory = results[1];
+    } else if (line.startsWith('- ')) {
+      if (!mostRecentCategory) {
+        throw new Error(`Category missing for change: '${truncated(line)}'`);
+      }
+      const description = line.slice(2);
+      finalizePreviousChange();
+      currentChangeEntry = description;
+    } else if (currentChangeEntry) {
+      currentChangeEntry += `\n${line}`;
+    } else if (line === '') {
+      continue;
+    } else {
+      throw new Error(`Unrecognized line: '${truncated(line)}'`);
+    }
+  }
+  // Trailing newline removed because the reference link definition section is
+  // expected to be separated by a newline.
+  finalizePreviousChange({ removeTrailingNewline: true });
+
+  return changelog;
+}
+
+/**
+ * Looks for potential links to pull requests from the end of the first line of
+ * a change entry and pulls them off.
+ *
+ * Note that the pattern to look for potential links is intentionally naive,
+ * so that we can offer better error messaging in case URLs do not match the
+ * repo URL (such an error would appear when attempting to stringify the
+ * changelog).
+ *
+ * @param changeEntry - The text of the change entry.
+ * @param repoName - The name of the GitHub repository.
+ * @returns The list of pull request numbers referenced by the change entry, and
+ * the change entry without the links to those pull requests.
+ */
+function extractPrLinks(
+  changeEntry: string,
+  repoName: string,
+): {
+  description: string;
+  prNumbers: string[];
+} {
+  const lines = changeEntry.split('\n');
+  const prNumbers: string[] = [];
+
+  // Only process the first line for PR link extraction
+  let firstLine = lines[0];
+
+  // We only extract PR links from the right repo, because it happens that some
+  // changelog entries include links to PRs from other repos like packages that were bumped.
+  // We don't want to accidentally extract those.
+
+  // A single parenthesized group of one or more comma-separated long PR
+  // links, e.g. `([#123](...))` or `([#123](...), [#456](...))`.
+  const longLinkGroup = `\\(\\s*(?:\\[#\\d+\\]\\([^)]*${repoName}[^)]*\\)\\s*,?\\s*)+\\)`;
+
+  // eslint-disable-next-line prefer-regex-literals
+  const longGroupMatchPattern = new RegExp(
+    // Match the canonical form `(... , ...)` and the legacy form where
+    // multiple parenthesized groups are written next to each other separated
+    // by commas: `([#123](...)), ([#456](...))`. In the legacy form the
+    // inter-group `, ` must be consumed so it isn't left behind in the
+    // description after replacement.
+    `\\s+${longLinkGroup}(?:\\s*,\\s*${longLinkGroup})*`,
+    'gu',
+  );
+
+  // eslint-disable-next-line prefer-regex-literals
+  const longMatchPattern = new RegExp(
+    // Example of long match: "[#123](...)"
+    `\\[#(\\d+)\\]\\([^)]*${repoName}[^)]*\\)`,
+    'gu',
+  );
+
+  // Match and extract all long PR links like ([#123](...)) separated by commas
+  const longGroupMatches = [...firstLine.matchAll(longGroupMatchPattern)];
+  for (const longGroupMatch of longGroupMatches) {
+    const group = longGroupMatch[0];
+    const longMatches = [...group.matchAll(longMatchPattern)];
+    for (const match of longMatches) {
+      prNumbers.push(match[1]);
+    }
+  }
+
+  // Remove valid long PR links (grouped in parentheses, possibly comma-separated)
+  firstLine = firstLine.replace(longGroupMatchPattern, '');
+
+  // Example of short match group: " (#123), (#123)"
+  const shortGroupMatchPattern = /\s+(\(#\d+\)\s*,?\s*)+/gu;
+
+  // Example of short match: "(#123)"
+  const shortMatchPattern = /\(#(\d+)\)/gu;
+
+  // Match and extract all short PR links like (#123)
+  const shortGroupMatches = [...firstLine.matchAll(shortGroupMatchPattern)];
+  for (const shortGroupMatch of shortGroupMatches) {
+    const group = shortGroupMatch[0];
+    const shortMatches = [...group.matchAll(shortMatchPattern)];
+    for (const match of shortMatches) {
+      prNumbers.push(match[1]);
+    }
+  }
+
+  // Remove valid short PR links
+  firstLine = firstLine.replace(shortGroupMatchPattern, '');
+
+  // Prepare the cleaned description
+  const cleanedLines = [firstLine.trim(), ...lines.slice(1)];
+  const cleanedDescription = cleanedLines.join('\n');
+
+  // Return unique PR numbers and the cleaned description
+  return {
+    description: cleanedDescription.trim(),
+    prNumbers: [...new Set(prNumbers)],
+  };
+}
