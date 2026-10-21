@@ -47,10 +47,12 @@ describe('getChangesetPaths', () => {
     ]);
   });
 
-  it('returns no paths when the Changeset directory does not exist', async () => {
+  it('reports a missing Changeset directory', async () => {
     const repositoryDirectory = await createRepository();
 
-    expect(await getChangesetPaths(repositoryDirectory)).toStrictEqual([]);
+    await expect(getChangesetPaths(repositoryDirectory)).rejects.toThrow(
+      `Could not find the Changeset directory in ${repositoryDirectory}.`,
+    );
   });
 
   it('reports errors other than a missing Changeset directory', async () => {

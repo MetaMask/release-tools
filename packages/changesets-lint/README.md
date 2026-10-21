@@ -24,6 +24,10 @@ const diagnostics = await lintChangesets({
 });
 ```
 
+The function returns structured diagnostics for every Changeset. It skips
+`README.md`, non-Markdown files, and nested directories. It throws if the
+`.changeset/` directory or a selected file cannot be read.
+
 The command-line interface and CI integration are not available yet.
 
 ## Contributing

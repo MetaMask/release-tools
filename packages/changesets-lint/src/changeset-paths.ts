@@ -23,7 +23,10 @@ export async function getChangesetPaths(
     );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
+      throw new Error(
+        `Could not find the Changeset directory in ${repositoryDirectory}.`,
+        { cause: error },
+      );
     }
     throw error;
   }

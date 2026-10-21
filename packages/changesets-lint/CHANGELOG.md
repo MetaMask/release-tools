@@ -10,6 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add Changeset file validation against MetaMask conventions ([#93](https://github.com/MetaMask/release-tools/pull/93))
-- Add Changeset discovery and validation orchestration
+- Add `lintChangesets` to validate all Changeset files in a repository
 
 [Unreleased]: https://github.com/MetaMask/release-tools/
