@@ -1,3 +1,4 @@
+import { basename } from 'path';
 import { defineConfig, mergeConfig } from 'vitest/config';
 
 import baseConfig from '../../vitest.config.packages.js';
@@ -7,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       // The display name when running multiple projects.
-      name: '@metamask/changesets-changelog',
+      name: basename(import.meta.dirname),
 
       coverage: {
         // The test run fails when coverage drops below these.
