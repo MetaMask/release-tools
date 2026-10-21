@@ -13,24 +13,13 @@ or
 ## Usage
 
 Call `lintChangesets` with the repository directory and the workspace package
-names. By default, it validates every Markdown file in `.changeset/`:
+names. It validates every Changeset Markdown file in `.changeset/`:
 
 ```ts
 import { lintChangesets } from '@metamask/changesets-lint';
 
 const diagnostics = await lintChangesets({
   repositoryDirectory: process.cwd(),
-  workspacePackageNames: new Set(['@metamask/example']),
-});
-```
-
-Set `since` to a Git revision to validate only Changeset files added or
-modified between that revision and `HEAD`:
-
-```ts
-const diagnostics = await lintChangesets({
-  repositoryDirectory: process.cwd(),
-  since: 'origin/main',
   workspacePackageNames: new Set(['@metamask/example']),
 });
 ```

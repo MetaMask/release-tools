@@ -2,20 +2,17 @@ import { readFile } from 'node:fs/promises';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getChangesetPaths } from './changeset-paths.js';
-import { getChangedChangesetPaths } from './git.js';
 import { lintChangesets } from './lint-changesets.js';
 import { validateChangesetFile } from './validate-changeset-file.js';
 
 vi.mock('node:fs/promises', () => ({ readFile: vi.fn() }));
 vi.mock('./changeset-paths.js', () => ({ getChangesetPaths: vi.fn() }));
-vi.mock('./git.js', () => ({ getChangedChangesetPaths: vi.fn() }));
 vi.mock('./validate-changeset-file.js', () => ({
   validateChangesetFile: vi.fn(),
 }));
 
 const mockedReadFile = vi.mocked(readFile);
 const mockedGetChangesetPaths = vi.mocked(getChangesetPaths);
-const mockedGetChangedChangesetPaths = vi.mocked(getChangedChangesetPaths);
 const mockedValidateChangesetFile = vi.mocked(validateChangesetFile);
 const workspacePackageNames = new Set(['@metamask/example']);
 
@@ -26,7 +23,7 @@ describe('lintChangesets', () => {
     mockedValidateChangesetFile.mockReturnValue([]);
   });
 
-  it('validates all current Changesets when since is omitted', async () => {
+  it('validates every current Changeset', async () => {
     mockedGetChangesetPaths.mockResolvedValue([
       '.changeset/zebra.md',
       '.changeset/alpha.md',
@@ -49,7 +46,6 @@ describe('lintChangesets', () => {
       },
     ]);
     expect(mockedGetChangesetPaths).toHaveBeenCalledWith('/repo');
-    expect(mockedGetChangedChangesetPaths).not.toHaveBeenCalled();
     expect(mockedReadFile).toHaveBeenNthCalledWith(
       1,
       '/repo/.changeset/alpha.md',
@@ -61,27 +57,6 @@ describe('lintChangesets', () => {
       workspacePackageNames,
     });
   });
-
-  it.each(['HEAD^', ''])(
-    'validates Changesets changed since the Git revision %j',
-    async (since) => {
-      mockedGetChangedChangesetPaths.mockResolvedValue([
-        '.changeset/changed.md',
-      ]);
-
-      await lintChangesets({
-        repositoryDirectory: '/repo',
-        since,
-        workspacePackageNames,
-      });
-
-      expect(mockedGetChangedChangesetPaths).toHaveBeenCalledWith(
-        '/repo',
-        since,
-      );
-      expect(mockedGetChangesetPaths).not.toHaveBeenCalled();
-    },
-  );
 
   it('identifies a Changeset that cannot be read', async () => {
     mockedGetChangesetPaths.mockResolvedValue(['.changeset/broken.md']);
