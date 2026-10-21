@@ -17,6 +17,7 @@ package-lock.json
 
 merged-packages/*/coverage
 merged-packages/*/dist
+merged-packages/*/api-docs
 packages/*/coverage
 packages/*/dist
 packages/*/api-docs
