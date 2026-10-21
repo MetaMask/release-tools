@@ -15,9 +15,12 @@ export async function getChangesetPaths(
 ): Promise<string[]> {
   let entries;
   try {
-    entries = await readdir(path.join(repositoryDirectory, CHANGESET_DIRECTORY), {
-      withFileTypes: true,
-    });
+    entries = await readdir(
+      path.join(repositoryDirectory, CHANGESET_DIRECTORY),
+      {
+        withFileTypes: true,
+      },
+    );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];

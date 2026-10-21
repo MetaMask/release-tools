@@ -20,12 +20,9 @@ describe('getChangedChangesetPaths', () => {
         'A\0.changeset/added file.md\0M\0.changeset/modified.md\0D\0.changeset/deleted.md\0R100\0.changeset/old.md\0.changeset/new.md\0A\0.changeset/config.json\0A\0.changeset/nested/file.md\0A\0.changeset/README.md\0',
     } as never);
 
-    await expect(
-      getChangedChangesetPaths('/repo', 'origin/main'),
-    ).resolves.toStrictEqual([
-      '.changeset/added file.md',
-      '.changeset/modified.md',
-    ]);
+    expect(
+      await getChangedChangesetPaths('/repo', 'origin/main'),
+    ).toStrictEqual(['.changeset/added file.md', '.changeset/modified.md']);
     expect(mockedExeca).toHaveBeenCalledWith(
       'git',
       [
@@ -45,9 +42,7 @@ describe('getChangedChangesetPaths', () => {
   it('returns no paths when git reports no changes', async () => {
     mockedExeca.mockResolvedValue({ stdout: '' } as never);
 
-    await expect(
-      getChangedChangesetPaths('/repo', 'HEAD^'),
-    ).resolves.toStrictEqual([]);
+    expect(await getChangedChangesetPaths('/repo', 'HEAD^')).toStrictEqual([]);
   });
 
   it('identifies the revision when git fails', async () => {

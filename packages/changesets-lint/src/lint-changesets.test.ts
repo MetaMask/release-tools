@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getChangesetPaths } from './changeset-paths.js';
@@ -36,9 +35,12 @@ describe('lintChangesets', () => {
       .mockReturnValueOnce([{ message: 'Alpha problem.' }])
       .mockReturnValueOnce([{ line: 2, message: 'Zebra problem.' }]);
 
-    await expect(
-      lintChangesets({ repositoryDirectory: '/repo', workspacePackageNames }),
-    ).resolves.toStrictEqual([
+    expect(
+      await lintChangesets({
+        repositoryDirectory: '/repo',
+        workspacePackageNames,
+      }),
+    ).toStrictEqual([
       { path: '.changeset/alpha.md', message: 'Alpha problem.' },
       {
         path: '.changeset/zebra.md',
@@ -61,9 +63,7 @@ describe('lintChangesets', () => {
   });
 
   it('validates Changesets changed since a Git revision', async () => {
-    mockedGetChangedChangesetPaths.mockResolvedValue([
-      '.changeset/changed.md',
-    ]);
+    mockedGetChangedChangesetPaths.mockResolvedValue(['.changeset/changed.md']);
 
     await lintChangesets({
       repositoryDirectory: '/repo',

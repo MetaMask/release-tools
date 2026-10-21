@@ -1,29 +1,33 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { getChangesetPaths } from './changeset-paths.js';
 
 const temporaryDirectories: string[] = [];
 
-/** Creates a temporary repository directory for a test. */
+/**
+ * Creates a temporary repository directory for a test.
+ *
+ * @returns The temporary repository directory.
+ */
 async function createRepository(): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), 'changesets-lint-'));
   temporaryDirectories.push(directory);
   return directory;
 }
 
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
-    ),
-  );
-});
-
 describe('getChangesetPaths', () => {
+  afterEach(async () => {
+    await Promise.all(
+      temporaryDirectories
+        .splice(0)
+        .map(async (directory) =>
+          rm(directory, { recursive: true, force: true }),
+        ),
+    );
+  });
   it('returns sorted Changeset Markdown files from the current tree', async () => {
     const repositoryDirectory = await createRepository();
     const changesetDirectory = path.join(repositoryDirectory, '.changeset');
@@ -37,7 +41,7 @@ describe('getChangesetPaths', () => {
       writeFile(path.join(repositoryDirectory, 'outside.md'), ''),
     ]);
 
-    await expect(getChangesetPaths(repositoryDirectory)).resolves.toStrictEqual([
+    expect(await getChangesetPaths(repositoryDirectory)).toStrictEqual([
       '.changeset/alpha.md',
       '.changeset/zebra.md',
     ]);
@@ -46,8 +50,18 @@ describe('getChangesetPaths', () => {
   it('returns no paths when the Changeset directory does not exist', async () => {
     const repositoryDirectory = await createRepository();
 
-    await expect(getChangesetPaths(repositoryDirectory)).resolves.toStrictEqual(
-      [],
+    expect(await getChangesetPaths(repositoryDirectory)).toStrictEqual([]);
+  });
+
+  it('reports errors other than a missing Changeset directory', async () => {
+    const repositoryDirectory = await createRepository();
+    await writeFile(
+      path.join(repositoryDirectory, '.changeset'),
+      'not a directory',
     );
+
+    await expect(getChangesetPaths(repositoryDirectory)).rejects.toMatchObject({
+      code: 'ENOTDIR',
+    });
   });
 });

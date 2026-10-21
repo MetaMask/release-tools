@@ -34,7 +34,10 @@ export async function lintChangesets({
   for (const filePath of selectedPaths.sort()) {
     let contents: string;
     try {
-      contents = await readFile(path.join(repositoryDirectory, filePath), 'utf8');
+      contents = await readFile(
+        path.join(repositoryDirectory, filePath),
+        'utf8',
+      );
     } catch (error) {
       throw new Error(`Could not read Changeset file ${filePath}.`, {
         cause: error,
