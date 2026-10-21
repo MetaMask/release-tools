@@ -49,6 +49,7 @@
     "@changesets/parse": "^1.0.0",
     "@changesets/types": "^7.0.0",
     "@metamask/changesets-utils": "^0.0.0",
+    "execa": "^9.5.2",
     "yaml": "^2.2.2"
   },
   "devDependencies": {
