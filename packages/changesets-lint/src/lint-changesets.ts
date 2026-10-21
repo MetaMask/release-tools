@@ -26,9 +26,10 @@ export async function lintChangesets({
   since,
   workspacePackageNames,
 }: LintChangesetsOptions): Promise<LintDiagnostic[]> {
-  const selectedPaths = since
-    ? await getChangedChangesetPaths(repositoryDirectory, since)
-    : await getChangesetPaths(repositoryDirectory);
+  const selectedPaths =
+    since === undefined
+      ? await getChangesetPaths(repositoryDirectory)
+      : await getChangedChangesetPaths(repositoryDirectory, since);
   const diagnostics: LintDiagnostic[] = [];
 
   for (const filePath of selectedPaths.sort()) {

@@ -62,21 +62,26 @@ describe('lintChangesets', () => {
     });
   });
 
-  it('validates Changesets changed since a Git revision', async () => {
-    mockedGetChangedChangesetPaths.mockResolvedValue(['.changeset/changed.md']);
+  it.each(['HEAD^', ''])(
+    'validates Changesets changed since the Git revision %j',
+    async (since) => {
+      mockedGetChangedChangesetPaths.mockResolvedValue([
+        '.changeset/changed.md',
+      ]);
 
-    await lintChangesets({
-      repositoryDirectory: '/repo',
-      since: 'HEAD^',
-      workspacePackageNames,
-    });
+      await lintChangesets({
+        repositoryDirectory: '/repo',
+        since,
+        workspacePackageNames,
+      });
 
-    expect(mockedGetChangedChangesetPaths).toHaveBeenCalledWith(
-      '/repo',
-      'HEAD^',
-    );
-    expect(mockedGetChangesetPaths).not.toHaveBeenCalled();
-  });
+      expect(mockedGetChangedChangesetPaths).toHaveBeenCalledWith(
+        '/repo',
+        since,
+      );
+      expect(mockedGetChangesetPaths).not.toHaveBeenCalled();
+    },
+  );
 
   it('identifies a Changeset that cannot be read', async () => {
     mockedGetChangesetPaths.mockResolvedValue(['.changeset/broken.md']);
