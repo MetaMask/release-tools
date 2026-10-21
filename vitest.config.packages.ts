@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * This configuration is extended by the `vitest.config.mjs` configuration in
+ * This configuration is extended by the `vitest.config.ts` configuration in
  * each package.
  *
  * For a detailed explanation of each option, visit:

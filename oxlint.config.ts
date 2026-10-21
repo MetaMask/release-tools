@@ -41,7 +41,6 @@ export default createConfig({
         '.github/**',
         '**/scripts/**',
         'packages/apply-release-plan/**',
-        'packages/*/vitest.config.mjs',
         'packages/*/vitest.config.ts',
         'packages/create-release-branch/**',
         '!packages/create-release-branch/src/ui/**',
