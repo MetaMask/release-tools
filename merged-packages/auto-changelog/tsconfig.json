@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
-    "lib": ["ES2020"],
-    "target": "ES2019",
     "types": ["node"]
   },
   "references": [],
