@@ -43,7 +43,7 @@
     "since-latest-release": "../../scripts/since-latest-release.sh",
     "test": "vitest",
     "test:clean": "vitest --clearCache",
-    "test:package": "attw --pack",
+    "test:package": "attw --pack --profile esm-only",
     "test:verbose": "vitest --reporter=verbose",
     "test:watch": "vitest --watch"
   },
@@ -55,7 +55,7 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.15.3",
+    "@arethetypeswrong/cli": "^0.18.5",
     "@types/diff": "^5.0.0",
     "@types/node": "^22.13.14",
     "@types/semver": "^7",
