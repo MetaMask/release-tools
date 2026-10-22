@@ -246,13 +246,46 @@ function configureCommonCommandOptions(_yargs: Argv): Argv {
 }
 
 /**
+ * The parsed command-line arguments for all auto-changelog commands.
+ */
+type CliArguments = {
+  file: string;
+  repo: string;
+  root?: string;
+  tagPrefix: string;
+  versionBeforePackageRename?: string;
+  tagPrefixBeforePackageRename?: string;
+  autoCategorize: boolean;
+  rc: boolean;
+  currentVersion?: string;
+  prettier?: boolean;
+  formatter: string;
+  useChangelogEntry: boolean;
+  useShortPrLink: boolean;
+  requirePrNumbers: boolean;
+  normalizeToPastTense: boolean;
+  excludeChoreWithoutChangelogEntry: boolean;
+  preventBackfill: boolean;
+  verbose: boolean;
+  fix: boolean;
+  prLinks: boolean;
+  checkDeps: boolean;
+  fromRef?: string;
+  toRef: string;
+  remote: string;
+  baseBranch?: string;
+  currentPr?: string;
+  _: (string | number)[];
+  $0: string;
+};
+
+/**
  * The entrypoint for the auto-changelog CLI.
  *
  * @returns A promise that resolves when the selected command completes.
  */
 async function main(): Promise<void> {
-  // Yargs cannot infer the types of the parsed arguments when subcommands are
-  // used, so we assert the shape that the option definitions above produce.
+  // Yargs cannot infer subcommand option types from a shared `argv`.
   const argv = (await yargs(hideBin(process.argv))
     .command(
       'update',
@@ -410,36 +443,7 @@ async function main(): Promise<void> {
     .usage(
       `Utilities for validating and updating "Keep a Changelog" formatted changelogs.\nUsage: $0 [command] [options]`,
     )
-    .parse()) as {
-    file: string;
-    repo: string;
-    root?: string;
-    tagPrefix: string;
-    versionBeforePackageRename?: string;
-    tagPrefixBeforePackageRename?: string;
-    autoCategorize: boolean;
-    rc: boolean;
-    currentVersion?: string;
-    prettier?: boolean;
-    formatter: string;
-    useChangelogEntry: boolean;
-    useShortPrLink: boolean;
-    requirePrNumbers: boolean;
-    normalizeToPastTense: boolean;
-    excludeChoreWithoutChangelogEntry: boolean;
-    preventBackfill: boolean;
-    verbose: boolean;
-    fix: boolean;
-    prLinks: boolean;
-    checkDeps: boolean;
-    fromRef?: string;
-    toRef: string;
-    remote: string;
-    baseBranch?: string;
-    currentPr?: string;
-    _: (string | number)[];
-    $0: string;
-  };
+    .parse()) as CliArguments;
 
   const {
     file: changelogFilename,
