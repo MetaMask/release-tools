@@ -1,7 +1,9 @@
-import { ChangeCategory } from './constants';
-import * as ChangeLogUtils from './get-new-changes';
-import * as ChangeLogManager from './update-changelog';
-import { getCategory } from './update-changelog';
+import { describe, expect, it, vi } from 'vitest';
+
+import { ChangeCategory } from './constants.js';
+import * as ChangeLogUtils from './get-new-changes.js';
+import * as ChangeLogManager from './update-changelog.js';
+import { getCategory } from './update-changelog.js';
 
 const emptyChangelog = `# Changelog
 All notable changes to this project will be documented in this file.
@@ -61,9 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 describe('updateChangelog', () => {
   it('should contain conventional support mappings categorization when autoCategorize is true', async () => {
-    jest
-      .spyOn(ChangeLogUtils, 'getNewChangeEntries')
-      .mockResolvedValue(getNewChangeEntriesMockData);
+    vi.spyOn(ChangeLogUtils, 'getNewChangeEntries').mockResolvedValue(
+      getNewChangeEntriesMockData,
+    );
 
     const result = await ChangeLogManager.updateChangelog({
       ...changelogData,
@@ -76,9 +78,9 @@ describe('updateChangelog', () => {
   });
 
   it('should not contain conventional support mappings categorization when autoCategorize is false', async () => {
-    jest
-      .spyOn(ChangeLogUtils, 'getNewChangeEntries')
-      .mockResolvedValue(getNewChangeEntriesMockData);
+    vi.spyOn(ChangeLogUtils, 'getNewChangeEntries').mockResolvedValue(
+      getNewChangeEntriesMockData,
+    );
 
     const result = await ChangeLogManager.updateChangelog({
       ...changelogData,
@@ -91,9 +93,9 @@ describe('updateChangelog', () => {
   });
 
   it('should support useChangelogEntry=true', async () => {
-    jest
-      .spyOn(ChangeLogUtils, 'getNewChangeEntries')
-      .mockResolvedValue(getNewChangeEntriesMockData);
+    vi.spyOn(ChangeLogUtils, 'getNewChangeEntries').mockResolvedValue(
+      getNewChangeEntriesMockData,
+    );
 
     const result = await ChangeLogManager.updateChangelog({
       ...changelogData,
@@ -105,14 +107,17 @@ describe('updateChangelog', () => {
   });
 
   it('should have default values for useChangelogEntry and useShortPrLink', async () => {
-    jest
-      .spyOn(ChangeLogUtils, 'getNewChangeEntries')
-      .mockResolvedValue(getNewChangeEntriesMockData);
+    vi.spyOn(ChangeLogUtils, 'getNewChangeEntries').mockResolvedValue(
+      getNewChangeEntriesMockData,
+    );
 
+    // Omit useChangelogEntry and useShortPrLink so their defaults apply.
     const result = await ChangeLogManager.updateChangelog({
-      ...changelogData,
-      useChangelogEntry: undefined,
-      useShortPrLink: undefined,
+      changelogContent: changelogData.changelogContent,
+      currentVersion: changelogData.currentVersion,
+      repoUrl: changelogData.repoUrl,
+      isReleaseCandidate: changelogData.isReleaseCandidate,
+      autoCategorize: changelogData.autoCategorize,
     });
 
     expect(result).toContain('### Added\n- New cool feature (#124)');
@@ -120,10 +125,10 @@ describe('updateChangelog', () => {
   });
 
   it('logs emitted changelog entries when verbose is enabled', async () => {
-    jest
-      .spyOn(ChangeLogUtils, 'getNewChangeEntries')
-      .mockResolvedValue(getNewChangeEntriesMockData);
-    const errorSpy = jest
+    vi.spyOn(ChangeLogUtils, 'getNewChangeEntries').mockResolvedValue(
+      getNewChangeEntriesMockData,
+    );
+    const errorSpy = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
 
@@ -139,7 +144,7 @@ describe('updateChangelog', () => {
   });
 
   it('passes only target release PRs to the backfill guard', async () => {
-    const getNewChangeEntriesSpy = jest
+    const getNewChangeEntriesSpy = vi
       .spyOn(ChangeLogUtils, 'getNewChangeEntries')
       .mockResolvedValue([]);
 

@@ -1,18 +1,21 @@
 import semver from 'semver';
 
-import Changelog, { DependencyBump, Formatter } from './changelog';
-import { ChangeCategory, unreleased } from './constants';
-import { PackageRename } from './shared-types';
+import Changelog from './changelog.js';
+import type { DependencyBump, Formatter } from './changelog.js';
+import { ChangeCategory, unreleased } from './constants.js';
+import type { PackageRename } from './shared-types.js';
 
 /**
  * Parse a dependency bump description into structured data.
  *
  * Detects the following patterns (case-insensitive verb):
- * - `[**BREAKING:** ]Bump \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Update \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Upgrade \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Update \`dep\` to \`new\`` (oldVersion omitted)
- * - `[**BREAKING:** ]Upgrade \`dep\` to \`new\`` (oldVersion omitted)
+ * - `[**BREAKING:** ]Bump <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Update <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Upgrade <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Update <dep> to <new>` (oldVersion omitted)
+ * - `[**BREAKING:** ]Upgrade <dep> to <new>` (oldVersion omitted)
+ *
+ * Dependency names and versions are wrapped in backticks in the description.
  *
  * Note: The dependency type is inferred heuristically from the description:
  * entries with `**BREAKING:**` prefix are classified as `peerDependencies`,
@@ -62,7 +65,7 @@ function parsePossibleDependencyBumpDescription(
  * @param line - The string to truncate.
  * @returns The truncated string.
  */
-function truncated(line: string) {
+function truncated(line: string): string {
   return line.length > 80 ? `${line.slice(0, 80)}...` : line;
 }
 
@@ -106,7 +109,7 @@ export function parseChangelog({
   changelogContent,
   repoUrl,
   tagPrefix = 'v',
-  formatter = undefined,
+  formatter,
   packageRename,
   shouldExtractPrLinks = false,
 }: {
@@ -116,13 +119,13 @@ export function parseChangelog({
   formatter?: Formatter;
   packageRename?: PackageRename;
   shouldExtractPrLinks?: boolean;
-}) {
+}): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
   const changelog = new Changelog({
     repoUrl,
     tagPrefix,
-    formatter,
-    packageRename,
+    ...(formatter !== undefined && { formatter }),
+    ...(packageRename !== undefined && { packageRename }),
   });
   const repoName = extractRepoName(repoUrl);
 
@@ -159,7 +162,7 @@ export function parseChangelog({
     removeTrailingNewline = false,
   }: {
     removeTrailingNewline?: boolean;
-  } = {}) {
+  } = {}): void {
     if (!currentChangeEntry) {
       return;
     }

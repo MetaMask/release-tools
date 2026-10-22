@@ -1,7 +1,7 @@
 import path from 'path';
 
-import type { DependencyBump } from './changelog';
-import { runCommand } from './run-command';
+import type { DependencyBump } from './changelog.js';
+import { runCommand } from './run-command.js';
 
 /**
  * Thrown when the base ref cannot be auto-detected, typically because
@@ -256,14 +256,14 @@ export async function getDependencyChanges({
   let oldPkg: PackageJson;
   let newPkg: PackageJson;
   try {
-    oldPkg = JSON.parse(oldContent);
+    oldPkg = JSON.parse(oldContent) as PackageJson;
   } catch {
     throw new Error(
       `Could not parse ${relativePath} at ref ${actualFromRef} as JSON`,
     );
   }
   try {
-    newPkg = JSON.parse(newContent);
+    newPkg = JSON.parse(newContent) as PackageJson;
   } catch {
     throw new Error(`Could not parse ${relativePath} at ref ${toRef} as JSON`);
   }

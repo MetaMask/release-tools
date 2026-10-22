@@ -1,8 +1,9 @@
 /* eslint-disable node/no-process-env */
 
 import path from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { findNearestPackageJson, getRepositoryUrl } from './repo';
+import { findNearestPackageJson, getRepositoryUrl } from './repo.js';
 
 describe('getRepositoryUrl', () => {
   const originalNpmPackageRepositoryUrl =
@@ -42,10 +43,10 @@ describe('getRepositoryUrl', () => {
 
   it('reads the repository URL from the package.json', () => {
     process.env.npm_package_repository_url = '';
-    process.env.PROJECT_CWD = path.resolve(__dirname, '..');
+    process.env.PROJECT_CWD = path.resolve(import.meta.dirname, '..');
 
     expect(getRepositoryUrl()).toBe(
-      'https://github.com/MetaMask/auto-changelog',
+      'https://github.com/MetaMask/release-tools',
     );
   });
 
@@ -53,10 +54,12 @@ describe('getRepositoryUrl', () => {
     delete process.env.npm_package_repository_url;
     delete process.env.PROJECT_CWD;
     // The auto-changelog project root, which has a `repository` field.
-    jest.spyOn(process, 'cwd').mockReturnValue(path.resolve(__dirname, '..'));
+    vi.spyOn(process, 'cwd').mockReturnValue(
+      path.resolve(import.meta.dirname, '..'),
+    );
 
     expect(getRepositoryUrl()).toBe(
-      'https://github.com/MetaMask/auto-changelog',
+      'https://github.com/MetaMask/release-tools',
     );
   });
 
@@ -65,16 +68,16 @@ describe('getRepositoryUrl', () => {
     delete process.env.PROJECT_CWD;
     // A nested directory that has no package.json of its own; the search must
     // walk up to the project root.
-    jest.spyOn(process, 'cwd').mockReturnValue(__dirname);
+    vi.spyOn(process, 'cwd').mockReturnValue(import.meta.dirname);
 
     expect(getRepositoryUrl()).toBe(
-      'https://github.com/MetaMask/auto-changelog',
+      'https://github.com/MetaMask/release-tools',
     );
   });
 });
 
 describe('findNearestPackageJson', () => {
-  const projectRoot = path.resolve(__dirname, '..');
+  const projectRoot = path.resolve(import.meta.dirname, '..');
 
   it('finds the package.json in the given directory', () => {
     expect(findNearestPackageJson(projectRoot)).toBe(
@@ -83,14 +86,14 @@ describe('findNearestPackageJson', () => {
   });
 
   it('walks up to the nearest package.json from a nested directory', () => {
-    // `__dirname` (the `src` directory) has no package.json of its own.
-    expect(findNearestPackageJson(__dirname)).toBe(
+    // `import.meta.dirname` (the `src` directory) has no package.json of its own.
+    expect(findNearestPackageJson(import.meta.dirname)).toBe(
       path.join(projectRoot, 'package.json'),
     );
   });
 
   it('defaults to the current working directory', () => {
-    jest.spyOn(process, 'cwd').mockReturnValue(__dirname);
+    vi.spyOn(process, 'cwd').mockReturnValue(import.meta.dirname);
 
     expect(findNearestPackageJson()).toBe(
       path.join(projectRoot, 'package.json'),

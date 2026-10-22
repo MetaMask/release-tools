@@ -1,7 +1,9 @@
+import { describe, expect, it } from 'vitest';
+
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { Change, DependencyBump } from './changelog';
-import { ChangeCategory } from './constants';
-import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry';
+import type { Change, DependencyBump } from './changelog.js';
+import { ChangeCategory } from './constants.js';
+import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry.js';
 
 describe('find-dependency-bump-changelog-entry', () => {
   describe('findDependencyBumpChangelogEntry', () => {
@@ -15,7 +17,7 @@ describe('find-dependency-bump-changelog-entry', () => {
         ({ description, dependencyBump }) => ({
           description,
           prNumbers: [],
-          dependencyBump,
+          ...(dependencyBump !== undefined && { dependencyBump }),
         }),
       ),
     });

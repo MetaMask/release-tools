@@ -1,5 +1,5 @@
-import type { Change, DependencyBump, ReleaseChanges } from './changelog';
-import { ChangeCategory } from './constants';
+import type { Change, DependencyBump, ReleaseChanges } from './changelog.js';
+import { ChangeCategory } from './constants.js';
 
 /**
  * Result of checking for a changelog entry.

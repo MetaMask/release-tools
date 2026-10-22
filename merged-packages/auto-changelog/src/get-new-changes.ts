@@ -3,9 +3,9 @@ import { Octokit } from '@octokit/rest';
 import {
   ConventionalCommitType,
   LEADING_VERB_TO_PAST_TENSE,
-} from './constants';
-import { getOwnerAndRepoFromUrl } from './repo';
-import { runCommand, runCommandAndSplit } from './run-command';
+} from './constants.js';
+import { getOwnerAndRepoFromUrl } from './repo.js';
+import { runCommand, runCommandAndSplit } from './run-command.js';
 
 let github: Octokit;
 
@@ -24,6 +24,12 @@ export type AddNewCommitsOptions = {
   verbose?: boolean;
 };
 
+export type NewChangeEntry = {
+  description: string;
+  subject: string;
+  hasChangelogEntry: boolean;
+};
+
 // Get array of all ConventionalCommitType values
 const conventionalCommitTypes = Object.values(ConventionalCommitType);
 
@@ -40,7 +46,7 @@ const typesWithPipe = conventionalCommitTypes.join('|');
 async function getCommitHashesInRange(
   commitRange: string,
   rootDirectory?: string,
-) {
+): Promise<string[]> {
   const revListArgs = ['rev-list', commitRange];
   if (rootDirectory) {
     revListArgs.push(rootDirectory);
@@ -136,7 +142,7 @@ function isCherryPickSubject(subject: string): boolean {
  * @param message - The changelog entry message.
  * @returns The message without outer backticks.
  */
-function removeOuterBackticksIfPresent(message: string) {
+function removeOuterBackticksIfPresent(message: string): string {
   return message.replace(/^`(.*)`$/u, '$1');
 }
 
@@ -146,7 +152,7 @@ function removeOuterBackticksIfPresent(message: string) {
  * @param message - The changelog entry message.
  * @returns The message without Conventional Commit prefix.
  */
-function removeConventionalCommitPrefixIfPresent(message: string) {
+function removeConventionalCommitPrefixIfPresent(message: string): string {
   const regex = new RegExp(`^(${typesWithPipe})(\\([^)]*\\))?:\\s*`, 'iu');
   return message.replace(regex, '');
 }
@@ -784,16 +790,24 @@ async function getCommits(
       }
     }
 
+    const cherryPickOriginalSubject = getCherryPickOriginalSubject(subject);
+
     commits.push({
       hash: commitHash,
-      prNumber,
+      ...(prNumber !== undefined && { prNumber }),
       subject,
       description: description.trim(),
       isMergeCommit,
       isCherryPick: isCherryPickSubject(subject),
-      cherryPickOriginalSubject: getCherryPickOriginalSubject(subject),
-      cherryPickOriginalPrNumber,
-      changelogEntry: rawChangelogEntry,
+      ...(cherryPickOriginalSubject !== undefined && {
+        cherryPickOriginalSubject,
+      }),
+      ...(cherryPickOriginalPrNumber !== undefined && {
+        cherryPickOriginalPrNumber,
+      }),
+      ...(rawChangelogEntry !== undefined && {
+        changelogEntry: rawChangelogEntry,
+      }),
     });
     if (verbose) {
       console.error(
@@ -811,7 +825,9 @@ async function getCommits(
  * @param prNumbers - PR numbers in the target changelog section.
  * @returns A mapping of PR numbers to their matching commit hashes.
  */
-async function getCommitsForPrNumbers(prNumbers: string[]) {
+async function getCommitsForPrNumbers(
+  prNumbers: string[],
+): Promise<Map<string, string>> {
   const commitsByPrNumber = new Map<string, string>();
   const targetPrNumbers = new Set(prNumbers);
   const prNumberPattern = prNumbers.join('|');
@@ -856,7 +872,7 @@ async function preventBackfillCommits(
   commits: Commit[],
   targetSectionPrNumbers: string[],
   verbose: boolean,
-) {
+): Promise<Commit[]> {
   const commitsByPrNumber = await getCommitsForPrNumbers(
     targetSectionPrNumbers,
   );
@@ -1096,7 +1112,7 @@ export async function getNewChangeEntries({
   normalizeToPastTense,
   preventBackfill = false,
   verbose = false,
-}: AddNewCommitsOptions) {
+}: AddNewCommitsOptions): Promise<NewChangeEntry[]> {
   const shouldNormalizeToPastTense = normalizeToPastTense ?? true;
   const commitRange =
     mostRecentTag === null ? 'HEAD' : `${mostRecentTag}..HEAD`;
@@ -1136,7 +1152,7 @@ export async function getNewChangeEntries({
       // line and joins the values, so a well-formed entry never contains the
       // label. This strip remains only as a safety net for descriptions that
       // reach here by another path (e.g. merge-commit body lines).
-      let newDescription = description?.replace(/CHANGELOG entry: /gu, '');
+      let newDescription = description.replace(/CHANGELOG entry: /gu, '');
 
       // Strip HTML comments that may come from PR templates to prevent broken markdown
       if (newDescription) {
@@ -1229,7 +1245,7 @@ async function resolveGithubToken(): Promise<string> {
 /**
  * Initialize the Octokit GitHub client with authentication token.
  */
-async function initOctoKit() {
+async function initOctoKit(): Promise<void> {
   const githubToken = await resolveGithubToken();
 
   github = new Octokit({ auth: githubToken });
@@ -1265,8 +1281,7 @@ async function getPrLabels(
     });
 
     if (pullRequest) {
-      const labels = pullRequest.labels.map((label: any) => label.name);
-      return labels;
+      return pullRequest.labels.map((label) => label.name);
     }
   } catch (error: unknown) {
     // If PR doesn't exist (404), return empty labels instead of throwing

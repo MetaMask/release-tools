@@ -1,8 +1,9 @@
-import _outdent from 'outdent';
+import { outdent as outdentFactory } from 'outdent';
+import { describe, expect, it } from 'vitest';
 
-import { parseChangelog } from './parse-changelog';
+import { parseChangelog } from './parse-changelog.js';
 
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 const repoUrl =
   'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
@@ -156,9 +157,9 @@ describe('parseChangelog', () => {
     });
 
     expect(changelog.getReleases()).toStrictEqual([
-      { date: '2020-01-01', status: undefined, version: '1.0.0' },
-      { date: '2020-01-01', status: undefined, version: '0.0.2' },
-      { date: '2020-01-01', status: undefined, version: '0.0.1' },
+      { date: '2020-01-01', version: '1.0.0' },
+      { date: '2020-01-01', version: '0.0.2' },
+      { date: '2020-01-01', version: '0.0.1' },
     ]);
 
     expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
@@ -190,7 +191,6 @@ describe('parseChangelog', () => {
 
     expect(changelog.getRelease('1.0.0')).toStrictEqual({
       date: '2020-01-01',
-      status: undefined,
       version: '1.0.0',
     });
 
@@ -234,9 +234,9 @@ describe('parseChangelog', () => {
     });
 
     expect(changelog.getReleases()).toStrictEqual([
-      { date: '2020-01-01', status: undefined, version: '1.0.0' },
-      { date: '2020-01-01', status: undefined, version: '0.0.2' },
-      { date: '2020-01-01', status: undefined, version: '0.0.1' },
+      { date: '2020-01-01', version: '1.0.0' },
+      { date: '2020-01-01', version: '0.0.2' },
+      { date: '2020-01-01', version: '0.0.1' },
     ]);
 
     expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
@@ -300,9 +300,9 @@ describe('parseChangelog', () => {
     });
 
     expect(changelog.getReleases()).toStrictEqual([
-      { date: '2020-01-01', status: undefined, version: '1.0.0-rc.1' },
-      { date: '2020-01-01', status: undefined, version: '0.0.2-beta.1' },
-      { date: '2020-01-01', status: undefined, version: '0.0.1-alpha.1' },
+      { date: '2020-01-01', version: '1.0.0-rc.1' },
+      { date: '2020-01-01', version: '0.0.2-beta.1' },
+      { date: '2020-01-01', version: '0.0.1-alpha.1' },
     ]);
   });
 
@@ -538,7 +538,7 @@ describe('parseChangelog', () => {
     });
 
     expect(changelog.getReleases()).toStrictEqual([
-      { date: '2020-01-01', status: undefined, version: '1.0.0' },
+      { date: '2020-01-01', version: '1.0.0' },
     ]);
 
     expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
@@ -871,9 +871,9 @@ describe('parseChangelog', () => {
     });
 
     expect(changelog.getReleases()).toStrictEqual([
-      { date: '2020-01-01', status: undefined, version: '1.0.0' },
-      { date: '2020-01-01', status: undefined, version: '0.0.2' },
-      { date: '2020-01-01', status: undefined, version: '0.0.1' },
+      { date: '2020-01-01', version: '1.0.0' },
+      { date: '2020-01-01', version: '0.0.2' },
+      { date: '2020-01-01', version: '0.0.1' },
     ]);
 
     expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
@@ -905,7 +905,6 @@ describe('parseChangelog', () => {
 
     expect(changelog.getRelease('1.0.0')).toStrictEqual({
       date: '2020-01-01',
-      status: undefined,
       version: '1.0.0',
     });
 

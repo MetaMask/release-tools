@@ -1,16 +1,17 @@
 import { promises as fs } from 'fs';
 import os from 'os';
-import _outdent from 'outdent';
+import { outdent as outdentFactory } from 'outdent';
 import path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { DependencyBump } from './changelog';
-import { readFile, writeFile } from './fs';
-import { updateChangelogWithDependencyBumps } from './update-changelog-with-dependency-bumps';
+import type { DependencyBump } from './changelog.js';
+import { readFile, writeFile } from './fs.js';
+import { updateChangelogWithDependencyBumps } from './update-changelog-with-dependency-bumps.js';
 
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 const TEST_REPO_URL = 'https://github.com/example-org/example-repo';
-const formatter = async (content: string) => content;
+const formatter = async (content: string): Promise<string> => content;
 
 /**
  * Builds a changelog by filling in the header automatically.
@@ -697,7 +698,7 @@ describe('updateChangelogWithDependencyBumps', () => {
     `);
     await writeFile(changelogPath, initialContent);
 
-    const { parseChangelog } = await import('./parse-changelog');
+    const { parseChangelog } = await import('./parse-changelog.js');
     const parsedChangelog = parseChangelog({
       changelogContent: initialContent,
       repoUrl: TEST_REPO_URL,
@@ -744,7 +745,7 @@ describe('updateChangelogWithDependencyBumps', () => {
     `);
     await writeFile(changelogPath, initialContent);
 
-    const { parseChangelog } = await import('./parse-changelog');
+    const { parseChangelog } = await import('./parse-changelog.js');
     const parsedChangelog = parseChangelog({
       changelogContent: initialContent,
       repoUrl: TEST_REPO_URL,

@@ -1,9 +1,11 @@
-import Changelog, { Change, type DependencyBump, Formatter } from './changelog';
-import { Version, ChangeCategory } from './constants';
-import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry';
-import type { DependencyCheckResult } from './get-dependency-changes';
-import { parseChangelog } from './parse-changelog';
-import { PackageRename } from './shared-types';
+import Changelog from './changelog.js';
+import type { Change, DependencyBump, Formatter } from './changelog.js';
+import { ChangeCategory } from './constants.js';
+import type { Version } from './constants.js';
+import { findDependencyBumpChangelogEntry } from './find-dependency-bump-changelog-entry.js';
+import type { DependencyCheckResult } from './get-dependency-changes.js';
+import { parseChangelog } from './parse-changelog.js';
+import type { PackageRename } from './shared-types.js';
 
 /**
  * Indicates that the changelog is invalid.
@@ -201,19 +203,21 @@ export async function validateChangelog({
   repoUrl,
   isReleaseCandidate,
   tagPrefix = 'v',
-  formatter = undefined,
+  formatter,
   packageRename,
   ensureValidPrLinksPresent,
   dependencyCheckResult,
-}: ValidateChangelogOptions) {
+}: ValidateChangelogOptions): Promise<void> {
   const normalizedChangelogContent = normalizeLineEndings(changelogContent);
   const changelog = parseChangelog({
     changelogContent: normalizedChangelogContent,
     repoUrl,
     tagPrefix,
-    formatter,
-    packageRename,
-    shouldExtractPrLinks: ensureValidPrLinksPresent,
+    ...(formatter !== undefined && { formatter }),
+    ...(packageRename !== undefined && { packageRename }),
+    ...(ensureValidPrLinksPresent !== undefined && {
+      shouldExtractPrLinks: ensureValidPrLinksPresent,
+    }),
   });
 
   validateReleaseCandidateState(changelog, isReleaseCandidate, currentVersion);
@@ -243,7 +247,7 @@ function validateReleaseCandidateState(
   changelog: Changelog,
   isReleaseCandidate: boolean,
   currentVersion: Version | undefined,
-) {
+): void {
   if (!isReleaseCandidate) {
     return;
   }
@@ -282,7 +286,7 @@ function validateReleaseCandidateState(
  *
  * @param changelog - The parsed changelog.
  */
-function validatePrLinks(changelog: Changelog) {
+function validatePrLinks(changelog: Changelog): void {
   for (const release of changelog.getReleases()) {
     const releaseChangesForVersion = changelog.getReleaseChanges(
       release.version,
@@ -309,7 +313,7 @@ function validateDependencyBumps(
   changelog: Changelog,
   dependencyCheckResult: DependencyCheckResult,
   currentVersion: Version | undefined,
-) {
+): void {
   const { dependencyChanges } = dependencyCheckResult;
   if (!dependencyChanges || dependencyChanges.length === 0) {
     return;
@@ -383,7 +387,7 @@ function validateDependencyBumps(
 async function validateFormatting(
   changelog: Changelog,
   normalizedContent: string,
-) {
+): Promise<void> {
   const validChangelog = await changelog.toString();
   if (normalizeLineEndings(validChangelog) !== normalizedContent) {
     throw new ChangelogFormattingError({
@@ -398,7 +402,7 @@ async function validateFormatting(
  *
  * @param changelog - The parsed changelog.
  */
-function validateNonEmptyReleases(changelog: Changelog) {
+function validateNonEmptyReleases(changelog: Changelog): void {
   for (const release of changelog.getReleases()) {
     const releaseChangesForVersion = changelog.getReleaseChanges(
       release.version,

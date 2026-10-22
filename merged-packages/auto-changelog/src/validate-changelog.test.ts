@@ -1,11 +1,11 @@
+import { outdent as outdentFactory } from 'outdent';
 /* eslint-disable jest/no-restricted-matchers */
+import { describe, expect, it } from 'vitest';
 
-import _outdent from 'outdent';
+import { format } from './changelog.js';
+import { validateChangelog } from './validate-changelog.js';
 
-import { format } from './changelog';
-import { validateChangelog } from './validate-changelog';
-
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 const emptyChangelog = `# Changelog
 All notable changes to this project will be documented in this file.

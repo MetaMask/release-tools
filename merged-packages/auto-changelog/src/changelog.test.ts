@@ -1,9 +1,10 @@
-import _outdent from 'outdent';
+import { outdent as outdentFactory } from 'outdent';
+import { describe, expect, it } from 'vitest';
 
-import Changelog from './changelog';
-import { ChangeCategory } from './constants';
+import Changelog from './changelog.js';
+import { ChangeCategory } from './constants.js';
 
-const outdent = _outdent({ trimTrailingNewline: false });
+const outdent = outdentFactory({ trimTrailingNewline: false });
 
 const emptyChangelog = `# Changelog
 All notable changes to this project will be documented in this file.

@@ -1,4 +1,6 @@
-import { createEmptyChangelog } from './init';
+import { describe, expect, it } from 'vitest';
+
+import { createEmptyChangelog } from './init.js';
 
 const exampleRepoUrl =
   'https://github.com/ExampleUsernameOrOrganization/ExampleRepository/';

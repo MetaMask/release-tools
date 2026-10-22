@@ -1,4 +1,4 @@
-import Changelog from './changelog';
+import Changelog from './changelog.js';
 
 /**
  * Creates a new empty changelog.
@@ -14,7 +14,7 @@ export async function createEmptyChangelog({
 }: {
   repoUrl: string;
   tagPrefix?: string;
-}) {
+}): Promise<string> {
   const changelog = new Changelog({ repoUrl, tagPrefix });
   return await changelog.toString();
 }

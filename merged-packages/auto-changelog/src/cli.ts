@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* oxlint-disable n/hashbang -- TypeScript preserves this shebang in the built CLI. */
 
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
@@ -7,14 +8,16 @@ import type { Argv } from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
-import { format, Formatter, FormatterName } from './changelog';
-import { unreleased, Version } from './constants';
-import { readFile, writeFile } from './fs';
-import { createEmptyChangelog } from './init';
-import { findNearestPackageJson, getRepositoryUrl } from './repo';
-import { PackageRename } from './shared-types';
-import { updateChangelog } from './update-changelog';
-import { error, validate } from './validate-command';
+import { format } from './changelog.js';
+import type { Formatter, FormatterName } from './changelog.js';
+import { unreleased } from './constants.js';
+import type { Version } from './constants.js';
+import { readFile, writeFile } from './fs.js';
+import { createEmptyChangelog } from './init.js';
+import { findNearestPackageJson, getRepositoryUrl } from './repo.js';
+import type { PackageRename } from './shared-types.js';
+import { updateChangelog } from './update-changelog.js';
+import { error, validate } from './validate-command/index.js';
 
 const updateEpilog = `New commits will be added to the "${unreleased}" section (or \
 to the section for the current release if the '--rc' flag is used) in reverse \
@@ -34,7 +37,7 @@ formatting is correct. Verification of the contents is left for manual review.`;
  * @param proposedUrl - The URL to validate.
  * @returns True if the URL is valid, false otherwise.
  */
-function isValidUrl(proposedUrl: string) {
+function isValidUrl(proposedUrl: string): boolean {
   try {
     // eslint-disable-next-line no-new
     new URL(proposedUrl);
@@ -128,18 +131,18 @@ async function update({
   excludeChoreWithoutChangelogEntry,
   preventBackfill,
   verbose,
-}: UpdateOptions) {
+}: UpdateOptions): Promise<void> {
   const changelogContent = await readFile(changelogPath);
 
   const newChangelogContent = await updateChangelog({
     changelogContent,
-    currentVersion,
+    ...(currentVersion !== undefined && { currentVersion }),
     repoUrl,
     isReleaseCandidate,
-    projectRootDirectory,
+    ...(projectRootDirectory !== undefined && { projectRootDirectory }),
     tagPrefixes: [tagPrefix],
     formatter,
-    packageRename,
+    ...(packageRename !== undefined && { packageRename }),
     autoCategorize,
     useChangelogEntry,
     useShortPrLink,
@@ -185,7 +188,11 @@ type InitOptions = {
  * @param options.repoUrl - The GitHub repository URL for the current project.
  * @param options.tagPrefix - The prefix used in tags before the version number.
  */
-async function init({ changelogPath, repoUrl, tagPrefix }: InitOptions) {
+async function init({
+  changelogPath,
+  repoUrl,
+  tagPrefix,
+}: InitOptions): Promise<void> {
   const changelogContent = await createEmptyChangelog({ repoUrl, tagPrefix });
   await writeFile(changelogPath, changelogContent);
 }
@@ -201,7 +208,7 @@ the current working directory), and where the changelog path is resolved from \
  * @param _yargs - The yargs instance to configure.
  * @returns A Yargs instance configured with all common commands.
  */
-function configureCommonCommandOptions(_yargs: Argv) {
+function configureCommonCommandOptions(_yargs: Argv): Argv {
   return _yargs
     .option('file', {
       default: 'CHANGELOG.md',
@@ -239,10 +246,47 @@ function configureCommonCommandOptions(_yargs: Argv) {
 }
 
 /**
- * The entrypoint for the auto-changelog CLI.
+ * The parsed command-line arguments for all auto-changelog commands.
  */
-async function main() {
-  const { argv } = yargs(hideBin(process.argv))
+type CliArguments = {
+  file: string;
+  repo: string;
+  root?: string;
+  tagPrefix: string;
+  versionBeforePackageRename?: string;
+  tagPrefixBeforePackageRename?: string;
+  autoCategorize: boolean;
+  rc: boolean;
+  currentVersion?: string;
+  prettier?: boolean;
+  formatter: string;
+  useChangelogEntry: boolean;
+  useShortPrLink: boolean;
+  requirePrNumbers: boolean;
+  normalizeToPastTense: boolean;
+  excludeChoreWithoutChangelogEntry: boolean;
+  preventBackfill: boolean;
+  verbose: boolean;
+  fix: boolean;
+  prLinks: boolean;
+  checkDeps: boolean;
+  fromRef?: string;
+  toRef: string;
+  remote: string;
+  baseBranch?: string;
+  currentPr?: string;
+  _: (string | number)[];
+  $0: string;
+};
+
+/**
+ * The entrypoint for the auto-changelog CLI.
+ *
+ * @returns A promise that resolves when the selected command completes.
+ */
+async function main(): Promise<void> {
+  // Yargs cannot infer subcommand option types from a shared `argv`.
+  const argv = (await yargs(hideBin(process.argv))
     .command(
       'update',
       'Update CHANGELOG.md with any changes made since the most recent release.\nUsage: $0 update [options]',
@@ -398,7 +442,8 @@ async function main() {
     .help('help')
     .usage(
       `Utilities for validating and updating "Keep a Changelog" formatted changelogs.\nUsage: $0 [command] [options]`,
-    );
+    )
+    .parse()) as CliArguments;
 
   const {
     file: changelogFilename,
@@ -458,7 +503,7 @@ async function main() {
   }
   const command = argv._[0];
 
-  const formatter = async (changelog: string) => {
+  const formatter = async (changelog: string): Promise<string> => {
     // If the deprecated `--prettier` flag is used, it takes precedence over the
     // `--formatter` option. Otherwise, use the specified formatter, unless it's
     // "none".
@@ -488,7 +533,7 @@ async function main() {
   if (!currentVersion) {
     try {
       const manifestText = await readFile(manifestPath);
-      const manifest = JSON.parse(manifestText);
+      const manifest = JSON.parse(manifestText) as { version: string };
       currentVersion = manifest.version;
     } catch (caughtError) {
       if (hasErrorCode(caughtError)) {
@@ -562,13 +607,13 @@ async function main() {
     }
     await update({
       changelogPath,
-      currentVersion,
+      ...(currentVersion !== undefined && { currentVersion }),
       isReleaseCandidate,
       repoUrl,
-      projectRootDirectory,
+      ...(projectRootDirectory !== undefined && { projectRootDirectory }),
       tagPrefix,
       formatter,
-      packageRename,
+      ...(packageRename !== undefined && { packageRename }),
       autoCategorize,
       useChangelogEntry: Boolean(useChangelogEntry),
       useShortPrLink: Boolean(useShortPrLink),
@@ -597,21 +642,21 @@ async function main() {
 
     await validate({
       changelogPath,
-      currentVersion,
+      ...(currentVersion !== undefined && { currentVersion }),
       isReleaseCandidate,
       repoUrl,
       tagPrefix,
       fix,
       formatter,
-      packageRename,
+      ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent: prLinks,
       checkDeps,
       manifestPath,
-      fromRef,
+      ...(fromRef !== undefined && { fromRef }),
       toRef,
       remote,
-      baseBranch,
-      currentPr,
+      ...(baseBranch !== undefined && { baseBranch }),
+      ...(currentPr !== undefined && { currentPr }),
     });
   } else if (command === 'init') {
     await init({
@@ -620,9 +665,10 @@ async function main() {
       tagPrefix,
     });
   }
-  return undefined;
 }
 
-main().catch((caughtError) => {
-  error(caughtError);
+main().catch((caughtError: unknown) => {
+  error(
+    caughtError instanceof Error ? caughtError.message : String(caughtError),
+  );
 });

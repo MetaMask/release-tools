@@ -5,9 +5,9 @@ import {
   orderedChangeCategories,
   unreleased,
   Version,
-} from './constants';
-import * as formatters from './formatters';
-import { PackageRename } from './shared-types';
+} from './constants.js';
+import * as formatters from './formatters.js';
+import { PackageRename } from './shared-types.js';
 
 /**
  * The name of the formatter to use when formatting the changelog string.
@@ -44,7 +44,7 @@ export async function format(
  * derived from the object itself.
  */
 export function getKnownPropertyNames<Key extends PropertyKey>(
-  object: Partial<Record<Key, any>>,
+  object: Partial<Record<Key, unknown>>,
 ): Key[] {
   return Object.getOwnPropertyNames(object) as Key[];
 }
@@ -137,7 +137,7 @@ function stringifyCategory(
   changes: Change[],
   repoUrl: string,
   useShortPrLink = false,
-) {
+): string {
   const categoryHeader = `### ${category}`;
   if (changes.length === 0) {
     return categoryHeader;
@@ -180,7 +180,7 @@ function stringifyRelease(
   repoUrl: string,
   useShortPrLink = false,
   { date, status }: Partial<ReleaseMetadata> = {},
-) {
+): string {
   const releaseHeader = `## [${version}]${date ? ` - ${date}` : ''}${
     status ? ` [${status}]` : ''
   }`;
@@ -211,7 +211,7 @@ function stringifyReleases(
   changes: ChangelogChanges,
   repoUrl: string,
   useShortPrLink = false,
-) {
+): string {
   const stringifiedUnreleased = stringifyRelease(
     unreleased,
     changes[unreleased],
@@ -221,8 +221,8 @@ function stringifyReleases(
   const stringifiedReleases = releases.map(({ version, date, status }) => {
     const categories = changes[version];
     return stringifyRelease(version, categories, repoUrl, useShortPrLink, {
-      date,
-      status,
+      ...(date !== undefined && { date }),
+      ...(status !== undefined && { status }),
     });
   });
 
@@ -236,7 +236,7 @@ function stringifyReleases(
  * @param url - The URL string.
  * @returns The URL string with a trailing slash.
  */
-function withTrailingSlash(url: string) {
+function withTrailingSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
 }
 
@@ -248,7 +248,11 @@ function withTrailingSlash(url: string) {
  * @param secondRef - A reference (e.g., commit hash, tag, etc.) to the second commit to compare.
  * @returns The comparison URL for the two given commits.
  */
-function getCompareUrl(repoUrl: string, firstRef: string, secondRef: string) {
+function getCompareUrl(
+  repoUrl: string,
+  firstRef: string,
+  secondRef: string,
+): string {
   return `${withTrailingSlash(repoUrl)}compare/${firstRef}...${secondRef}`;
 }
 
@@ -259,7 +263,7 @@ function getCompareUrl(repoUrl: string, firstRef: string, secondRef: string) {
  * @param tag - The tag name.
  * @returns The URL for the given tag.
  */
-function getTagUrl(repoUrl: string, tag: string) {
+function getTagUrl(repoUrl: string, tag: string): string {
   return `${withTrailingSlash(repoUrl)}releases/tag/${tag}`;
 }
 
@@ -280,7 +284,7 @@ function stringifyLinkReferenceDefinitions(
   tagPrefix: string,
   releases: ReleaseMetadata[],
   packageRename?: PackageRename,
-) {
+): string {
   const unreleasedLinkReferenceDefinition =
     getUnreleasedLinkReferenceDefinition(
       repoUrl,
@@ -337,7 +341,9 @@ function getUnreleasedLinkReferenceDefinition(
   // if there is a package renamed, the tag prefix before the rename will be considered for compare
   // [Unreleased]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/compare/test@0.0.2...HEAD
   const tagPrefixToCompare =
-    packageRename && packageRename.versionBeforeRename === latestSemverVersion
+    // oxlint-disable-next-line typescript/prefer-optional-chain -- Optional chaining makes two absent values compare equal.
+    packageRename !== undefined &&
+    packageRename.versionBeforeRename === latestSemverVersion
       ? packageRename.tagPrefixBeforeRename
       : tagPrefix;
 
@@ -376,7 +382,7 @@ function getReleaseLinkReferenceDefinitions(
   const releaseLinkReferenceDefinitions = releases.map(({ version }) => {
     let diffUrl;
     // once the version matches with versionBeforeRename, rest of the lines in changelog will be assumed as migrated tags
-    if (packageRename && packageRename.versionBeforeRename === version) {
+    if (packageRename?.versionBeforeRename === version) {
       tagPrefixToCompare = packageRename.tagPrefixBeforeRename;
     }
 
@@ -391,10 +397,7 @@ function getReleaseLinkReferenceDefinitions(
         });
 
       if (previousVersion) {
-        if (
-          packageRename &&
-          packageRename.versionBeforeRename === previousVersion
-        ) {
+        if (packageRename?.versionBeforeRename === previousVersion) {
           // The package was renamed at this version
           // (the tag prefix holds the new name).
           diffUrl = getCompareUrl(
@@ -494,7 +497,7 @@ export default class Changelog {
 
   readonly #tagPrefix: string;
 
-  #formatter: Formatter;
+  readonly #formatter: Formatter;
 
   readonly #packageRename: PackageRename | undefined;
 
@@ -511,7 +514,7 @@ export default class Changelog {
   constructor({
     repoUrl,
     tagPrefix = 'v',
-    formatter = (changelog) => changelog,
+    formatter = (changelog): string => changelog,
     packageRename,
   }: {
     repoUrl: string;
@@ -542,7 +545,12 @@ export default class Changelog {
    * @param options.version - The version of the current release, which should
    * be a [SemVer](https://semver.org/spec/v2.0.0.html)-compatible version.
    */
-  addRelease({ addToStart = true, date, status, version }: AddReleaseOptions) {
+  addRelease({
+    addToStart = true,
+    date,
+    status,
+    version,
+  }: AddReleaseOptions): void {
     if (!version) {
       throw new Error('Version required');
     } else if (semver.valid(version) === null) {
@@ -552,7 +560,11 @@ export default class Changelog {
     }
 
     this.#changes[version] = {};
-    const newRelease = { version, date, status };
+    const newRelease = {
+      version,
+      ...(date !== undefined && { date }),
+      ...(status !== undefined && { status }),
+    };
     if (addToStart) {
       this.#releases.unshift(newRelease);
     } else {
@@ -580,7 +592,7 @@ export default class Changelog {
    * provided and no description is given, the description is auto-generated
    * from the bump data.
    */
-  addChange(options: AddChangeOptions) {
+  addChange(options: AddChangeOptions): void {
     const {
       addToStart = true,
       category,
@@ -639,7 +651,7 @@ export default class Changelog {
    * @param options.prNumbers - New PR numbers (optional).
    * @param options.dependencyBump - New dependency bump data (optional).
    */
-  updateChange(options: UpdateChangeOptions) {
+  updateChange(options: UpdateChangeOptions): void {
     const { version, category, entryIndex, prNumbers } = options;
 
     const release = version
@@ -697,7 +709,7 @@ export default class Changelog {
    *
    * @param version - The release version to migrate unreleased changes to.
    */
-  migrateUnreleasedChangesToRelease(version: Version) {
+  migrateUnreleasedChangesToRelease(version: Version): void {
     const releaseChanges = this.#changes[version];
     if (!releaseChanges) {
       throw new Error(`Specified release version does not exist: '${version}'`);
@@ -711,7 +723,7 @@ export default class Changelog {
           ...(unreleasedChanges[category] ?? []),
           ...(releaseChanges[category] ?? []),
         ];
-      } else {
+      } else if (unreleasedChanges[category]) {
         releaseChanges[category] = unreleasedChanges[category];
       }
     }
@@ -723,7 +735,7 @@ export default class Changelog {
    *
    * @returns The metadata for each release.
    */
-  getReleases() {
+  getReleases(): ReleaseMetadata[] {
     return this.#releases;
   }
 
@@ -733,7 +745,7 @@ export default class Changelog {
    * @param version - The version of the release to retrieve.
    * @returns The specified release, or undefined if no such release exists.
    */
-  getRelease(version: Version) {
+  getRelease(version: Version): ReleaseMetadata | undefined {
     return this.getReleases().find(
       ({ version: _version }) => _version === version,
     );
@@ -747,7 +759,7 @@ export default class Changelog {
    * @param useShortPrLink - Whether to use short PR links in the changelog entries.
    * @returns The stringified release, as it appears in the changelog.
    */
-  getStringifiedRelease(version: Version, useShortPrLink = false) {
+  getStringifiedRelease(version: Version, useShortPrLink = false): string {
     const release = this.getRelease(version);
     if (!release) {
       throw new Error(`Specified release version does not exist: '${version}'`);
@@ -768,7 +780,7 @@ export default class Changelog {
    * @param version - The version of the release being retrieved.
    * @returns The changes included in the given released.
    */
-  getReleaseChanges(version: Version) {
+  getReleaseChanges(version: Version): ReleaseChanges {
     return this.#changes[version];
   }
 
@@ -777,7 +789,7 @@ export default class Changelog {
    *
    * @returns The changes that have not yet been released.
    */
-  getUnreleasedChanges() {
+  getUnreleasedChanges(): ReleaseChanges {
     return this.#changes[unreleased];
   }
 
