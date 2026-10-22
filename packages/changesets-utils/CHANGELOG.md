@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Uncategorized
-
-- Integrate auto-changelog into the monorepo ([#103](https://github.com/MetaMask/release-tools/pull/103))
-- fix: update create-package Vite config ([#94](https://github.com/MetaMask/release-tools/pull/94))
-- build: update Vite to version 8 ([#89](https://github.com/MetaMask/release-tools/pull/89))
-- refactor: rename changeset utils package ([#79](https://github.com/MetaMask/release-tools/pull/79))
-
 ### Added
 
 - Add `parseChangesetSummary` for parsing categorized Changeset summaries, and `GrammarError` for structured parse failures ([#41](https://github.com/MetaMask/release-tools/pull/41))
@@ -22,6 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Returns new changeset and release objects, preserves summaries and metadata, drops changesets with no selected releases, and does not mutate its inputs.
 - Add `restoreResidualChangesets` for rewriting Changeset files after a partial release ([#78](https://github.com/MetaMask/release-tools/pull/78))
   - Writes back only the releases for packages that were not released, preserves the original summary and bump types, leaves fully consumed Changeset files deleted, and is safe to run more than once.
-- Export the supported changeset categories for changelog plugins. ([#87](https://github.com/MetaMask/release-tools/pull/87))
+- Export the supported changeset categories for changelog plugins ([#87](https://github.com/MetaMask/release-tools/pull/87)).
 
 [Unreleased]: https://github.com/MetaMask/release-tools/

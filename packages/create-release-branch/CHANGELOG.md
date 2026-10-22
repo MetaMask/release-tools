@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.3]
+
 ### Uncategorized
 
 - fix: update create-package Vite config ([#94](https://github.com/MetaMask/release-tools/pull/94))
@@ -19,4 +21,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump `@metamask/auto-changelog` from `^6.1.0` to `^6.2.1` ([#103](https://github.com/MetaMask/release-tools/pull/103))
 
-[Unreleased]: https://github.com/MetaMask/release-tools/
+[Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/create-release-branch@4.2.3...HEAD
+[4.2.3]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/create-release-branch@4.2.3

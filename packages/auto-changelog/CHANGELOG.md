@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0]
+
 ### Uncategorized
 
 - Integrate auto-changelog into the monorepo ([#103](https://github.com/MetaMask/release-tools/pull/103))
@@ -17,4 +19,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This package is now ESM-only, but can still be used in CommonJS projects via `require(esm)` in modern Node.js versions (22+), or dynamic imports in older Node.js versions.
 - This package was migrated from [`MetaMask/auto-changelog`](https://github.com/MetaMask/auto-changelog). See [the original changelog](https://github.com/MetaMask/auto-changelog/blob/v6.2.1/CHANGELOG.md) for changes prior to the migration.
 
-[Unreleased]: https://github.com/MetaMask/release-tools/
+[Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/auto-changelog@7.0.0...HEAD
+[7.0.0]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/auto-changelog@7.0.0

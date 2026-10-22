@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Uncategorized
-
-- Integrate auto-changelog into the monorepo ([#103](https://github.com/MetaMask/release-tools/pull/103))
-- fix: update create-package Vite config ([#94](https://github.com/MetaMask/release-tools/pull/94))
-- build: update Vite to version 8 ([#89](https://github.com/MetaMask/release-tools/pull/89))
-- chore: scaffold changesets-changelog package ([#82](https://github.com/MetaMask/release-tools/pull/82))
-
 ### Added
 
 - Add local pull request resolution from Git commit subjects ([#84](https://github.com/MetaMask/release-tools/pull/84))

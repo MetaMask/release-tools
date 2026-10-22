@@ -1,6 +1,6 @@
 {
   "name": "@metamask/create-release-branch",
-  "version": "4.2.2",
+  "version": "4.2.3",
   "description": "An interactive command-line tool to prepare a release branch by automatically bumping versions and updating changelogs for desired packages. Works for both polyrepos and monorepos",
   "keywords": [
     "Ethereum",
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@metamask/action-utils": "^2.0.0",
-    "@metamask/auto-changelog": "^6.2.1",
+    "@metamask/auto-changelog": "^7.0.0",
     "@metamask/utils": "^11.12.0",
     "debug": "^4.3.4",
     "execa": "^8.0.1",
