@@ -11,4 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - This package was migrated from [`MetaMask/create-release-branch`](https://github.com/MetaMask/create-release-branch). See [the original changelog](https://github.com/MetaMask/create-release-branch/blob/v4.2.2/CHANGELOG.md) for changes prior to the migration.
 
+### Changed
+
+- Bump `@metamask/auto-changelog` from `^6.1.0` to `^6.2.1` ([#103](https://github.com/MetaMask/release-tools/pull/103))
+
 [Unreleased]: https://github.com/MetaMask/release-tools/
