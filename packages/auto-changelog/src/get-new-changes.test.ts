@@ -85,6 +85,30 @@ describe('getNewChangeEntries', () => {
       ]);
     });
 
+    it('uses the trailing source PR when a subject also names an original PR', async () => {
+      mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
+      mockRunCommand.mockResolvedValueOnce(
+        'chore: cherry-pick revert a feature (#37564) (#37790)',
+      );
+
+      const result = await getNewChangeEntries({
+        mostRecentTag: 'v1.0.0',
+        repoUrl,
+        loggedPrNumbers: [],
+        loggedDescriptions: [],
+        useChangelogEntry: false,
+        useShortPrLink: true,
+      });
+
+      expect(result).toStrictEqual([
+        {
+          description: 'chore: cherry-pick revert a feature (#37564) (#37790)',
+          subject: 'chore: cherry-pick revert a feature (#37564) (#37790)',
+          hasChangelogEntry: false,
+        },
+      ]);
+    });
+
     it('logs commit decisions when verbose is enabled', async () => {
       mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
       mockRunCommand.mockResolvedValueOnce('add feature (#12345)');

@@ -741,7 +741,7 @@ async function getCommits(
       );
     }
 
-    const subjectMatch = subject.match(/\(#(\d+)\)/u);
+    const subjectMatch = subject.match(/\s\(#(\d+)\)$/u);
 
     let prNumber: string | undefined;
     let sourcePrNumber: string | undefined;
