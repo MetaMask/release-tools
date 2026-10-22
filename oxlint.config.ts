@@ -14,7 +14,6 @@ export default createConfig({
     '**/coverage/**',
     '**/dist/**',
     '.yarn/**',
-    'merged-packages/**',
     // The template's tsconfigs extend `../../tsconfig.packages.json`, which
     // only resolves once the package has been generated into `packages/`.
     'scripts/create-package/package-template/**',

@@ -1,14 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { prettier } from './formatters.js';
+import { oxfmt, prettier } from './formatters.js';
 
 describe('oxfmt', () => {
-  // Oxfmt is ESM-only, and Jest doesn't work well with ESM. We'll want to
-  // switch to Vitest eventually anyway, so for now we'll just skip this test.
-  it.todo('formats changelog with Oxfmt when installed');
+  it('formats changelog with Oxfmt when installed', async () => {
+    const input = '# Changelog\n\n* Initial release';
 
-  // Not easy to test with Jest, since Oxfmt is dynamically imported.
-  it.todo('throws an error with a clear message when Oxfmt is not installed');
+    expect(await oxfmt(input)).toBe('# Changelog\n\n- Initial release\n');
+  });
+
+  it('throws an error with a clear message when Oxfmt is not installed', async () => {
+    vi.doMock('oxfmt', () => {
+      throw new Error('Cannot find package');
+    });
+
+    await expect(oxfmt('# Changelog')).rejects.toThrow(
+      'Failed to format changelog with Oxfmt. Is Oxfmt installed?',
+    );
+
+    vi.doUnmock('oxfmt');
+  });
 });
 
 describe('prettier', () => {
@@ -18,8 +29,15 @@ describe('prettier', () => {
     expect(await prettier(input)).toBe('# Changelog\n\n- Initial release\n');
   });
 
-  // Not easy to test with Jest, since Prettier is dynamically imported.
-  it.todo(
-    'throws an error with a clear message when Prettier is not installed',
-  );
+  it('throws an error with a clear message when Prettier is not installed', async () => {
+    vi.doMock('prettier/standalone', () => {
+      throw new Error('Cannot find package');
+    });
+
+    await expect(prettier('# Changelog')).rejects.toThrow(
+      'Failed to format changelog with Prettier. Is Prettier installed?',
+    );
+
+    vi.doUnmock('prettier/standalone');
+  });
 });

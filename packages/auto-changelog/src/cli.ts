@@ -1,6 +1,3 @@
-#!/usr/bin/env node
-/* oxlint-disable n/hashbang -- TypeScript preserves this shebang in the built CLI. */
-
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
 import semver from 'semver';

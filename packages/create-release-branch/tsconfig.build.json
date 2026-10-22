@@ -6,6 +6,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
+  "references": [{ "path": "../auto-changelog/tsconfig.build.json" }],
   "include": ["./src"],
   "exclude": ["**/*.test.ts", "./src/ui/**"]
 }

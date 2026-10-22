@@ -46,7 +46,6 @@
     "test:watch": "vitest --watch"
   },
   "devDependencies": {
-    "@metamask/auto-changelog": "^6.1.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-istanbul": "^5.0.1",
     "rimraf": "^5.0.5",

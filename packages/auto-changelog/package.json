@@ -15,8 +15,9 @@
     "type": "git",
     "url": "https://github.com/MetaMask/release-tools.git"
   },
-  "bin": "dist/cli.js",
+  "bin": "bin/auto-changelog.js",
   "files": [
+    "bin/",
     "dist/"
   ],
   "type": "module",
@@ -57,7 +58,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.15.3",
     "@types/diff": "^5.0.0",
-    "@types/node": "^22.18.0",
+    "@types/node": "^22.13.14",
     "@types/semver": "^7",
     "@types/yargs": "^17.0.33",
     "@vitest/coverage-istanbul": "^5.0.1",

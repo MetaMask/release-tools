@@ -6,11 +6,15 @@ This package has a CLI (`auto-changelog`), and an API.
 
 ## Installation
 
-`yarn add --dev @metamask/auto-changelog`
+```sh
+yarn add @metamask/auto-changelog --dev
+```
 
-or
+or:
 
-`npm install --save-dev @metamask/auto-changelog`
+```sh
+npm install @metamask/auto-changelog --save-dev
+```
 
 ## CLI Usage
 
