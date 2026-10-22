@@ -27,6 +27,7 @@ const repoUrl = 'https://github.com/MetaMask/metamask-mobile';
  * Mock GitHub's pull request labels endpoint.
  *
  * @param labels - The label names to return.
+ * @param replaceExistingMocks - Whether to remove existing Nock mocks first.
  * @returns The Nock scope for the mocked endpoint.
  */
 function mockPrLabels(

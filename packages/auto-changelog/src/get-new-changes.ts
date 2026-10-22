@@ -1297,7 +1297,9 @@ async function resolveGithubToken(): Promise<string> {
 }
 
 /**
- * Initialize the Octokit GitHub client with authentication token.
+ * Get a cached Octokit GitHub client for the current authentication token.
+ *
+ * @returns The cached or newly initialized Octokit client.
  */
 async function getOctoKit(): Promise<Octokit> {
   const token = await resolveGithubToken();
