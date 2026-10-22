@@ -45,7 +45,6 @@
   "devDependencies": {
     "@lavamoat/allow-scripts": "^3.0.4",
     "@lavamoat/preinstall-always-fail": "^2.1.0",
-    "@metamask/auto-changelog-npm": "https://registry.npmjs.org/@metamask/auto-changelog/-/auto-changelog-6.2.1.tgz",
     "@metamask/create-release-branch": "^4.2.2",
     "@metamask/oxlint-config": "^0.1.1",
     "@metamask/oxlint-config-browser": "^0.1.1",

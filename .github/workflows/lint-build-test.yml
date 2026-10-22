@@ -83,6 +83,8 @@ jobs:
           # Full history so `changelog:validate` can find the merge base with the
           # base branch to detect which packages are being released.
           fetch-depth: 0
+      # The changelog scripts run the `auto-changelog` CLI from its workspace.
+      - run: yarn build
       - run: yarn workspace "$PACKAGE_NAME" changelog:validate
         env:
           PACKAGE_NAME: ${{ matrix.package-name }}

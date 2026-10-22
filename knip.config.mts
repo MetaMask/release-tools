@@ -11,9 +11,6 @@ const config: KnipConfig = {
       project: ['scripts/**/*.ts', 'tests/**/*.ts', '*.{js,cjs,mjs,ts}'],
       ignore: ['scripts/create-package/package-template/**'],
       ignoreDependencies: [
-        // Run by path from the shared changelog scripts in `scripts/`, so knip
-        // can't tie it back to this workspace.
-        '@metamask/auto-changelog-npm',
         // Installed for the `plugin-allow-scripts` Yarn plugin and the
         // `preinstall` lifecycle guard, neither of which knip can see.
         '@lavamoat/allow-scripts',
@@ -26,6 +23,9 @@ const config: KnipConfig = {
     },
     'packages/*': {
       ignoreDependencies: [
+        // Invoked as `yarn auto-changelog` by the shared changelog scripts in
+        // `scripts/`, so knip can't tie it back to this workspace.
+        '@metamask/auto-changelog',
         // Resolved by the apply-release-plan test through import-meta-resolve.
         '@changesets/cli',
       ],

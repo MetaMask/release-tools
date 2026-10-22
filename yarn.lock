@@ -901,6 +901,7 @@ __metadata:
     "@changesets/should-skip-package": "npm:^1.0.0"
     "@changesets/types": "npm:^7.0.0"
     "@manypkg/get-packages": "npm:^3.1.0"
+    "@metamask/auto-changelog": "npm:^6.2.1"
     "@types/node": "npm:^22.13.14"
     "@types/semver": "npm:^7"
     "@typescript/native": "npm:typescript@^7.0.2"
@@ -917,29 +918,6 @@ __metadata:
     vitest: "npm:^5.0.1"
   languageName: unknown
   linkType: soft
-
-"@metamask/auto-changelog-npm@https://registry.npmjs.org/@metamask/auto-changelog/-/auto-changelog-6.2.1.tgz":
-  version: 6.2.1
-  resolution: "@metamask/auto-changelog-npm@https://registry.npmjs.org/@metamask/auto-changelog/-/auto-changelog-6.2.1.tgz"
-  dependencies:
-    "@octokit/rest": "npm:^20.0.0"
-    diff: "npm:^5.0.0"
-    execa: "npm:^5.1.1"
-    semver: "npm:^7.3.5"
-    yargs: "npm:^17.0.1"
-  peerDependencies:
-    oxfmt: ^0.45.0
-    prettier: ">=3.0.0"
-  peerDependenciesMeta:
-    oxfmt:
-      optional: true
-    prettier:
-      optional: true
-  bin:
-    auto-changelog: dist/cli.mjs
-  checksum: 10/ab859f24ef0e885671f88d44a3baec474b5ec1e424d4f1b0ead5f4673bbf9bba2a46cea684c93d437a4269580665faf6f5307f10aecabe5f92ea2616a5ca35da
-  languageName: node
-  linkType: hard
 
 "@metamask/auto-changelog@npm:^6.2.1, @metamask/auto-changelog@workspace:packages/auto-changelog":
   version: 0.0.0-use.local
@@ -982,6 +960,7 @@ __metadata:
   resolution: "@metamask/changesets-changelog@workspace:packages/changesets-changelog"
   dependencies:
     "@changesets/types": "npm:^7.0.0"
+    "@metamask/auto-changelog": "npm:^6.2.1"
     "@metamask/changesets-utils": "npm:^0.0.0"
     "@metamask/utils": "npm:^11.12.0"
     "@types/node": "npm:^22.13.14"
@@ -1002,6 +981,7 @@ __metadata:
   dependencies:
     "@changesets/parse": "npm:^1.0.0"
     "@changesets/types": "npm:^7.0.0"
+    "@metamask/auto-changelog": "npm:^6.2.1"
     "@metamask/changesets-utils": "npm:^0.0.0"
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
@@ -1019,6 +999,7 @@ __metadata:
   resolution: "@metamask/changesets-utils@workspace:packages/changesets-utils"
   dependencies:
     "@changesets/types": "npm:^7.0.0"
+    "@metamask/auto-changelog": "npm:^6.2.1"
     "@types/node": "npm:^22.13.14"
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
@@ -1156,7 +1137,6 @@ __metadata:
   dependencies:
     "@lavamoat/allow-scripts": "npm:^3.0.4"
     "@lavamoat/preinstall-always-fail": "npm:^2.1.0"
-    "@metamask/auto-changelog-npm": "https://registry.npmjs.org/@metamask/auto-changelog/-/auto-changelog-6.2.1.tgz"
     "@metamask/create-release-branch": "npm:^4.2.2"
     "@metamask/oxlint-config": "npm:^0.1.1"
     "@metamask/oxlint-config-browser": "npm:^0.1.1"
@@ -4045,23 +4025,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^5.1.1":
-  version: 5.1.1
-  resolution: "execa@npm:5.1.1"
-  dependencies:
-    cross-spawn: "npm:^7.0.3"
-    get-stream: "npm:^6.0.0"
-    human-signals: "npm:^2.1.0"
-    is-stream: "npm:^2.0.0"
-    merge-stream: "npm:^2.0.0"
-    npm-run-path: "npm:^4.0.1"
-    onetime: "npm:^5.1.2"
-    signal-exit: "npm:^3.0.3"
-    strip-final-newline: "npm:^2.0.0"
-  checksum: 10/8ada91f2d70f7dff702c861c2c64f21dfdc1525628f3c0454fd6f02fce65f7b958616cbd2b99ca7fa4d474e461a3d363824e91b3eb881705231abbf387470597
-  languageName: node
-  linkType: hard
-
 "execa@npm:^8.0.1":
   version: 8.0.1
   resolution: "execa@npm:8.0.1"
@@ -4360,13 +4323,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"get-stream@npm:^6.0.0":
-  version: 6.0.1
-  resolution: "get-stream@npm:6.0.1"
-  checksum: 10/781266d29725f35c59f1d214aedc92b0ae855800a980800e2923b3fbc4e56b3cb6e462c42e09a1cf1a00c64e056a78fa407cbe06c7c92b7e5cd49b4b85c2a497
-  languageName: node
-  linkType: hard
-
 "get-stream@npm:^8.0.1":
   version: 8.0.1
   resolution: "get-stream@npm:8.0.1"
@@ -4568,13 +4524,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"human-signals@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "human-signals@npm:2.1.0"
-  checksum: 10/df59be9e0af479036798a881d1f136c4a29e0b518d4abb863afbd11bf30efa3eeb1d0425fc65942dcc05ab3bf40205ea436b0ff389f2cd20b75b8643d539bf86
-  languageName: node
-  linkType: hard
-
 "human-signals@npm:^5.0.0":
   version: 5.0.0
   resolution: "human-signals@npm:5.0.0"
@@ -4761,13 +4710,6 @@ __metadata:
   version: 4.1.0
   resolution: "is-plain-obj@npm:4.1.0"
   checksum: 10/6dc45da70d04a81f35c9310971e78a6a3c7a63547ef782e3a07ee3674695081b6ca4e977fbb8efc48dae3375e0b34558d2bcd722aec9bddfa2d7db5b041be8ce
-  languageName: node
-  linkType: hard
-
-"is-stream@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "is-stream@npm:2.0.1"
-  checksum: 10/b8e05ccdf96ac330ea83c12450304d4a591f9958c11fd17bed240af8d5ffe08aedafa4c0f4cfccd4d28dc9d4d129daca1023633d5c11601a6cbc77521f6fae66
   languageName: node
   linkType: hard
 
@@ -5717,13 +5659,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mimic-fn@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "mimic-fn@npm:2.1.0"
-  checksum: 10/d2421a3444848ce7f84bd49115ddacff29c15745db73f54041edc906c14b131a38d05298dae3081667627a59b2eb1ca4b436ff2e1b80f69679522410418b478a
-  languageName: node
-  linkType: hard
-
 "mimic-fn@npm:^4.0.0":
   version: 4.0.0
   resolution: "mimic-fn@npm:4.0.0"
@@ -5995,15 +5930,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"npm-run-path@npm:^4.0.1":
-  version: 4.0.1
-  resolution: "npm-run-path@npm:4.0.1"
-  dependencies:
-    path-key: "npm:^3.0.0"
-  checksum: 10/5374c0cea4b0bbfdfae62da7bbdf1e1558d338335f4cacf2515c282ff358ff27b2ecb91ffa5330a8b14390ac66a1e146e10700440c1ab868208430f56b5f4d23
-  languageName: node
-  linkType: hard
-
 "npm-run-path@npm:^5.1.0":
   version: 5.3.0
   resolution: "npm-run-path@npm:5.3.0"
@@ -6049,15 +5975,6 @@ __metadata:
   dependencies:
     wrappy: "npm:1"
   checksum: 10/cd0a88501333edd640d95f0d2700fbde6bff20b3d4d9bdc521bdd31af0656b5706570d6c6afe532045a20bb8dc0849f8332d6f2a416e0ba6d3d3b98806c7db68
-  languageName: node
-  linkType: hard
-
-"onetime@npm:^5.1.2":
-  version: 5.1.2
-  resolution: "onetime@npm:5.1.2"
-  dependencies:
-    mimic-fn: "npm:^2.1.0"
-  checksum: 10/e9fd0695a01cf226652f0385bf16b7a24153dbbb2039f764c8ba6d2306a8506b0e4ce570de6ad99c7a6eb49520743afdb66edd95ee979c1a342554ed49a9aadd
   languageName: node
   linkType: hard
 
@@ -6478,7 +6395,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"path-key@npm:^3.0.0, path-key@npm:^3.1.0":
+"path-key@npm:^3.1.0":
   version: 3.1.1
   resolution: "path-key@npm:3.1.1"
   checksum: 10/55cd7a9dd4b343412a8386a743f9c746ef196e57c823d90ca3ab917f90ab9f13dd0ded27252ba49dbdfcab2b091d998bc446f6220cd3cea65db407502a740020
@@ -6982,13 +6899,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"signal-exit@npm:^3.0.3":
-  version: 3.0.7
-  resolution: "signal-exit@npm:3.0.7"
-  checksum: 10/a2f098f247adc367dffc27845853e9959b9e88b01cb301658cfe4194352d8d2bb32e18467c786a7fe15f1d44b233ea35633d076d5e737870b7139949d1ab6318
-  languageName: node
-  linkType: hard
-
 "signal-exit@npm:^4.0.1, signal-exit@npm:^4.1.0":
   version: 4.1.0
   resolution: "signal-exit@npm:4.1.0"
@@ -7195,13 +7105,6 @@ __metadata:
   dependencies:
     ansi-regex: "npm:^6.0.1"
   checksum: 10/475f53e9c44375d6e72807284024ac5d668ee1d06010740dec0b9744f2ddf47de8d7151f80e5f6190fc8f384e802fdf9504b76a7e9020c9faee7103623338be2
-  languageName: node
-  linkType: hard
-
-"strip-final-newline@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "strip-final-newline@npm:2.0.0"
-  checksum: 10/69412b5e25731e1938184b5d489c32e340605bb611d6140344abc3421b7f3c6f9984b21dff296dfcf056681b82caa3bb4cc996a965ce37bcfad663e92eae9c64
   languageName: node
   linkType: hard
 
@@ -7975,7 +7878,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yargs@npm:^17.0.1, yargs@npm:^17.7.2":
+"yargs@npm:^17.7.2":
   version: 17.7.3
   resolution: "yargs@npm:17.7.3"
   dependencies:

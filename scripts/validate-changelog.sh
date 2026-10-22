@@ -89,15 +89,10 @@ main() {
     base_version="$(resolve_base_version)"
   fi
 
-  # Use the published CLI pinned by the root `package.json`, so this script does
-  # not depend on a build of the workspace package.
-  local auto_changelog
-  auto_changelog="$(git rev-parse --show-toplevel)/node_modules/@metamask/auto-changelog-npm/dist/cli.mjs"
-
   if should_validate_as_release_candidate "${branch_name}" "${current_version}" "${base_version}"; then
-    "${auto_changelog}" validate --formatter oxfmt --tag-prefix "${package_name}@" --rc "$@"
+    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" --rc "$@"
   else
-    "${auto_changelog}" validate --formatter oxfmt --tag-prefix "${package_name}@" "$@"
+    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" "$@"
   fi
 }
 

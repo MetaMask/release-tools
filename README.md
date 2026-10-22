@@ -37,8 +37,12 @@ linkStyle default opacity:0.5
   changesets_lint(["@metamask/changesets-lint"]);
   changesets_utils(["@metamask/changesets-utils"]);
   create_release_branch(["@metamask/create-release-branch"]);
+  apply_release_plan --> auto_changelog;
   changesets_changelog --> changesets_utils;
+  changesets_changelog --> auto_changelog;
   changesets_lint --> changesets_utils;
+  changesets_lint --> auto_changelog;
+  changesets_utils --> auto_changelog;
   create_release_branch --> auto_changelog;
 ```
 
