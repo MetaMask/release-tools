@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Uncategorized
 
+- fix: update create-package Vite config ([#94](https://github.com/MetaMask/release-tools/pull/94))
+- build: update Vite to version 8 ([#89](https://github.com/MetaMask/release-tools/pull/89))
+- chore: Increase test timeout in `create-release-branch` ([#77](https://github.com/MetaMask/release-tools/pull/77))
+- chore: move create-release-branch to packages ([#35](https://github.com/MetaMask/release-tools/pull/35))
 - This package was migrated from [`MetaMask/create-release-branch`](https://github.com/MetaMask/create-release-branch). See [the original changelog](https://github.com/MetaMask/create-release-branch/blob/v4.2.2/CHANGELOG.md) for changes prior to the migration.
 
 ### Changed
