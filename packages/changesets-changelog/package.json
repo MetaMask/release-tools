@@ -52,7 +52,7 @@
     "execa": "^8.0.1"
   },
   "devDependencies": {
-    "@metamask/auto-changelog": "^7.0.0",
+    "@metamask/auto-changelog": "^7.1.0",
     "@types/node": "^22.13.14",
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-istanbul": "^5.0.1",
