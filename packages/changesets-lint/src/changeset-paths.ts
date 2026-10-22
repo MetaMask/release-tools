@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const CHANGESET_DIRECTORY = '.changeset';
-const README_FILE = 'README.md';
+const IGNORED_FILES = new Set(['README.md']);
 
 /**
  * Gets all Changeset Markdown paths from a repository.
@@ -36,7 +36,7 @@ export async function getChangesetPaths(
       (entry) =>
         entry.isFile() &&
         entry.name.endsWith('.md') &&
-        entry.name !== README_FILE,
+        !IGNORED_FILES.has(entry.name),
     )
     .map((entry) => `${CHANGESET_DIRECTORY}/${entry.name}`)
     .sort();
