@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Improvements to prepare for AI (#127)
+- Improve populating changelogs from commits/PRs to prepare for AI-powered release workflows in MetaMask clients ([#127](https://github.com/MetaMask/release-tools/pull/127))
+  - Handle extracting the PR number from a Runway-generated cherry-pick commit subject even when the subject has been hard-wrapped
+  - Repair a Markdown link that accidentally splits a word
+  - Handle parsing the PR number from a malformed link
+  - Don't skip a PR that has a non-empty `CHANGELOG entry:` line even when it also has a `no-changelog` label
+  - Use the trailing squash-merge PR reference when a commit subject includes both an original PR and its own PR
 
 ## [7.0.0]
 

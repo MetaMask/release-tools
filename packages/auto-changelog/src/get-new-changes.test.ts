@@ -29,7 +29,14 @@ const repoUrl = 'https://github.com/MetaMask/metamask-mobile';
  * @param labels - The label names to return.
  * @returns The Nock scope for the mocked endpoint.
  */
-function mockPrLabels(labels: string[] = []): ReturnType<typeof nock> {
+function mockPrLabels(
+  labels: string[] = [],
+  replaceExistingMocks = false,
+): ReturnType<typeof nock> {
+  if (replaceExistingMocks) {
+    nock.cleanAll();
+  }
+
   return nock('https://api.github.com')
     .persist()
     .get(/\/repos\/MetaMask\/metamask-mobile\/pulls\/\d+/u)
@@ -1020,8 +1027,7 @@ describe('getNewChangeEntries', () => {
     });
 
     it('keeps an authored entry when the PR has a no-changelog label', async () => {
-      nock.cleanAll();
-      const scope = mockPrLabels(['no-changelog']);
+      const scope = mockPrLabels(['no-changelog'], true);
 
       const result = await runWithEntry(
         'feat: add a tab (#100)',
@@ -1039,8 +1045,7 @@ describe('getNewChangeEntries', () => {
     });
 
     it('uses a no-changelog label when no entry was authored', async () => {
-      nock.cleanAll();
-      const scope = mockPrLabels(['no-changelog']);
+      const scope = mockPrLabels(['no-changelog'], true);
 
       const result = await runWithEntry(
         'feat: add a tab (#100)',

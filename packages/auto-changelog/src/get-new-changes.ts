@@ -7,7 +7,8 @@ import {
 import { getOwnerAndRepoFromUrl } from './repo.js';
 import { runCommand, runCommandAndSplit } from './run-command.js';
 
-let github: Octokit;
+let github: Octokit | undefined;
+let githubToken: string | undefined;
 
 export type AddNewCommitsOptions = {
   mostRecentTag: string | null;
@@ -1298,10 +1299,16 @@ async function resolveGithubToken(): Promise<string> {
 /**
  * Initialize the Octokit GitHub client with authentication token.
  */
-async function initOctoKit(): Promise<void> {
-  const githubToken = await resolveGithubToken();
+async function getOctoKit(): Promise<Octokit> {
+  const token = await resolveGithubToken();
 
-  github = new Octokit({ auth: githubToken });
+  if (github && githubToken === token) {
+    return github;
+  }
+
+  github = new Octokit({ auth: token });
+  githubToken = token;
+  return github;
 }
 
 /**
@@ -1319,12 +1326,12 @@ async function getPrLabels(
     return [];
   }
 
-  await initOctoKit();
+  const octokit = await getOctoKit();
 
   const { owner, repo } = getOwnerAndRepoFromUrl(repoUrl);
 
   try {
-    const { data: pullRequest } = await github.rest.pulls.get({
+    const { data: pullRequest } = await octokit.rest.pulls.get({
       owner,
       repo,
       // eslint-disable-next-line @typescript-eslint/naming-convention
