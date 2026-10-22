@@ -1,5 +1,14 @@
 * text=auto
 
+# Force LF for shell scripts so they run in WSL on Windows.
+# `* text=auto` above otherwise lets git rewrite to CRLF on Windows checkouts,
+# breaking bash with `$'\r': command not found` and `set: invalid option`.
+*.sh text eol=lf
+
+# Oxlint validates these Node hashbang entrypoints and requires LF.
+packages/auto-changelog/src/cli.ts text eol=lf
+packages/create-release-branch/bin/create-release-branch.js text eol=lf
+
 yarn.lock linguist-generated=false
 
 # `tsconfig.json` is already recognized as JSONC. This ensures our other `tsconfig` files are as
