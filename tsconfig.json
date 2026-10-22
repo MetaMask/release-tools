@@ -12,6 +12,9 @@
       "path": "./packages/apply-release-plan"
     },
     {
+      "path": "./packages/auto-changelog"
+    },
+    {
       "path": "./packages/changesets-changelog"
     },
     {

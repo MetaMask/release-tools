@@ -178,6 +178,11 @@ jobs:
           git commit -m "[Temporary] Add changelogs from current pull request"
         shell: bash
 
+      # The changelog scripts run the `auto-changelog` CLI from its workspace.
+      - name: Build `auto-changelog`
+        run: yarn workspace @metamask/auto-changelog run build
+        shell: bash
+
       - name: Ensure required dependency bump entries exist across all changelogs
         id: update-changelogs
         env:

@@ -13,6 +13,9 @@
       "path": "./packages/apply-release-plan/tsconfig.lint.json"
     },
     {
+      "path": "./packages/auto-changelog/tsconfig.lint.json"
+    },
+    {
       "path": "./packages/changesets-changelog/tsconfig.lint.json"
     },
     {

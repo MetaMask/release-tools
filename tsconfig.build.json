@@ -11,6 +11,9 @@
       "path": "./packages/apply-release-plan/tsconfig.build.json"
     },
     {
+      "path": "./packages/auto-changelog/tsconfig.build.json"
+    },
+    {
       "path": "./packages/changesets-changelog/tsconfig.build.json"
     },
     {
