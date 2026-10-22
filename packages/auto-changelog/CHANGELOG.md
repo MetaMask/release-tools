@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Move the package into the `MetaMask/release-tools` monorepo workspaces ([#103](https://github.com/MetaMask/release-tools/pull/103))
 - **BREAKING:** Drop CommonJS support ([#100](https://github.com/MetaMask/release-tools/pull/100))
   - This package is now ESM-only, but can still be used in CommonJS projects via `require(esm)` in modern Node.js versions (22+), or dynamic imports in older Node.js versions.
 - This package was migrated from [`MetaMask/auto-changelog`](https://github.com/MetaMask/auto-changelog). See [the original changelog](https://github.com/MetaMask/auto-changelog/blob/v6.2.1/CHANGELOG.md) for changes prior to the migration.
