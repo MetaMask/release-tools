@@ -27,9 +27,17 @@ const repoUrl = 'https://github.com/MetaMask/metamask-mobile';
  * Mock GitHub's pull request labels endpoint.
  *
  * @param labels - The label names to return.
+ * @param replaceExistingMocks - Whether to remove existing Nock mocks first.
  * @returns The Nock scope for the mocked endpoint.
  */
-function mockPrLabels(labels: string[] = []): ReturnType<typeof nock> {
+function mockPrLabels(
+  labels: string[] = [],
+  replaceExistingMocks = false,
+): ReturnType<typeof nock> {
+  if (replaceExistingMocks) {
+    nock.cleanAll();
+  }
+
   return nock('https://api.github.com')
     .persist()
     .get(/\/repos\/MetaMask\/metamask-mobile\/pulls\/\d+/u)
@@ -80,6 +88,30 @@ describe('getNewChangeEntries', () => {
           description:
             'bug fix ([#12346](https://github.com/MetaMask/metamask-mobile/pull/12346))',
           subject: 'bug fix (#12346)',
+          hasChangelogEntry: false,
+        },
+      ]);
+    });
+
+    it('uses the trailing source PR when a subject also names an original PR', async () => {
+      mockRunCommandAndSplit.mockResolvedValueOnce(['commit1']);
+      mockRunCommand.mockResolvedValueOnce(
+        'chore: cherry-pick revert a feature (#37564) (#37790)',
+      );
+
+      const result = await getNewChangeEntries({
+        mostRecentTag: 'v1.0.0',
+        repoUrl,
+        loggedPrNumbers: [],
+        loggedDescriptions: [],
+        useChangelogEntry: false,
+        useShortPrLink: true,
+      });
+
+      expect(result).toStrictEqual([
+        {
+          description: 'chore: cherry-pick revert a feature (#37564) (#37790)',
+          subject: 'chore: cherry-pick revert a feature (#37564) (#37790)',
           hasChangelogEntry: false,
         },
       ]);
@@ -576,6 +608,46 @@ describe('getNewChangeEntries', () => {
       },
     );
 
+    it.each([
+      [
+        'release(runway): cherry-pick fix: resolve ip-address cp-13.43.0 (#45252)',
+        '- fix: resolve ip-address cp-13.43.0\n(#45243)',
+        '45243',
+      ],
+      [
+        'release(runway): cherry-pick bump: update a dependency (#45410)',
+        '- bump: update a dependency cp-13.4\n4.0\n(#45299)',
+        '45299',
+      ],
+    ])(
+      'uses the original PR from a hard-wrapped Runway cherry-pick body',
+      async (subject, originalSubject, originalPrNumber) => {
+        mockRunCommandAndSplit.mockResolvedValueOnce(['cherrypick']);
+        mockRunCommand
+          .mockResolvedValueOnce(subject)
+          .mockResolvedValueOnce(
+            `${originalSubject}\n\nCHANGELOG entry: Fixed the integration issue`,
+          );
+
+        const result = await getNewChangeEntries({
+          mostRecentTag: 'v1.0.0',
+          repoUrl,
+          loggedPrNumbers: [],
+          loggedDescriptions: [],
+          useChangelogEntry: true,
+          useShortPrLink: true,
+        });
+
+        expect(result).toStrictEqual([
+          {
+            description: `Fixed the integration issue (#${originalPrNumber})`,
+            subject: 'Fixed the integration issue',
+            hasChangelogEntry: true,
+          },
+        ]);
+      },
+    );
+
     it('drops a Runway cherry-pick when its scoped original has a different entry', async () => {
       mockRunCommandAndSplit.mockResolvedValueOnce(['original', 'cherrypick']);
       mockRunCommand
@@ -955,6 +1027,36 @@ describe('getNewChangeEntries', () => {
       ]);
     });
 
+    it('keeps an authored entry when the PR has a no-changelog label', async () => {
+      const scope = mockPrLabels(['no-changelog'], true);
+
+      const result = await runWithEntry(
+        'feat: add a tab (#100)',
+        'CHANGELOG entry: Added a new tab',
+      );
+
+      expect(result).toStrictEqual([
+        {
+          description: 'Added a new tab (#100)',
+          subject: 'Added a new tab',
+          hasChangelogEntry: true,
+        },
+      ]);
+      expect(scope.isDone()).toBe(false);
+    });
+
+    it('uses a no-changelog label when no entry was authored', async () => {
+      const scope = mockPrLabels(['no-changelog'], true);
+
+      const result = await runWithEntry(
+        'feat: add a tab (#100)',
+        'Description without a changelog entry',
+      );
+
+      expect(result).toStrictEqual([]);
+      expect(scope.isDone()).toBe(true);
+    });
+
     it('excludes an entry marked null even when a Fixes: line follows it', async () => {
       // Regression: the old regex swallowed the following line into the entry,
       // turning `null` into `null Fixes: <url>` and defeating the null check.
@@ -1025,6 +1127,21 @@ describe('getNewChangeEntries', () => {
             'Fixed an issue where users who closed the extension on the wallet-ready screen without tapping Done were shown the celebration screen again on reopen (#44232)',
           subject:
             'Fixed an issue where users who closed the extension on the wallet-ready screen without tapping Done were shown the celebration screen again on reopen',
+          hasChangelogEntry: true,
+        },
+      ]);
+    });
+
+    it('repairs a Markdown link that accidentally splits a word', async () => {
+      const result = await runWithEntry(
+        'fix: swap source amount (#45469)',
+        'CHANGELOG entry: f[ix: swap source amount becomes undefined](https://github.com/MetaMask/metamask-extension/pull/45469#top)',
+      );
+
+      expect(result).toStrictEqual([
+        {
+          description: 'Swap source amount becomes undefined (#45469)',
+          subject: 'fix: swap source amount becomes undefined',
           hasChangelogEntry: true,
         },
       ]);
@@ -1176,6 +1293,23 @@ describe('getNewChangeEntries', () => {
       const result = await runWithEntry(
         'perf: nothing user facing (#44245)',
         'CHANGELOG entry: null\nCHANGELOG entry: null',
+      );
+
+      expect(result).toStrictEqual([]);
+    });
+
+    it.each([
+      'CHANGELOG entry: null (internal refactor, no user-visible change)',
+      'CHANGELOG entry: null (dev tooling only)',
+      'CHANGELOG entry: null: internal refactor',
+      'CHANGELOG entry: null - internal refactor',
+      'CHANGELOG entry: null -- internal refactor',
+      'CHANGELOG entry: null, internal refactor',
+      'CHANGELOG entry: null; internal refactor',
+    ])('excludes null entries with an explanation', async (body) => {
+      const result = await runWithEntry(
+        'chore: internal-only change (#44655)',
+        body,
       );
 
       expect(result).toStrictEqual([]);
@@ -1882,13 +2016,28 @@ describe('getNewChangeEntries', () => {
       });
     }
 
-    it('falls back to `gh auth token` when GITHUB_TOKEN is unset and not on CI', async () => {
-      // First `runCommand` call resolves the `gh auth token`, then the `%s`
-      // and `%b` git calls for the single commit.
+    it('does not resolve a token when an entry was authored', async () => {
       mockRunCommand
-        .mockResolvedValueOnce('gh-cli-token\n') // gh auth token
+        .mockResolvedValueOnce('feat: add a tab (#504)') // %s
+        .mockResolvedValueOnce('CHANGELOG entry: Added a new tab'); // %b
+
+      expect(await run()).toStrictEqual([
+        {
+          description: 'Added a new tab (#504)',
+          subject: 'Added a new tab',
+          hasChangelogEntry: true,
+        },
+      ]);
+      expect(mockRunCommand).not.toHaveBeenCalledWith('gh', ['auth', 'token']);
+    });
+
+    it('falls back to `gh auth token` when GITHUB_TOKEN is unset and not on CI', async () => {
+      // The `%s` and `%b` git calls establish that no entry was authored.
+      // The fallback label lookup then resolves the token through the GH CLI.
+      mockRunCommand
         .mockResolvedValueOnce('feat: do a thing (#500)') // %s
-        .mockResolvedValueOnce(''); // %b
+        .mockResolvedValueOnce('') // %b
+        .mockResolvedValueOnce('gh-cli-token\n'); // gh auth token
       const scope = mockPrLabels().matchHeader(
         'authorization',
         'token gh-cli-token',
@@ -1920,6 +2069,9 @@ describe('getNewChangeEntries', () => {
     it('does not fall back to the gh CLI on CI and throws instead', async () => {
       // eslint-disable-next-line node/no-process-env
       process.env.CI = 'true';
+      mockRunCommand
+        .mockResolvedValueOnce('feat: do a thing (#502)') // %s
+        .mockResolvedValueOnce(''); // %b
 
       await expect(run()).rejects.toThrow(
         'GITHUB_TOKEN environment variable is not set',
@@ -1928,7 +2080,10 @@ describe('getNewChangeEntries', () => {
     });
 
     it('throws when the gh CLI is unavailable or unauthenticated', async () => {
-      mockRunCommand.mockRejectedValueOnce(new Error('gh: command not found'));
+      mockRunCommand
+        .mockResolvedValueOnce('feat: do a thing (#503)') // %s
+        .mockResolvedValueOnce('') // %b
+        .mockRejectedValueOnce(new Error('gh: command not found'));
 
       await expect(run()).rejects.toThrow(
         'GITHUB_TOKEN environment variable is not set',
