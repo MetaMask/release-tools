@@ -15,9 +15,8 @@
     "type": "git",
     "url": "https://github.com/MetaMask/release-tools.git"
   },
-  "bin": "bin/auto-changelog.js",
+  "bin": "dist/cli.js",
   "files": [
-    "bin/",
     "dist/"
   ],
   "type": "module",

@@ -69,6 +69,17 @@ export default createConfig({
       },
     },
     {
+      files: ['packages/auto-changelog/src/cli.ts'],
+      rules: {
+        // The published `bin` is the built `dist/cli.js`, which keeps this
+        // shebang. Map the source to it so the rule checks the right file.
+        'n/hashbang': [
+          'error',
+          { convertPath: { 'src/**/*.ts': ['^src/(.+)\\.ts$', 'dist/$1.js'] } },
+        ],
+      },
+    },
+    {
       files: ['packages/create-release-branch/src/ui/**'],
       extends: [typescript, browser],
     },

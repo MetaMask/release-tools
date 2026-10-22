@@ -951,7 +951,7 @@ __metadata:
     prettier:
       optional: true
   bin:
-    auto-changelog: bin/auto-changelog.js
+    auto-changelog: dist/cli.js
   languageName: unknown
   linkType: soft
 
