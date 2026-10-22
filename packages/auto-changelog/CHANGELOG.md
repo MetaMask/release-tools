@@ -9,10 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [7.0.0]
 
-### Uncategorized
-
-- Integrate auto-changelog into the monorepo ([#103](https://github.com/MetaMask/release-tools/pull/103))
-
 ### Changed
 
 - **BREAKING:** Drop CommonJS support ([#100](https://github.com/MetaMask/release-tools/pull/100))
