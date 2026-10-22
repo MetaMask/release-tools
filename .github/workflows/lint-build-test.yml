@@ -84,7 +84,8 @@ jobs:
           # base branch to detect which packages are being released.
           fetch-depth: 0
       # The changelog scripts run the `auto-changelog` CLI from its workspace.
-      - run: yarn build
+      - name: Build `auto-changelog`
+        run: yarn workspace @metamask/auto-changelog run build
       - run: yarn workspace "$PACKAGE_NAME" changelog:validate
         env:
           PACKAGE_NAME: ${{ matrix.package-name }}

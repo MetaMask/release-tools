@@ -60,6 +60,7 @@
     "@types/node": "^22.13.14",
     "@types/semver": "^7",
     "@types/yargs": "^17.0.33",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-istanbul": "^5.0.1",
     "nock": "^14.0.17",
     "outdent": "^0.8.0",
