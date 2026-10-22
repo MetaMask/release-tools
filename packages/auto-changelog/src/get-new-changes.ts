@@ -108,19 +108,35 @@ function isRunwayCherryPickSubject(subject: string): boolean {
 }
 
 /**
- * Extract the original PR number from the first non-empty line of a Runway
- * cherry-pick body. Runway records the cherry-picked commit subject there as
- * a Markdown list item, including its original trailing PR reference.
+ * Extract the original PR number from the first non-empty Markdown list item
+ * in a Runway cherry-pick body. Runway records the cherry-picked commit
+ * subject there, including its original trailing PR reference. Git can hard
+ * wrap that list item, so continuation lines are joined before matching.
  *
  * @param body - The Runway cherry-pick commit body.
  * @returns The original PR number when present.
  */
 function getRunwayOriginalPrNumber(body: string): string | undefined {
-  const originalSubject = body
-    .split(/\r?\n/gu)
-    .find((line) => line.trim() !== '');
+  const lines = body.split(/\r?\n/gu);
+  const firstContentLineIndex = lines.findIndex((line) => line.trim() !== '');
 
-  return originalSubject?.match(/^\s*[-*]\s+.*\(#(\d+)\)\s*$/u)?.[1];
+  if (firstContentLineIndex === -1) {
+    return undefined;
+  }
+
+  const originalSubject = [lines[firstContentLineIndex]];
+  for (let index = firstContentLineIndex + 1; index < lines.length; index++) {
+    const line = lines[index];
+    if (line.trim() === '') {
+      break;
+    }
+    originalSubject.push(line);
+  }
+
+  return originalSubject
+    .join(' ')
+    .replace(/\s+/gu, ' ')
+    .match(/^\s*[-*]\s+.*\(#(\d+)\)\s*$/u)?.[1];
 }
 
 /**
@@ -385,6 +401,18 @@ function unwrapStandaloneMarkdownLink(entry: string): string {
 }
 
 /**
+ * Repair an accidental Markdown link that splits a single word. For example,
+ * `f[ix: fix a swap](https://example.com/pr/1)` becomes `fix: fix a swap`.
+ * Normal inline links remain untouched.
+ *
+ * @param entry - The assembled entry value.
+ * @returns The entry with split-word links rejoined.
+ */
+function repairSplitWordMarkdownLinks(entry: string): string {
+  return entry.replace(/([A-Za-z])\[([^\]\n]+)\]\([^\s)]+\)/gu, '$1$2');
+}
+
+/**
  * Determine whether an in-progress entry ends inside a Markdown link label.
  *
  * GitHub's commit-message wrapping can insert a blank line between a link
@@ -418,12 +446,38 @@ const optOutEntryValues = new Set(['null', 'n/a', 'n\\a', 'na', 'tbd', 'none']);
  * Determine whether an assembled entry value is a "no changelog entry"
  * opt-out placeholder (`null`, `N/A`, `TBD`, `none`, ...).
  *
+ * A short explanation is allowed after the placeholder because authors often
+ * document why a change is not user-facing, for example `null (dev tooling
+ * only)`, `null: internal refactor`, or `null -- no user-visible change`.
+ *
+ * This remains deliberately narrow: the value must begin with a known
+ * placeholder and the explanation must use a parenthetical or a recognized
+ * separator. A normal entry that merely contains a placeholder word, such as
+ * `Removed the none option`, is not treated as an opt-out.
+ *
  * @param entry - The assembled entry value (already trimmed and stripped of a
  * leading list marker).
- * @returns `true` if the entire value is an opt-out placeholder.
+ * @returns `true` if the value is an opt-out placeholder, optionally followed
+ * by an explanatory parenthetical or a common text separator.
  */
 function isOptOutValue(entry: string): boolean {
-  return optOutEntryValues.has(entry.trim().toLowerCase());
+  const normalizedEntry = entry.trim().toLowerCase();
+  if (optOutEntryValues.has(normalizedEntry)) {
+    return true;
+  }
+
+  return [...optOutEntryValues].some((placeholder) => {
+    if (!normalizedEntry.startsWith(placeholder)) {
+      return false;
+    }
+
+    const explanation = normalizedEntry.slice(placeholder.length).trim();
+    if (explanation.startsWith('(') && explanation.endsWith(')')) {
+      return true;
+    }
+
+    return /^(?::|,|;|--?)\s+\S/u.test(explanation);
+  });
 }
 
 /**
@@ -500,8 +554,8 @@ function extractChangelogEntry(body: string): ChangelogEntryResult {
       return;
     }
     const assembled = current.join(' ').replace(/\s+/gu, ' ').trim();
-    const withoutMarker = unwrapStandaloneMarkdownLink(
-      stripLeadingListMarker(assembled),
+    const withoutMarker = repairSplitWordMarkdownLinks(
+      unwrapStandaloneMarkdownLink(stripLeadingListMarker(assembled)),
     );
     // Track opt-out entries separately: a body whose only entries are opt-out
     // placeholders (`null`, `N/A`, `TBD`, ...) must still return the literal
@@ -666,11 +720,6 @@ async function getCommits(
   useChangelogEntry: boolean,
   verbose: boolean,
 ): Promise<Commit[]> {
-  // Only initialize Octokit if we need to fetch PR labels
-  if (useChangelogEntry) {
-    await initOctoKit();
-  }
-
   const commits: Commit[] = [];
   for (const commitHash of commitHashes) {
     const subject = await runCommand('git', [
@@ -761,14 +810,18 @@ async function getCommits(
           description = normalizeSubjectDescription(subject) ?? '';
         }
 
-        const prLabels = await getPrLabels(repoUrl, sourcePrNumber);
-        if (prLabels.includes('no-changelog')) {
-          if (verbose) {
-            console.error(
-              `[auto-changelog] commit=${commitHash} skipped reason=no-changelog-label source-pr=${sourcePrNumber}`,
-            );
+        // An authored entry is authoritative. The legacy no-changelog label
+        // remains a fallback only for PRs with no entry at all.
+        if (changelogEntry.type === 'none') {
+          const prLabels = await getPrLabels(repoUrl, sourcePrNumber);
+          if (prLabels.includes('no-changelog')) {
+            if (verbose) {
+              console.error(
+                `[auto-changelog] commit=${commitHash} skipped reason=no-changelog-label source-pr=${sourcePrNumber}`,
+              );
+            }
+            continue;
           }
-          continue;
         }
       } else {
         description = subject.match(/^(.+)\s\(#\d+\)/u)?.[1] ?? '';
@@ -1266,9 +1319,7 @@ async function getPrLabels(
     return [];
   }
 
-  if (!github) {
-    await initOctoKit();
-  }
+  await initOctoKit();
 
   const { owner, repo } = getOwnerAndRepoFromUrl(repoUrl);
 
