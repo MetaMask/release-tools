@@ -529,15 +529,8 @@ async function main(): Promise<void> {
   if (!currentVersion) {
     try {
       const manifestText = await readFile(manifestPath);
-      const manifest: unknown = JSON.parse(manifestText);
-      if (
-        typeof manifest === 'object' &&
-        manifest !== null &&
-        'version' in manifest &&
-        typeof manifest.version === 'string'
-      ) {
-        currentVersion = manifest.version;
-      }
+      const manifest = JSON.parse(manifestText) as { version: string };
+      currentVersion = manifest.version;
     } catch (caughtError) {
       if (hasErrorCode(caughtError)) {
         if (caughtError.code === 'ENOENT') {

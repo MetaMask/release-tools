@@ -9,11 +9,13 @@ import type { PackageRename } from './shared-types.js';
  * Parse a dependency bump description into structured data.
  *
  * Detects the following patterns (case-insensitive verb):
- * - `[**BREAKING:** ]Bump \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Update \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Upgrade \`dep\` from \`old\` to \`new\``
- * - `[**BREAKING:** ]Update \`dep\` to \`new\`` (oldVersion omitted)
- * - `[**BREAKING:** ]Upgrade \`dep\` to \`new\`` (oldVersion omitted)
+ * - `[**BREAKING:** ]Bump <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Update <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Upgrade <dep> from <old> to <new>`
+ * - `[**BREAKING:** ]Update <dep> to <new>` (oldVersion omitted)
+ * - `[**BREAKING:** ]Upgrade <dep> to <new>` (oldVersion omitted)
+ *
+ * Dependency names and versions are wrapped in backticks in the description.
  *
  * Note: The dependency type is inferred heuristically from the description:
  * entries with `**BREAKING:**` prefix are classified as `peerDependencies`,
@@ -25,7 +27,6 @@ import type { PackageRename } from './shared-types.js';
  * @param description - The change description to parse.
  * @returns A DependencyBump if the description matches, undefined otherwise.
  */
-/* oxlint-disable jsdoc/require-param, jsdoc/require-returns -- Oxlint does not recognize the existing tags for this multiline signature. */
 function parsePossibleDependencyBumpDescription(
   description: string,
 ): DependencyBump | undefined {

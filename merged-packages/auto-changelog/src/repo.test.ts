@@ -1,5 +1,6 @@
-import path from 'path';
 /* eslint-disable node/no-process-env */
+
+import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { findNearestPackageJson, getRepositoryUrl } from './repo.js';

@@ -3,7 +3,6 @@ import os from 'os';
 import { outdent as outdentFactory } from 'outdent';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MockedFunction } from 'vitest';
 
 import {
   BaseRefNotFoundError,
@@ -15,19 +14,15 @@ import type { ValidateOptions } from './validate.js';
 const outdent = outdentFactory({ trimTrailingNewline: false });
 
 // Only mock the getDependencyChanges function — keep BaseRefNotFoundError real.
-vi.mock('../get-dependency-changes.js', async () => {
-  const actual = await vi.importActual<
-    typeof import('../get-dependency-changes.js')
-  >('../get-dependency-changes.js');
+vi.mock(import('../get-dependency-changes.js'), async (importOriginal) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     getDependencyChanges: vi.fn(),
   };
 });
 
-const getDependencyChangesMock = getDependencyChanges as MockedFunction<
-  typeof getDependencyChanges
->;
+const getDependencyChangesMock = vi.mocked(getDependencyChanges);
 
 const repoUrl = 'https://github.com/Org/Repo';
 
