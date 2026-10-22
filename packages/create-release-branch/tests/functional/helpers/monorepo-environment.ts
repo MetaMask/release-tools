@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 
-import { TOOL_EXECUTABLE_PATH, TSX_PATH } from './constants.js';
+import { TOOL_EXECUTABLE_PATH, TSCONFIG_PATH, TSX_PATH } from './constants.js';
 import Environment, {
   EnvironmentOptions,
   PackageSpecification,
@@ -127,6 +127,8 @@ cat "${releaseSpecificationPath}" > "$1"
     await fs.promises.chmod(releaseSpecificationEditorPath, 0o777);
 
     const args = [
+      '--tsconfig',
+      TSCONFIG_PATH,
       TOOL_EXECUTABLE_PATH,
       '--project-directory',
       this.localRepo.getWorkingDirectoryPath(),
