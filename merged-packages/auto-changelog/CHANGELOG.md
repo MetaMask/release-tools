@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** Drop CommonJS support
+- **BREAKING:** Drop CommonJS support ([#100](https://github.com/MetaMask/release-tools/pull/100))
   - This package is now ESM-only. CommonJS consumers must use dynamic imports.
 - This package was migrated from [`MetaMask/auto-changelog`](https://github.com/MetaMask/auto-changelog). See [the original changelog](https://github.com/MetaMask/auto-changelog/blob/v6.2.1/CHANGELOG.md) for changes prior to the migration.
 
