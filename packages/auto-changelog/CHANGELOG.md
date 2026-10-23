@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Handle parsing the PR number from a malformed link
   - Don't skip a PR that has a non-empty `CHANGELOG entry:` line even when it also has a `no-changelog` label
   - Use the trailing squash-merge PR reference when a commit subject includes both an original PR and its own PR
+- Parse a combined short PR reference such as `(#79, #91)` in an existing changelog entry as separate PRs ([#130](https://github.com/MetaMask/release-tools/pull/130))
+  - Previously no PR numbers were extracted, so PRs documented this way were regenerated as duplicate entries in later releases
 
 ## [7.0.0]
 

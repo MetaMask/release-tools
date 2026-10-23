@@ -333,11 +333,12 @@ function extractPrLinks(
   // Remove valid long PR links (grouped in parentheses, possibly comma-separated)
   firstLine = firstLine.replace(longGroupMatchPattern, '');
 
-  // Example of short match group: " (#123), (#123)"
-  const shortGroupMatchPattern = /\s+(\(#\d+\)\s*,?\s*)+/gu;
+  // Example of short match group: " (#123), (#456)" or " (#123, #456)", the
+  // latter being what `stringifyCategory` writes for several PRs.
+  const shortGroupMatchPattern = /\s+(\(#\d+(?:\s*,\s*#\d+)*\)\s*,?\s*)+/gu;
 
-  // Example of short match: "(#123)"
-  const shortMatchPattern = /\(#(\d+)\)/gu;
+  // Example of short match: "#123"
+  const shortMatchPattern = /#(\d+)/gu;
 
   // Match and extract all short PR links like (#123)
   const shortGroupMatches = [...firstLine.matchAll(shortGroupMatchPattern)];
