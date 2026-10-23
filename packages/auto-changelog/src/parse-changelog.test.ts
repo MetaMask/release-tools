@@ -1343,6 +1343,68 @@ describe('parseChangelog', () => {
       });
     });
 
+    it('should parse comma-separated pull requests inside one parenthesis', () => {
+      const changelogContent = createChangelog(
+        COMMON_HEADER,
+        outdent`
+          ## [1.0.0]
+          ### Changed
+          - Change something (#100, #200)
+          - Change another thing (#300, #400), (#500)
+        `,
+        COMMON_REFERENCE_LINKS_1,
+      );
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        shouldExtractPrLinks: true,
+      });
+
+      expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
+        Changed: [
+          {
+            description: 'Change something',
+            prNumbers: ['100', '200'],
+          },
+          {
+            description: 'Change another thing',
+            prNumbers: ['300', '400', '500'],
+          },
+        ],
+      });
+    });
+
+    it('should read back the combined pull requests it writes with short links', async () => {
+      const changelog = parseChangelog({
+        changelogContent: createChangelog(
+          COMMON_HEADER,
+          outdent`
+            ## [1.0.0]
+            ### Changed
+            - Change something (#100), (#200)
+          `,
+          COMMON_REFERENCE_LINKS_1,
+        ),
+        repoUrl,
+        shouldExtractPrLinks: true,
+      });
+
+      const reparsed = parseChangelog({
+        changelogContent: await changelog.toString(true),
+        repoUrl,
+        shouldExtractPrLinks: true,
+      });
+
+      expect(reparsed.getReleaseChanges('1.0.0')).toStrictEqual({
+        Changed: [
+          {
+            description: 'Change something',
+            prNumbers: ['100', '200'],
+          },
+        ],
+      });
+    });
+
     it('should parse changelog with pull request links at end of first line of multi-line change description', () => {
       const changelogContent = createChangelog(
         COMMON_HEADER,
