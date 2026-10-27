@@ -11,6 +11,8 @@ export default mergeConfig(
       name: basename(import.meta.dirname),
 
       coverage: {
+        // The process-only adapter delegates to the tested CLI.
+        exclude: ['src/main.ts'],
         // The test run fails when coverage drops below these.
         thresholds: {
           branches: 100,

@@ -39,9 +39,9 @@ const ALLOWED_PEER_DEPENDENCIES = [];
 const ALLOWED_NON_DUAL_LICENSE_PACKAGES = ['@metamask/apply-release-plan'];
 
 /**
- * These packages are tools and do not ship with APIs.
+ * These packages are primarily tools. They may also expose library APIs.
  */
-const TOOLS = ['@metamask/create-release-branch'];
+const TOOLS = ['@metamask/changesets-lint', '@metamask/create-release-branch'];
 
 /**
  * Aliases for the Yarn type definitions, to make the code more readable.

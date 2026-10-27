@@ -69,10 +69,13 @@ export default createConfig({
       },
     },
     {
-      files: ['packages/auto-changelog/src/cli.ts'],
+      files: [
+        'packages/auto-changelog/src/cli.ts',
+        'packages/changesets-lint/src/main.ts',
+      ],
       rules: {
-        // The published `bin` is the built `dist/cli.js`, which keeps this
-        // shebang. Map the source to it so the rule checks the right file.
+        // Published executables keep their source shebangs in dist/.
+        // Map each source to its output so the rule checks the right file.
         'n/hashbang': [
           'error',
           { convertPath: { 'src/**/*.ts': ['^src/(.+)\\.ts$', 'dist/$1.js'] } },
