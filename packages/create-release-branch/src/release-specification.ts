@@ -29,7 +29,7 @@ export enum IncrementableVersionParts {
  * Describes how to update the version for a package, either by bumping a part
  * of the version or by setting that version exactly.
  */
-type VersionSpecifier = IncrementableVersionParts | SemVer;
+export type VersionSpecifier = IncrementableVersionParts | SemVer;
 
 /**
  * User-provided instructions for how to update this project in order to prepare
@@ -44,7 +44,19 @@ export type ReleaseSpecification = {
 };
 
 const SKIP_PACKAGE_DIRECTIVE = null;
-const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
+export const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
+
+/**
+ * An issue found in a release spec.
+ *
+ * @property message - The message, or its lines.
+ * @property lineNumber - The line of the release spec the issue is about, if
+ * any.
+ */
+export type ReleaseSpecificationError = {
+  message: string | string[];
+  lineNumber?: number;
+};
 
 /**
  * Generates a skeleton for a release specification, which describes how a
@@ -371,8 +383,8 @@ export function validateAllPackageEntries(
   packagesWithChanges: ReadonlySet<string> = getPackagesWithChangesSinceLatestRelease(
     project,
   ),
-): { message: string | string[]; lineNumber?: number }[] {
-  const errors: { message: string | string[]; lineNumber?: number }[] = [];
+): ReleaseSpecificationError[] {
+  const errors: ReleaseSpecificationError[] = [];
 
   Object.entries(unvalidatedReleaseSpecificationPackages).forEach(
     ([changedPackageName, versionSpecifierOrDirective], index) => {
@@ -538,6 +550,88 @@ export function validateAllPackageEntries(
 }
 
 /**
+ * Builds the text that ends every release spec error message.
+ *
+ * @param releaseSpecificationPath - The path to the release spec file.
+ * @returns The afterword.
+ */
+function buildAfterwordForAllErrorMessages(
+  releaseSpecificationPath: string,
+): string {
+  return [
+    "The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.",
+    releaseSpecificationPath,
+  ].join('\n\n');
+}
+
+/**
+ * Builds the message of the error thrown when a release spec has issues: a
+ * list of the issues, followed by an afterword explaining that the release
+ * spec file was retained.
+ *
+ * @param errors - The issues.
+ * @param releaseSpecificationPath - The path to the release spec file.
+ * @returns The error message.
+ */
+export function buildReleaseSpecificationErrorMessage(
+  errors: ReleaseSpecificationError[],
+  releaseSpecificationPath: string,
+): string {
+  return [
+    'Your release spec could not be processed due to the following issues:',
+    errors
+      .flatMap((error) => {
+        const itemPrefix = '* ';
+
+        if (error.lineNumber === undefined) {
+          return `${itemPrefix}${String(error.message)}`;
+        }
+
+        const lineNumberPrefix = `Line ${error.lineNumber}: `;
+
+        if (Array.isArray(error.message)) {
+          return [
+            `${itemPrefix}${lineNumberPrefix}${error.message[0]}`,
+            ...error.message.slice(1).map((line) => {
+              const indentedLineLength =
+                itemPrefix.length + lineNumberPrefix.length + line.length;
+              return line.padStart(indentedLineLength, ' ');
+            }),
+          ];
+        }
+
+        return `${itemPrefix}${lineNumberPrefix}${error.message}`;
+      })
+      .join('\n'),
+    buildAfterwordForAllErrorMessages(releaseSpecificationPath),
+  ].join('\n\n');
+}
+
+/**
+ * Parses a version specifier that is known to be valid.
+ *
+ * @param versionSpecifier - "major", "minor", "patch", or a version string.
+ * @returns The bump type, or the parsed version.
+ */
+export function parseVersionSpecifier(
+  versionSpecifier: string,
+): VersionSpecifier {
+  if (
+    Object.values(IncrementableVersionParts).includes(
+      // Typecast: It doesn't matter what type versionSpecifier is as we are
+      // checking for inclusion.
+      versionSpecifier as IncrementableVersionParts,
+    )
+  ) {
+    // Typecast: We know what this is as we've checked it above.
+    return versionSpecifier as IncrementableVersionParts;
+  }
+
+  // Typecast: We know that this will safely parse.
+  return semver.parse(versionSpecifier) as SemVer;
+}
+
+/**
  * Looks over the release spec that the user has edited to ensure that:
  *
  * 1. the names of all packages match those within the project; and
@@ -567,10 +661,9 @@ export async function validateReleaseSpecification(
     packages: Record<string, string | null>;
   };
 
-  const afterwordForAllErrorMessages = [
-    "The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.",
+  const afterwordForAllErrorMessages = buildAfterwordForAllErrorMessages(
     releaseSpecificationPath,
-  ].join('\n\n');
+  );
 
   try {
     unvalidatedReleaseSpecification = YAML.parse(
@@ -607,35 +700,9 @@ export async function validateReleaseSpecification(
   );
 
   if (errors.length > 0) {
-    const message = [
-      'Your release spec could not be processed due to the following issues:',
-      errors
-        .flatMap((error) => {
-          const itemPrefix = '* ';
-
-          if (error.lineNumber === undefined) {
-            return `${itemPrefix}${String(error.message)}`;
-          }
-
-          const lineNumberPrefix = `Line ${error.lineNumber}: `;
-
-          if (Array.isArray(error.message)) {
-            return [
-              `${itemPrefix}${lineNumberPrefix}${error.message[0]}`,
-              ...error.message.slice(1).map((line) => {
-                const indentedLineLength =
-                  itemPrefix.length + lineNumberPrefix.length + line.length;
-                return line.padStart(indentedLineLength, ' ');
-              }),
-            ];
-          }
-
-          return `${itemPrefix}${lineNumberPrefix}${error.message}`;
-        })
-        .join('\n'),
-      afterwordForAllErrorMessages,
-    ].join('\n\n');
-    throw new Error(message);
+    throw new Error(
+      buildReleaseSpecificationErrorMessage(errors, releaseSpecificationPath),
+    );
   }
 
   const packages = Object.keys(unvalidatedReleaseSpecification.packages).reduce<
@@ -648,25 +715,9 @@ export async function validateReleaseSpecification(
       versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
       versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
     ) {
-      if (
-        Object.values(IncrementableVersionParts).includes(
-          // Typecast: It doesn't matter what type versionSpecifierOrDirective
-          // is as we are checking for inclusion.
-          versionSpecifierOrDirective as IncrementableVersionParts,
-        )
-      ) {
-        return {
-          ...obj,
-          // Typecast: We know what this is as we've checked it above.
-          [packageName]:
-            versionSpecifierOrDirective as IncrementableVersionParts,
-        };
-      }
-
       return {
         ...obj,
-        // Typecast: We know that this will safely parse.
-        [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
+        [packageName]: parseVersionSpecifier(versionSpecifierOrDirective),
       };
     }
 

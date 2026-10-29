@@ -5,7 +5,10 @@ import { Formatter } from './initial-parameters.js';
 import { debug } from './misc-utils.js';
 import { Package, updatePackage } from './package.js';
 import { Project } from './project.js';
-import { ReleaseSpecification } from './release-specification.js';
+import {
+  ReleaseSpecification,
+  VersionSpecifier,
+} from './release-specification.js';
 
 /**
  * Instructions for how to update the project in order to prepare it for a new
@@ -43,6 +46,26 @@ export type PackageReleasePlan = {
 };
 
 /**
+ * Calculates the version that a package receives in a release.
+ *
+ * @param pkg - The package.
+ * @param versionSpecifier - The version specifier of the package in the
+ * release spec.
+ * @returns The new version of the package.
+ */
+export function calculateNewPackageVersion(
+  pkg: Package,
+  versionSpecifier: VersionSpecifier,
+): string {
+  const currentVersion = pkg.validatedManifest.version;
+  const newVersion =
+    versionSpecifier instanceof SemVer
+      ? versionSpecifier
+      : new SemVer(currentVersion.toString()).inc(versionSpecifier);
+  return newVersion.toString();
+}
+
+/**
  * Uses the release specification to calculate the final versions of all of the
  * packages that we want to update.
  *
@@ -72,16 +95,13 @@ export async function planRelease({
     releaseSpecificationPackages,
   ).map((packageName) => {
     const pkg = project.workspacePackages[packageName];
-    const versionSpecifier = releaseSpecificationPackages[packageName];
-    const currentVersion = pkg.validatedManifest.version;
-    const newVersion =
-      versionSpecifier instanceof SemVer
-        ? versionSpecifier
-        : new SemVer(currentVersion.toString()).inc(versionSpecifier);
 
     return {
       package: pkg,
-      newVersion: newVersion.toString(),
+      newVersion: calculateNewPackageVersion(
+        pkg,
+        releaseSpecificationPackages[packageName],
+      ),
     };
   });
 

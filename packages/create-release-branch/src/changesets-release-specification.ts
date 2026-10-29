@@ -1,4 +1,4 @@
-import type { ComprehensiveRelease } from '@changesets/types';
+import type { ComprehensiveRelease, Packages } from '@changesets/types';
 import { parseChangelog } from '@metamask/auto-changelog';
 import { satisfies } from 'semver';
 import YAML from 'yaml';
@@ -77,7 +77,10 @@ function isBumpingRelease(
  * @param release - The release of the dependency.
  * @returns The semver range. Other ranges are returned unchanged.
  */
-function resolveWorkspaceRange(range: string, release: BumpingRelease): string {
+function resolveWorkspaceRange(
+  range: string,
+  release: Pick<ComprehensiveRelease, 'oldVersion'>,
+): string {
   if (!range.startsWith('workspace:')) {
     return range;
   }
@@ -94,19 +97,24 @@ function resolveWorkspaceRange(range: string, release: BumpingRelease): string {
 }
 
 /**
- * Explains why the release plan adds a package that no Changeset releases.
+ * Explains why a release plan adds a package that no Changeset releases.
  *
  * @param packageName - The name of the propagated package.
- * @param plan - The loaded Changesets plan.
- * @param releasesByName - The bumping releases of the plan, by package name.
- * @returns The reason, or undefined if no released dependency explains it.
+ * @param packages - The workspace packages.
+ * @param releasesByName - The releases of the plan that are not of type
+ * `none`, by package name.
+ * @returns The reason, for example `released because dependency @scope/b is
+ * released as major`, or undefined if no released dependency explains it.
  */
-function getPropagationReason(
+export function getPropagationReason(
   packageName: string,
-  plan: LoadedChangesetsPlan,
-  releasesByName: Map<string, BumpingRelease>,
+  packages: Packages,
+  releasesByName: ReadonlyMap<
+    string,
+    Pick<ComprehensiveRelease, 'type' | 'oldVersion' | 'newVersion'>
+  >,
 ): string | undefined {
-  const manifest = plan.packages.packages.find(
+  const manifest = packages.packages.find(
     ({ packageJson }) => packageJson.name === packageName,
   )?.packageJson;
   const withLabel = (
@@ -210,7 +218,11 @@ export async function findChangesetsCandidates({
         changesetCount,
       };
       if (candidate.kind === 'propagated') {
-        const reason = getPropagationReason(release.name, plan, releasesByName);
+        const reason = getPropagationReason(
+          release.name,
+          plan.packages,
+          releasesByName,
+        );
         if (reason !== undefined) {
           candidate.reason = reason;
         }
