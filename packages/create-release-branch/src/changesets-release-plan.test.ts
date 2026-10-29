@@ -404,6 +404,206 @@ describe('changesets-release-plan', () => {
       ).toMatchObject({ type: 'patch', newVersion: '1.0.1' });
     });
 
+    it('keeps the none releases of an overridden direct package', async () => {
+      const result = await planFixtureRelease(
+        { '@scope/a': 'patch', '@scope/b': 'minor' },
+        {
+          packages: [
+            { name: '@scope/a', version: '1.0.0' },
+            { name: '@scope/b', version: '1.0.0' },
+          ],
+          changesets: [
+            {
+              id: 'brave-cats-sing',
+              releases: { '@scope/a': 'minor' },
+              summary: 'Add a feature to a',
+            },
+            {
+              id: 'calm-dogs-run',
+              releases: { '@scope/a': 'none', '@scope/b': 'minor' },
+              summary: 'Add a feature to b',
+            },
+          ],
+        },
+      );
+
+      expect(
+        result.filteredPlan.releases.find(({ name }) => name === '@scope/a'),
+      ).toMatchObject({ type: 'patch', newVersion: '1.0.1' });
+      expect(
+        result.filteredPlan.changesets.map(({ id, releases }) => ({
+          id,
+          releases,
+        })),
+      ).toStrictEqual([
+        {
+          id: 'brave-cats-sing',
+          releases: [{ name: '@scope/a', type: 'patch' }],
+        },
+        {
+          id: 'calm-dogs-run',
+          releases: [
+            { name: '@scope/a', type: 'none' },
+            { name: '@scope/b', type: 'minor' },
+          ],
+        },
+      ]);
+    });
+
+    describe('when a propagated package is overridden with a higher bump', () => {
+      const RAISING_FIXTURE: ChangesetsFixtureOptions = {
+        packages: [
+          { name: '@scope/b', version: '1.0.0' },
+          {
+            name: '@scope/c',
+            version: '1.0.0',
+            dependencies: { '@scope/b': '^1.0.0' },
+          },
+          {
+            name: '@scope/k',
+            version: '1.0.0',
+            dependencies: { '@scope/c': '^1.0.0' },
+          },
+        ],
+        changesets: [
+          {
+            id: 'calm-dogs-run',
+            releases: { '@scope/b': 'major' },
+            summary: 'Break b',
+          },
+        ],
+      };
+
+      it.each([
+        ['major', '2.0.0'],
+        ['2.0.0', '2.0.0'],
+      ])(
+        'releases it with %s and releases its listed dependents',
+        async (specifier, newVersion) => {
+          const result = await planFixtureRelease(
+            {
+              '@scope/b': 'major',
+              '@scope/c': specifier,
+              '@scope/k': 'patch',
+            },
+            RAISING_FIXTURE,
+          );
+
+          expect(summarizeReleases(result)).toStrictEqual([
+            {
+              name: '@scope/b',
+              type: 'major',
+              oldVersion: '1.0.0',
+              newVersion: '2.0.0',
+            },
+            {
+              name: '@scope/c',
+              type: 'major',
+              oldVersion: '1.0.0',
+              newVersion,
+            },
+            {
+              name: '@scope/k',
+              type: 'patch',
+              oldVersion: '1.0.0',
+              newVersion: '1.0.1',
+            },
+          ]);
+        },
+      );
+
+      it('does not release it when the release that propagates it is excluded', async () => {
+        await expect(
+          planFixtureRelease(
+            { '@scope/c': 'major', '@scope/k': 'patch' },
+            RAISING_FIXTURE,
+          ),
+        ).rejects.toThrow(
+          buildErrorMessage([
+            '@scope/c is listed in the release spec but has nothing to release (no selected changesets, no Unreleased entries, and no dependency update). Remove it, mark it "intentionally-skip", or add a changeset.',
+            '@scope/k is listed in the release spec but has nothing to release (no selected changesets, no Unreleased entries, and no dependency update). Remove it, mark it "intentionally-skip", or add a changeset.',
+            'The release spec does not select any package to release.',
+          ]),
+        );
+      });
+
+      it('reports its unlisted dependents', async () => {
+        await expect(
+          planFixtureRelease(
+            { '@scope/b': 'major', '@scope/c': 'major' },
+            RAISING_FIXTURE,
+          ),
+        ).rejects.toThrow(
+          buildErrorMessage([
+            '@scope/k is released because dependency @scope/c is released as major, but it is not in the release spec. Add it with a version specifier, or mark it "intentionally-skip".',
+          ]),
+        );
+      });
+
+      it('leaves no trace of the in-memory changeset in the plan', async () => {
+        const result = await planFixtureRelease(
+          {
+            '@scope/b': 'major',
+            '@scope/c': 'major',
+            '@scope/k': 'patch',
+          },
+          RAISING_FIXTURE,
+        );
+
+        expect(
+          result.filteredPlan.changesets.map(({ id }) => id),
+        ).toStrictEqual(['calm-dogs-run']);
+        expect(
+          result.filteredPlan.releases.map(({ name, changesets }) => ({
+            name,
+            changesets,
+          })),
+        ).toStrictEqual([
+          { name: '@scope/b', changesets: ['calm-dogs-run'] },
+          { name: '@scope/c', changesets: [] },
+          { name: '@scope/k', changesets: [] },
+        ]);
+      });
+    });
+
+    it('lowers a propagated release after re-planning', async () => {
+      const result = await planFixtureRelease(
+        { '@scope/b': 'major', '@scope/p': 'minor' },
+        {
+          packages: [
+            { name: '@scope/b', version: '1.0.0' },
+            {
+              name: '@scope/p',
+              version: '1.0.0',
+              peerDependencies: { '@scope/b': '^1.0.0' },
+            },
+          ],
+          changesets: [
+            {
+              id: 'calm-dogs-run',
+              releases: { '@scope/b': 'major' },
+              summary: 'Break b',
+            },
+          ],
+        },
+      );
+
+      expect(summarizeReleases(result)).toStrictEqual([
+        {
+          name: '@scope/b',
+          type: 'major',
+          oldVersion: '1.0.0',
+          newVersion: '2.0.0',
+        },
+        {
+          name: '@scope/p',
+          type: 'minor',
+          oldVersion: '1.0.0',
+          newVersion: '1.1.0',
+        },
+      ]);
+    });
+
     it('removes a propagated package marked "intentionally-skip"', async () => {
       const result = await planFixtureRelease({
         ...PREFILLED_ENTRIES,

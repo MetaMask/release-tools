@@ -45,6 +45,20 @@ const BASE_BUMP_TYPES: Record<ReleaseType, BumpType> = {
   release: 'patch',
 };
 
+const BUMP_TYPE_ORDER: ComprehensiveRelease['type'][] = [
+  'none',
+  'patch',
+  'minor',
+  'major',
+];
+
+/**
+ * Prefix of the ids of the in-memory Changesets that propagate overrides
+ * raising propagated releases. Changeset ids are file names, so an id that
+ * contains a slash never matches a Changeset file.
+ */
+const SYNTHETIC_CHANGESET_ID_PREFIX = 'create-release-branch/override/';
+
 /**
  * Compares two strings by code unit, independently of the locale.
  *
@@ -186,21 +200,59 @@ export function planChangesetsRelease({
       ...changeset,
       releases: changeset.releases.map((release) => {
         const override = getOverride(release.name);
-        return selected.has(release.name) && override !== undefined
+        return selected.has(release.name) &&
+          release.type !== 'none' &&
+          override !== undefined
           ? { ...release, type: getBumpType(project, release.name, override) }
           : release;
       }),
     }),
   );
 
-  const replannedPlan = assembleReleasePlan(
-    changesets,
-    plan.packages,
-    plan.config,
-    plan.fullPlan.preState,
+  const syntheticChangesets: NewChangeset[] = [];
+  let replannedPlan: ReleasePlan;
+  let syntheticChangesetCount: number;
+  do {
+    syntheticChangesetCount = syntheticChangesets.length;
+    replannedPlan = assembleReleasePlan(
+      [...changesets, ...syntheticChangesets],
+      plan.packages,
+      plan.config,
+      plan.fullPlan.preState,
+    );
+    for (const release of replannedPlan.releases) {
+      const override = getOverride(release.name);
+      if (
+        release.type === 'none' ||
+        selected.has(release.name) ||
+        override === undefined
+      ) {
+        continue;
+      }
+      const type = getBumpType(project, release.name, override);
+      if (
+        BUMP_TYPE_ORDER.indexOf(type) > BUMP_TYPE_ORDER.indexOf(release.type)
+      ) {
+        syntheticChangesets.push({
+          id: `${SYNTHETIC_CHANGESET_ID_PREFIX}${release.name}`,
+          summary: '',
+          releases: [{ name: release.name, type }],
+        });
+      }
+    }
+  } while (syntheticChangesets.length > syntheticChangesetCount);
+
+  const syntheticChangesetIds = new Set(
+    syntheticChangesets.map(({ id }) => id),
   );
 
   const releases = replannedPlan.releases
+    .map((release) => ({
+      ...release,
+      changesets: release.changesets.filter(
+        (id) => !syntheticChangesetIds.has(id),
+      ),
+    }))
     .filter(
       ({ name, type }) =>
         type === 'none' ||
@@ -304,7 +356,13 @@ export function planChangesetsRelease({
   }
 
   return {
-    filteredPlan: { ...replannedPlan, releases },
+    filteredPlan: {
+      ...replannedPlan,
+      changesets: replannedPlan.changesets.filter(
+        ({ id }) => !syntheticChangesetIds.has(id),
+      ),
+      releases,
+    },
     legacyReleases,
   };
 }
