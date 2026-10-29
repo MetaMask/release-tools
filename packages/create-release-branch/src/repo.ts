@@ -131,14 +131,19 @@ async function getFilesChangedSince(
  *
  * @param repositoryDirectoryPath - The file system path to the git repository where changes are to be committed.
  * @param commitMessage - The message to be used for the git commit.
+ * @param options - The options.
+ * @param options.allowEmpty - Whether to create the commit even if there are
+ * no changes.
  * @throws If any git command fails to execute.
  */
 export async function commitAllChanges(
   repositoryDirectoryPath: string,
   commitMessage: string,
+  { allowEmpty = false }: { allowEmpty?: boolean } = {},
 ): Promise<void> {
   await getStdoutFromGitCommandWithin(repositoryDirectoryPath, 'add', ['-A']);
   await getStdoutFromGitCommandWithin(repositoryDirectoryPath, 'commit', [
+    ...(allowEmpty ? ['--allow-empty'] : []),
     '-m',
     commitMessage,
   ]);

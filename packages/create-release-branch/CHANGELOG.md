@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the `--no-changesets` option to use the legacy workflow in a monorepo that has `.changeset/config.json` ([#139](https://github.com/MetaMask/release-tools/pull/139))
+
 ### Changed
 
+- **BREAKING:** Use the Changesets workflow automatically in a monorepo that has `.changeset/config.json` ([#139](https://github.com/MetaMask/release-tools/pull/139))
+  - Pending Changesets decide which packages are offered in the release spec and their version bumps, and the configured Changesets changelog plugin writes the release entries.
+  - The `--interactive` option is not supported in this mode yet.
 - Bump `@metamask/auto-changelog` from `^7.0.0` to `^7.0.1` ([#129](https://github.com/MetaMask/release-tools/pull/129))
 
 ## [4.2.3]

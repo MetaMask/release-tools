@@ -2,7 +2,14 @@ import { execa } from 'execa';
 import fs from 'fs';
 import path from 'path';
 
+import {
+  readMonorepoRootPackage,
+  readMonorepoWorkspacePackage,
+} from '../../src/package.js';
+import type { Project } from '../../src/project.js';
+import { SemVer } from '../../src/semver.js';
 import { withSandbox } from '../helpers.js';
+import { buildMockProject, createNoopWriteStream } from './helpers.js';
 
 /**
  * A workspace package in a Changesets fixture.
@@ -246,6 +253,52 @@ export async function writeChangesetsFixture(
   await git('config', 'commit.gpgsign', 'false');
   await git('add', '-A');
   await git('commit', '-m', 'Initial commit');
+}
+
+/**
+ * Reads the project of a fixture from disk, without Git tags. The repository
+ * URL is {@link LOCAL_CHANGELOG_REPOSITORY_URL}.
+ *
+ * @param rootDirectoryPath - The root of the fixture.
+ * @returns The project.
+ */
+export async function readChangesetsFixtureProject(
+  rootDirectoryPath: string,
+): Promise<Project> {
+  const rootPackage = await readMonorepoRootPackage({
+    packageDirectoryPath: rootDirectoryPath,
+    projectDirectoryPath: rootDirectoryPath,
+    projectTagNames: [],
+  });
+  const packageDirectoryPaths = await fs.promises.readdir(
+    path.join(rootDirectoryPath, 'packages'),
+  );
+  const workspacePackages = await Promise.all(
+    packageDirectoryPaths.map(
+      async (directoryName) =>
+        await readMonorepoWorkspacePackage({
+          packageDirectoryPath: path.join(
+            rootDirectoryPath,
+            'packages',
+            directoryName,
+          ),
+          rootPackageName: 'root',
+          rootPackageVersion: new SemVer('1.0.0'),
+          projectDirectoryPath: rootDirectoryPath,
+          projectTagNames: [],
+          stderr: createNoopWriteStream(),
+        }),
+    ),
+  );
+  return buildMockProject({
+    directoryPath: rootDirectoryPath,
+    repositoryUrl: LOCAL_CHANGELOG_REPOSITORY_URL,
+    rootPackage,
+    isMonorepo: true,
+    workspacePackages: Object.fromEntries(
+      workspacePackages.map((pkg) => [pkg.validatedManifest.name, pkg]),
+    ),
+  });
 }
 
 /**

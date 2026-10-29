@@ -1,7 +1,9 @@
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withSandbox } from '../tests/helpers.js';
 import {
   buildMockProject,
   buildMockPackage,
@@ -9,6 +11,7 @@ import {
 } from '../tests/unit/helpers.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import * as envModule from './env.js';
+import * as fsModule from './fs.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import * as projectModule from './project.js';
 
@@ -40,6 +43,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -63,6 +67,7 @@ describe('initial-parameters', () => {
         interactive: false,
         port: 3000,
         formatter: 'prettier',
+        releaseMode: 'legacy',
       });
     });
 
@@ -82,6 +87,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -115,6 +121,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -148,6 +155,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -181,6 +189,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -212,6 +221,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -243,6 +253,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -274,6 +285,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
+          changesets: true,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -290,5 +302,143 @@ describe('initial-parameters', () => {
 
       expect(initialParameters.releaseType).toBe('ordinary');
     });
+
+    it('returns releaseMode "changesets" when .changeset/config.json exists', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const stderr = createNoopWriteStream();
+        await writeChangesetConfig(sandbox.directoryPath);
+        mockCommandLineArguments({
+          projectDirectory: sandbox.directoryPath,
+          changesets: true,
+        });
+        vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
+
+        const initialParameters = await determineInitialParameters({
+          argv: ['arg1', 'arg2'],
+          cwd: '/path/to/somewhere',
+          stderr,
+        });
+
+        expect(initialParameters.releaseMode).toBe('changesets');
+      });
+    });
+
+    it('returns releaseMode "legacy" when .changeset/config.json does not exist', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const stderr = createNoopWriteStream();
+        mockCommandLineArguments({
+          projectDirectory: sandbox.directoryPath,
+          changesets: true,
+        });
+        vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
+
+        const initialParameters = await determineInitialParameters({
+          argv: ['arg1', 'arg2'],
+          cwd: '/path/to/somewhere',
+          stderr,
+        });
+
+        expect(initialParameters.releaseMode).toBe('legacy');
+      });
+    });
+
+    it('returns releaseMode "legacy" when --no-changesets is given even if .changeset/config.json exists', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const stderr = createNoopWriteStream();
+        await writeChangesetConfig(sandbox.directoryPath);
+        mockCommandLineArguments({
+          projectDirectory: sandbox.directoryPath,
+          changesets: false,
+        });
+        vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
+
+        const initialParameters = await determineInitialParameters({
+          argv: ['arg1', 'arg2'],
+          cwd: '/path/to/somewhere',
+          stderr,
+        });
+
+        expect(initialParameters.releaseMode).toBe('legacy');
+      });
+    });
+
+    it('does not write to the project when determining the release mode', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const stderr = createNoopWriteStream();
+        await writeChangesetConfig(sandbox.directoryPath);
+        mockCommandLineArguments({
+          projectDirectory: sandbox.directoryPath,
+          changesets: true,
+        });
+        vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
+        const writeSpies = [
+          vi.spyOn(fs, 'writeFile'),
+          vi.spyOn(fs.promises, 'writeFile'),
+          vi.spyOn(fsModule, 'writeFile'),
+          vi.spyOn(fsModule, 'writeJsonFile'),
+          vi.spyOn(fsModule, 'ensureDirectoryPathExists'),
+          vi.spyOn(fsModule, 'removeFile'),
+        ];
+
+        const initialParameters = await determineInitialParameters({
+          argv: ['arg1', 'arg2'],
+          cwd: '/path/to/somewhere',
+          stderr,
+        });
+
+        expect(initialParameters.releaseMode).toBe('changesets');
+        for (const writeSpy of writeSpies) {
+          expect(writeSpy).not.toHaveBeenCalled();
+        }
+      });
+    });
   });
 });
+
+/**
+ * Writes an empty Changesets configuration file to the given project.
+ *
+ * @param projectDirectoryPath - The path to the project directory.
+ */
+async function writeChangesetConfig(
+  projectDirectoryPath: string,
+): Promise<void> {
+  await fs.promises.mkdir(path.join(projectDirectoryPath, '.changeset'));
+  await fs.promises.writeFile(
+    path.join(projectDirectoryPath, '.changeset', 'config.json'),
+    '{}',
+  );
+}
+
+/**
+ * Mocks the command-line arguments for the `arg1 arg2` argv.
+ *
+ * @param overrides - The arguments to override.
+ * @param overrides.projectDirectory - The project directory.
+ * @param overrides.changesets - Whether to use the Changesets workflow.
+ */
+function mockCommandLineArguments({
+  projectDirectory,
+  changesets,
+}: {
+  projectDirectory: string;
+  changesets: boolean;
+}): void {
+  vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+    .calledWith(['arg1', 'arg2'])
+    .thenResolve({
+      projectDirectory,
+      tempDirectory: '/path/to/temp',
+      reset: false,
+      backport: false,
+      defaultBranch: 'main',
+      interactive: false,
+      port: 3000,
+      formatter: 'prettier',
+      changesets,
+    });
+}

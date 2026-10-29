@@ -2,7 +2,7 @@ import os from 'os';
 import path from 'path';
 
 import { readCommandLineArguments } from './command-line-arguments.js';
-import { WriteStreamLike } from './fs.js';
+import { fileExists, WriteStreamLike } from './fs.js';
 import { readProject, Project } from './project.js';
 
 /**
@@ -21,6 +21,14 @@ export type ReleaseType = 'ordinary' | 'backport';
  */
 export type Formatter = 'oxfmt' | 'prettier';
 
+/**
+ * The source of the release.
+ *
+ * - *legacy* releases use the `Unreleased` sections of changelogs.
+ * - *changesets* releases use the Changesets in the `.changeset` directory.
+ */
+export type ReleaseMode = 'legacy' | 'changesets';
+
 type InitialParameters = {
   project: Project;
   tempDirectoryPath: string;
@@ -30,6 +38,7 @@ type InitialParameters = {
   interactive: boolean;
   port: number;
   formatter: Formatter;
+  releaseMode: ReleaseMode;
 };
 
 /**
@@ -63,6 +72,13 @@ export async function determineInitialParameters({
           project.rootPackage.validatedManifest.name.replace('/', '__'),
         )
       : path.resolve(cwd, args.tempDirectory);
+  const releaseMode: ReleaseMode =
+    args.changesets &&
+    (await fileExists(
+      path.join(projectDirectoryPath, '.changeset', 'config.json'),
+    ))
+      ? 'changesets'
+      : 'legacy';
 
   return {
     project,
@@ -73,5 +89,6 @@ export async function determineInitialParameters({
     interactive: args.interactive,
     port: args.port,
     formatter: args.formatter as Formatter,
+    releaseMode,
   };
 }
