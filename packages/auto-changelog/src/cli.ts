@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { directoryExists } from '@metamask/node-utils';
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -773,11 +772,26 @@ async function main(): Promise<void> {
   }
 
   if (projectRootDirectory) {
-    const isDirectory = await directoryExists(projectRootDirectory);
-    if (!isDirectory) {
-      return error(
-        `Project root must be a directory: "${projectRootDirectory}".`,
-      );
+    try {
+      const stat = await fs.stat(projectRootDirectory);
+      if (!stat.isDirectory()) {
+        return error(
+          `Project root must be a directory: "${projectRootDirectory}".`,
+        );
+      }
+    } catch (caughtError) {
+      if (hasErrorCode(caughtError)) {
+        if (caughtError.code === 'ENOENT') {
+          return error(
+            `Root directory specified does not exist: "${projectRootDirectory}".`,
+          );
+        } else if (caughtError.code === 'EACCES') {
+          return error(
+            `Access to root directory is forbidden by file access permissions: "${projectRootDirectory}".`,
+          );
+        }
+      }
+      throw caughtError;
     }
   }
 
