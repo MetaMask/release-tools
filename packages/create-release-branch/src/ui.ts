@@ -6,13 +6,9 @@ import { join } from 'path';
 import { getCurrentDirectoryPath } from './dirname.js';
 import { readFile } from './fs.js';
 import { Formatter } from './initial-parameters.js';
+import { createLegacyReleaseSource } from './legacy-release-source.js';
 import { Package } from './package.js';
 import type { Project } from './project.js';
-import {
-  restoreChangelogsForSkippedPackages,
-  updateChangelogsForChangedPackages,
-} from './project.js';
-import { executeReleasePlan, planRelease } from './release-plan.js';
 import {
   findWorkspaceDependentNamesOfType,
   findCandidateDependencies,
@@ -20,14 +16,10 @@ import {
   IncrementableVersionParts,
   validateAllPackageEntries,
 } from './release-specification.js';
-import { commitAllChanges } from './repo.js';
+import type { ReleaseSpecification } from './release-specification.js';
+import { finishRelease, startRelease } from './release-workflow.js';
+import type { ReleaseSource } from './release-workflow.js';
 import { SemVer, semver } from './semver.js';
-import { createReleaseBranch } from './workflow-operations.js';
-import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './yarn-commands.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 
@@ -62,23 +54,22 @@ export async function startUI({
   stdout,
   stderr,
 }: UIOptions): Promise<void> {
-  const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
-    project,
-    releaseType,
-  });
-
-  if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, stderr });
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-    );
-  }
-
-  const app = createApp({
+  const source = createLegacyReleaseSource({
     project,
     defaultBranch,
     formatter,
+    stderr,
+  });
+
+  const { newReleaseVersion } = await startRelease({
+    project,
+    releaseType,
+    source,
+  });
+
+  const app = createApp({
+    project,
+    source,
     stderr,
     version: newReleaseVersion,
     closeServer: () => {
@@ -122,8 +113,7 @@ export async function startUI({
  *
  * @param options - The options for creating the app.
  * @param options.project - The project object.
- * @param options.defaultBranch - The default branch name.
- * @param options.formatter - The formatter to use for formatting the changelog.
+ * @param options.source - The release source used to apply the release.
  * @param options.stderr - The stderr stream.
  * @param options.version - The release version.
  * @param options.closeServer - The function to close the server.
@@ -131,15 +121,13 @@ export async function startUI({
  */
 function createApp({
   project,
-  defaultBranch,
-  formatter,
+  source,
   stderr,
   version,
   closeServer,
 }: {
   project: Project;
-  defaultBranch: string;
-  formatter: Formatter;
+  source: ReleaseSource<ReleaseSpecification>;
   stderr: Pick<WriteStream, 'write'>;
   version: string;
   closeServer: () => void;
@@ -322,25 +310,14 @@ function createApp({
           return obj;
         }, {});
 
-        await restoreChangelogsForSkippedPackages({
-          project,
-          releaseSpecificationPackages,
-          defaultBranch,
-        });
-
-        const releasePlan = await planRelease({
-          project,
-          releaseSpecificationPackages,
+        await source.apply({
+          releaseSpecification: {
+            packages: releaseSpecificationPackages,
+            path: '',
+          },
           newReleaseVersion: version,
         });
-        await executeReleasePlan(project, releasePlan, formatter, stderr);
-        await fixConstraints(project.directoryPath);
-        await updateYarnLockfile(project.directoryPath);
-        await deduplicateDependencies(project.directoryPath);
-        await commitAllChanges(
-          project.directoryPath,
-          `Update Release ${version}`,
-        );
+        await finishRelease({ project, newReleaseVersion: version });
 
         res.json({ status: 'success' });
 
