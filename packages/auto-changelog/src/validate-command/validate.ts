@@ -65,6 +65,12 @@ export type ValidateOptions = {
    * PR number to use when fixing missing dependency entries.
    */
   currentPr?: string;
+  /**
+   * Whether the changelog is managed with Changesets. In this mode, the
+   * Unreleased section is optional, and an empty one is removed when fixing.
+   * Cannot be combined with `checkDeps`.
+   */
+  changesets?: boolean;
 };
 
 /**
@@ -89,6 +95,7 @@ export type ValidateOptions = {
  * @param options.remote - Remote name for auto-detection.
  * @param options.baseBranch - Base branch for auto-detection.
  * @param options.currentPr - PR number to use when fixing missing entries.
+ * @param options.changesets - Whether the changelog is managed with Changesets.
  * @returns A promise that resolves to nothing once the changelog is validated, or
  * rejects with an error if the changelog is invalid.
  */
@@ -110,7 +117,13 @@ export async function validate(options: ValidateOptions): Promise<void> {
     remote,
     baseBranch,
     currentPr,
+    changesets,
   } = options;
+
+  if (changesets && checkDeps) {
+    return error('--changesets cannot be combined with --checkDeps.');
+  }
+
   const changelogContent = await readFile(changelogPath);
 
   let dependencyCheckResult: DependencyCheckResult | undefined;
@@ -144,6 +157,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
       ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent,
       ...(dependencyCheckResult !== undefined && { dependencyCheckResult }),
+      ...(changesets !== undefined && { changesets }),
     });
   } catch (caughtError) {
     if (caughtError instanceof ChangelogFormattingError) {
