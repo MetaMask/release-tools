@@ -273,6 +273,8 @@ export function getFormatter(
  * @param args.version - The release version to migrate unreleased changes to.
  * @param args.formatter - The formatter to use for formatting the changelog.
  * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.changesets - Whether the changelog is managed by Changesets. In
+ * this mode, the emptied Unreleased section is dropped.
  * @returns The result of writing to the changelog.
  */
 export async function migrateUnreleasedChangelogChangesToRelease({
@@ -281,12 +283,14 @@ export async function migrateUnreleasedChangelogChangesToRelease({
   version,
   formatter,
   stderr,
+  changesets = false,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   version: string;
   formatter: Formatter;
   stderr: Pick<WriteStream, 'write'>;
+  changesets?: boolean;
 }): Promise<void> {
   let changelogContent;
 
@@ -308,6 +312,7 @@ export async function migrateUnreleasedChangelogChangesToRelease({
     repoUrl: repositoryUrl,
     tagPrefix: `${pkg.validatedManifest.name}@`,
     formatter: getFormatter(formatter),
+    changesets,
   });
 
   changelog.addRelease({ version });
@@ -388,17 +393,21 @@ export async function updatePackageChangelog({
  * @param args.formatter - The formatter to use for formatting the changelog.
  * @param args.stderr - A stream that can be used to write to standard error.
  * Defaults to /dev/null.
+ * @param args.changesets - Whether the changelog is managed by Changesets. In
+ * this mode, the emptied Unreleased section is dropped.
  */
 export async function updatePackage({
   project,
   packageReleasePlan,
   formatter,
   stderr = fs.createWriteStream('/dev/null'),
+  changesets = false,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   packageReleasePlan: PackageReleasePlan;
   formatter: Formatter;
   stderr?: Pick<WriteStream, 'write'>;
+  changesets?: boolean;
 }): Promise<void> {
   const { package: pkg, newVersion } = packageReleasePlan;
 
@@ -413,5 +422,6 @@ export async function updatePackage({
     formatter,
     stderr,
     version: newVersion,
+    changesets,
   });
 }

@@ -74,6 +74,58 @@ export const DEFAULT_CHANGESETS_CONFIG = {
 };
 
 /**
+ * The GitHub repository that {@link LOCAL_CHANGELOG_CONFIG} links pull
+ * requests to.
+ */
+export const LOCAL_CHANGELOG_REPOSITORY = 'example-org/example-repo';
+
+/**
+ * The URL of {@link LOCAL_CHANGELOG_REPOSITORY}, to use as the repository URL
+ * of the project.
+ */
+export const LOCAL_CHANGELOG_REPOSITORY_URL = `https://github.com/${LOCAL_CHANGELOG_REPOSITORY}`;
+
+/**
+ * The files to pass as `files` to a fixture so that it has the local changelog
+ * module (`local-changelog.cjs`). The module renders like
+ * `@metamask/changesets-changelog` without Git or network lookups. It needs
+ * summaries built by {@link buildLocalChangelogSummary}, and throws for any
+ * other summary. Use with {@link LOCAL_CHANGELOG_CONFIG}.
+ */
+export const LOCAL_CHANGELOG_FILES: Record<string, string> = {
+  '.changeset/changelog.cjs': await fs.promises.readFile(
+    path.join(import.meta.dirname, 'local-changelog.cjs'),
+    'utf8',
+  ),
+};
+
+/**
+ * The fields to pass as `config` to a fixture so that it uses the local
+ * changelog module from {@link LOCAL_CHANGELOG_FILES}. Formatting is disabled
+ * so that the result does not depend on formatters found above the fixture.
+ */
+export const LOCAL_CHANGELOG_CONFIG = {
+  changelog: ['./changelog.cjs', { repo: LOCAL_CHANGELOG_REPOSITORY }],
+  format: false,
+};
+
+/**
+ * Builds the summary of a Changeset that the local changelog module accepts.
+ *
+ * @param category - The changelog category, such as `Added`.
+ * @param text - The text of the changelog entry.
+ * @param pullRequest - The number of the pull request to link.
+ * @returns The summary.
+ */
+export function buildLocalChangelogSummary(
+  category: string,
+  text: string,
+  pullRequest: number,
+): string {
+  return `## ${category}\n\n- ${text} (#${pullRequest})`;
+}
+
+/**
  * Returns the default directory of a fixture package, relative to the root.
  *
  * @param fixturePackage - The fixture package.

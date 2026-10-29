@@ -946,7 +946,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/apply-release-plan@workspace:packages/apply-release-plan":
+"@metamask/apply-release-plan@npm:^0.0.0, @metamask/apply-release-plan@workspace:packages/apply-release-plan":
   version: 0.0.0-use.local
   resolution: "@metamask/apply-release-plan@workspace:packages/apply-release-plan"
   dependencies:
@@ -1087,6 +1087,7 @@ __metadata:
     "@changesets/types": "npm:^7.0.0"
     "@manypkg/get-packages": "npm:^3.1.0"
     "@metamask/action-utils": "npm:^2.0.0"
+    "@metamask/apply-release-plan": "npm:^0.0.0"
     "@metamask/auto-changelog": "npm:^7.0.1"
     "@metamask/changesets-utils": "npm:^0.0.0"
     "@metamask/utils": "npm:^11.12.0"
