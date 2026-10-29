@@ -1,4 +1,5 @@
 import { restoreResidualChangesets } from '@metamask/changesets-utils';
+import { execa } from 'execa';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -33,6 +34,7 @@ import { findChangesetsCandidates } from './changesets-release-specification.js'
 import {
   readMonorepoRootPackage,
   readMonorepoWorkspacePackage,
+  updatePackage,
 } from './package.js';
 import type { Project } from './project.js';
 import { SemVer } from './semver.js';
@@ -45,9 +47,17 @@ vi.mock('@metamask/changesets-utils', async (importOriginal) => {
     restoreResidualChangesets: vi.fn(actual.restoreResidualChangesets),
   };
 });
+vi.mock('./package', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./package.js')>();
+  return { ...actual, updatePackage: vi.fn(actual.updatePackage) };
+});
 
-const RECOVERY_MESSAGE =
-  'The release could not be completed. Changesets that were only partly released have been restored. Discard the remaining uncommitted changes (git restore . && git clean -fd .changeset), then run this tool again to resume from the release spec.';
+const RECOVERY_COMMAND =
+  'git restore :/ && git clean -fd -e RELEASE_SPEC.yml :/';
+
+const RECOVERY_MESSAGE = `The release could not be completed. Changesets that were only partly released have been restored. Discard the remaining uncommitted changes (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
+
+const RESTORATION_FAILED_MESSAGE = `The release could not be completed, and the Changesets that were only partly released could not be restored. Discard every uncommitted change to get the Changesets back (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
 
 const REPOSITORY_URL = LOCAL_CHANGELOG_REPOSITORY_URL;
 
@@ -543,15 +553,86 @@ describe('changesets-apply', () => {
       });
     });
 
-    it('restores residual changesets and explains how to recover if the changelog module throws', async () => {
+    describe('when a straddling changeset releases a devDependent', () => {
+      const DEV_DEPENDENT_CHANGESET: ChangesetsFixtureChangeset = {
+        id: 'bold-ducks-swim',
+        releases: { '@example/a': 'major', '@example/b': 'patch' },
+        summary: buildLocalChangelogSummary('Changed', 'Break a and fix b', 20),
+      };
+
+      const UNSELECTED_CHANGESET: ChangesetsFixtureChangeset = {
+        id: 'shy-moles-dig',
+        releases: { '@example/b': 'patch', '@example/n': 'minor' },
+        summary: buildLocalChangelogSummary('Fixed', 'Fix b and extend n', 21),
+      };
+
+      const DEV_DEPENDENT_FIXTURE: ChangesetsFixtureOptions = {
+        packages: [
+          { name: '@example/a', version: '1.0.0' },
+          {
+            name: '@example/b',
+            version: '1.0.0',
+            devDependencies: { '@example/a': '^1.0.0' },
+          },
+          { name: '@example/n', version: '1.0.0' },
+        ],
+        changesets: [DEV_DEPENDENT_CHANGESET, UNSELECTED_CHANGESET],
+        config: LOCAL_CHANGELOG_CONFIG,
+        files: LOCAL_CHANGELOG_FILES,
+      };
+
+      it('restores the release of the devDependent that the spec leaves out', async () => {
+        await withChangesetsFixture(
+          DEV_DEPENDENT_FIXTURE,
+          async (rootDirectoryPath) => {
+            const { releasePlan } = await release(rootDirectoryPath, {
+              '@example/a': 'major',
+            });
+
+            expect(
+              releasePlan.filteredPlan.releases.map(({ name, type }) => ({
+                name,
+                type,
+              })),
+            ).toContainEqual({ name: '@example/b', type: 'none' });
+            expect(
+              (await readChangesetFiles(rootDirectoryPath))[
+                'bold-ducks-swim.md'
+              ],
+            ).toBe(
+              `---\n"@example/b": patch\n---\n${DEV_DEPENDENT_CHANGESET.summary}`,
+            );
+          },
+        );
+      });
+
+      it('leaves a changeset that the spec does not select untouched', async () => {
+        await withChangesetsFixture(
+          DEV_DEPENDENT_FIXTURE,
+          async (rootDirectoryPath) => {
+            const changesetFiles = await readChangesetFiles(rootDirectoryPath);
+
+            await release(rootDirectoryPath, { '@example/a': 'major' });
+
+            expect(
+              (await readChangesetFiles(rootDirectoryPath))['shy-moles-dig.md'],
+            ).toBe(changesetFiles['shy-moles-dig.md']);
+          },
+        );
+      });
+    });
+
+    it('leaves every changeset untouched and explains how to recover if the changelog module throws', async () => {
       await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
         await writeChangesetFile(rootDirectoryPath, {
           id: 'sharp-bees-buzz',
           releases: { '@example/a': 'patch' },
           summary: 'A summary without a category',
         });
+        const changesetFiles = await readChangesetFiles(rootDirectoryPath);
         const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
         vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.mocked(restoreResidualChangesets).mockClear();
 
         const promise = applyChangesetsRelease({
           ...prepared,
@@ -566,13 +647,68 @@ describe('changesets-apply', () => {
             message: 'Unsupported summary in changeset sharp-bees-buzz',
           },
         });
-        expect(
-          (await readChangesetFiles(rootDirectoryPath))['eager-owls-fly.md'],
-        ).toBe(RESIDUAL_STRADDLING_CHANGESET);
+        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual(
+          changesetFiles,
+        );
+        expect(restoreResidualChangesets).not.toHaveBeenCalled();
       });
     });
 
-    it('fails with the recovery message if a never-released changelog keeps an Unreleased link', async () => {
+    it('restores residual changesets if the release fails after the changesets are consumed', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        const updateError = new Error('Could not update the package');
+        vi.mocked(updatePackage).mockRejectedValueOnce(updateError);
+
+        const promise = release(rootDirectoryPath, ENTRIES);
+
+        await expect(promise).rejects.toThrow(RECOVERY_MESSAGE);
+        await expect(promise).rejects.toMatchObject({ cause: updateError });
+        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual({
+          'eager-owls-fly.md': RESIDUAL_STRADDLING_CHANGESET,
+        });
+      });
+    });
+
+    it('can resume with the recovery commands after the release created a changelog and failed', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        const releaseSpecificationPath = path.join(
+          rootDirectoryPath,
+          'RELEASE_SPEC.yml',
+        );
+        await fs.promises.writeFile(releaseSpecificationPath, 'packages: {}\n');
+        const changesetFiles = await readChangesetFiles(rootDirectoryPath);
+        vi.mocked(updatePackage).mockRejectedValueOnce(
+          new Error('Could not update the package'),
+        );
+
+        await expect(release(rootDirectoryPath, ENTRIES)).rejects.toThrow(
+          RECOVERY_MESSAGE,
+        );
+        expect(await readChangelog(rootDirectoryPath, '@example/b')).toMatch(
+          /^## \[2\.0\.0\]$/mu,
+        );
+        await execa(RECOVERY_COMMAND, {
+          cwd: path.join(rootDirectoryPath, 'packages', 'a'),
+          shell: true,
+        });
+        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual(
+          changesetFiles,
+        );
+        expect(
+          await fs.promises.readFile(releaseSpecificationPath, 'utf8'),
+        ).toBe('packages: {}\n');
+
+        await release(rootDirectoryPath, ENTRIES);
+
+        expect(
+          (await readChangelog(rootDirectoryPath, '@example/b')).match(
+            /^## \[/gmu,
+          ),
+        ).toStrictEqual(['## [']);
+      });
+    });
+
+    it('fails before changing any file if a never-released changelog keeps a link reference definition', async () => {
       await withChangesetsFixture(
         {
           ...FIXTURE,
@@ -602,23 +738,75 @@ describe('changesets-apply', () => {
             ...ENTRIES,
             '@example/n': 'minor',
           });
+          const { stdout: statusBefore } = await execa(
+            'git',
+            ['status', '--porcelain'],
+            { cwd: rootDirectoryPath },
+          );
 
-          const promise = applyChangesetsRelease({
-            ...prepared,
-            newReleaseVersion: '2.0.0',
-            formatter: 'prettier',
-            stderr: createNoopWriteStream(),
-          });
+          await expect(
+            applyChangesetsRelease({
+              ...prepared,
+              newReleaseVersion: '2.0.0',
+              formatter: 'prettier',
+              stderr: createNoopWriteStream(),
+            }),
+          ).rejects.toThrow(
+            `The changelog of @example/n (${path.join(
+              rootDirectoryPath,
+              'packages',
+              'n',
+              'CHANGELOG.md',
+            )}) has no release yet but has a link reference definition, so the release cannot be added to it. Remove the empty Unreleased section and its link reference definition, then run this tool again.`,
+          );
+          expect(statusBefore).toBe('');
+          const { stdout: statusAfter } = await execa(
+            'git',
+            ['status', '--porcelain'],
+            { cwd: rootDirectoryPath },
+          );
+          expect(statusAfter).toBe('');
+        },
+      );
+    });
+
+    it('names the package whose changelog cannot be parsed after the release block is written', async () => {
+      await withChangesetsFixture(
+        {
+          ...FIXTURE,
+          packages: [
+            ...PACKAGES.filter(({ name }) => name !== '@example/c'),
+            {
+              name: '@example/c',
+              version: '1.0.0',
+              dependencies: { '@example/b': '^1.0.0' },
+              changelog: buildChangelog(`
+                ## Notes
+
+                ## [1.0.0]
+
+                ### Added
+
+                - Initial release (${link(0)})
+
+                [1.0.0]: ${REPOSITORY_URL}/releases/tag/@example/c@1.0.0
+              `),
+            },
+          ],
+        },
+        async (rootDirectoryPath) => {
+          const promise = release(rootDirectoryPath, ENTRIES);
 
           await expect(promise).rejects.toThrow(RECOVERY_MESSAGE);
           await expect(promise).rejects.toMatchObject({
             cause: {
-              message:
-                "Release header found outside the changelog content: '## [0.1.0]'",
+              message: `Could not parse the changelog of @example/c (${path.join(
+                rootDirectoryPath,
+                'packages',
+                'c',
+                'CHANGELOG.md',
+              )}).`,
             },
-          });
-          expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual({
-            'eager-owls-fly.md': RESIDUAL_STRADDLING_CHANGESET,
           });
         },
       );
@@ -626,37 +814,22 @@ describe('changesets-apply', () => {
 
     it('reports both errors if the restoration fails after the release failed', async () => {
       await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
-        await writeChangesetFile(rootDirectoryPath, {
-          id: 'sharp-bees-buzz',
-          releases: { '@example/a': 'patch' },
-          summary: 'A summary without a category',
-        });
-        const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
-        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const updateError = new Error('Could not update the package');
+        vi.mocked(updatePackage).mockRejectedValueOnce(updateError);
         const restorationError = new Error('Could not write the changeset');
         vi.mocked(restoreResidualChangesets).mockRejectedValueOnce(
           restorationError,
         );
 
-        const promise = applyChangesetsRelease({
-          ...prepared,
-          newReleaseVersion: '2.0.0',
-          formatter: 'prettier',
-          stderr: createNoopWriteStream(),
-        });
+        const promise = release(rootDirectoryPath, ENTRIES);
 
-        await expect(promise).rejects.toThrow(RECOVERY_MESSAGE);
+        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
         const error = await promise.catch(
           (caughtError: unknown) => caughtError,
         );
         expect((error as Error).cause).toBeInstanceOf(AggregateError);
         expect(((error as Error).cause as AggregateError).errors).toStrictEqual(
-          [
-            expect.objectContaining({
-              message: 'Unsupported summary in changeset sharp-bees-buzz',
-            }),
-            restorationError,
-          ],
+          [updateError, restorationError],
         );
       });
     });
@@ -676,9 +849,32 @@ describe('changesets-apply', () => {
           stderr: createNoopWriteStream(),
         });
 
-        await expect(promise).rejects.toThrow(RECOVERY_MESSAGE);
+        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
         await expect(promise).rejects.toMatchObject({
           cause: restorationError,
+        });
+      });
+    });
+
+    it('reports every restoration error and still restores the other changesets', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        const firstError = new Error('Could not write the first changeset');
+        const secondError = new Error('Could not write the second changeset');
+        vi.mocked(restoreResidualChangesets)
+          .mockRejectedValueOnce(firstError)
+          .mockRejectedValueOnce(secondError);
+
+        const promise = release(rootDirectoryPath, ENTRIES);
+
+        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
+        await expect(promise).rejects.toMatchObject({
+          cause: {
+            message: 'Restoring several Changesets failed.',
+            errors: [firstError, secondError],
+          },
+        });
+        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual({
+          'eager-owls-fly.md': RESIDUAL_STRADDLING_CHANGESET,
         });
       });
     });
