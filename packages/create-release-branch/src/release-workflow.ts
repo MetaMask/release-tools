@@ -25,6 +25,11 @@ import {
  */
 export type ReleaseSource<Specification> = {
   /**
+   * Whether the "Initialize Release" commit is created even if `prepare`
+   * changes nothing.
+   */
+  allowEmptyInitializeCommit?: boolean;
+  /**
    * Makes changes to the project on the first run, before the release branch
    * is first committed to.
    */
@@ -89,10 +94,14 @@ export async function startRelease<Specification>({
 
   if (firstRun) {
     await source.prepare();
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-    );
+    const commitMessage = `Initialize Release ${newReleaseVersion}`;
+    if (source.allowEmptyInitializeCommit) {
+      await commitAllChanges(project.directoryPath, commitMessage, {
+        allowEmpty: true,
+      });
+    } else {
+      await commitAllChanges(project.directoryPath, commitMessage);
+    }
   }
 
   return { newReleaseVersion };

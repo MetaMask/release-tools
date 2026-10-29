@@ -12,6 +12,7 @@ import {
   LOCAL_CHANGELOG_CONFIG,
   LOCAL_CHANGELOG_FILES,
   LOCAL_CHANGELOG_REPOSITORY_URL,
+  readChangesetsFixtureProject,
   withChangesetsFixture,
   writeChangesetFile,
   writeChangesetsFixture,
@@ -21,23 +22,15 @@ import type {
   ChangesetsFixtureOptions,
   ChangesetsFixturePackage,
 } from '../tests/unit/changesets-fixture.js';
-import {
-  buildMockProject,
-  createNoopWriteStream,
-} from '../tests/unit/helpers.js';
+import { createNoopWriteStream } from '../tests/unit/helpers.js';
 import { applyChangesetsRelease } from './changesets-apply.js';
 import { loadChangesetsPlan } from './changesets-plan.js';
 import type { LoadedChangesetsPlan } from './changesets-plan.js';
 import { planChangesetsRelease } from './changesets-release-plan.js';
 import type { ChangesetsReleasePlan } from './changesets-release-plan.js';
 import { findChangesetsCandidates } from './changesets-release-specification.js';
-import {
-  readMonorepoRootPackage,
-  readMonorepoWorkspacePackage,
-  updatePackage,
-} from './package.js';
+import { updatePackage } from './package.js';
 import type { Project } from './project.js';
-import { SemVer } from './semver.js';
 
 vi.mock('@metamask/changesets-utils', async (importOriginal) => {
   const actual =
@@ -184,49 +177,6 @@ const ENTRIES: Record<string, string | null> = {
   '@example/l': 'patch',
 };
 
-/**
- * Reads the project of a fixture from disk, without Git tags.
- *
- * @param rootDirectoryPath - The root of the fixture.
- * @returns The project.
- */
-async function readFixtureProject(rootDirectoryPath: string): Promise<Project> {
-  const rootPackage = await readMonorepoRootPackage({
-    packageDirectoryPath: rootDirectoryPath,
-    projectDirectoryPath: rootDirectoryPath,
-    projectTagNames: [],
-  });
-  const packageDirectoryPaths = await fs.promises.readdir(
-    path.join(rootDirectoryPath, 'packages'),
-  );
-  const workspacePackages = await Promise.all(
-    packageDirectoryPaths.map(
-      async (directoryName) =>
-        await readMonorepoWorkspacePackage({
-          packageDirectoryPath: path.join(
-            rootDirectoryPath,
-            'packages',
-            directoryName,
-          ),
-          rootPackageName: 'root',
-          rootPackageVersion: new SemVer('1.0.0'),
-          projectDirectoryPath: rootDirectoryPath,
-          projectTagNames: [],
-          stderr: createNoopWriteStream(),
-        }),
-    ),
-  );
-  return buildMockProject({
-    directoryPath: rootDirectoryPath,
-    repositoryUrl: REPOSITORY_URL,
-    rootPackage,
-    isMonorepo: true,
-    workspacePackages: Object.fromEntries(
-      workspacePackages.map((pkg) => [pkg.validatedManifest.name, pkg]),
-    ),
-  });
-}
-
 type PreparedRelease = {
   project: Project;
   plan: LoadedChangesetsPlan;
@@ -244,7 +194,7 @@ async function prepareRelease(
   rootDirectoryPath: string,
   entries: Record<string, string | null>,
 ): Promise<PreparedRelease> {
-  const project = await readFixtureProject(rootDirectoryPath);
+  const project = await readChangesetsFixtureProject(rootDirectoryPath);
   const plan = await loadChangesetsPlan(rootDirectoryPath);
   const candidates = await findChangesetsCandidates({ project, plan });
   const releasePlan = planChangesetsRelease({

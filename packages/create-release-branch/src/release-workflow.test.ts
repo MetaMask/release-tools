@@ -33,9 +33,10 @@ type FakeSpecification = { packages: Record<string, string> };
  * @returns The fake release source.
  */
 function buildFakeSource(): {
-  [Key in keyof ReleaseSource<FakeSpecification>]: Mock<
-    ReleaseSource<FakeSpecification>[Key]
-  >;
+  [Key in Exclude<
+    keyof ReleaseSource<FakeSpecification>,
+    'allowEmptyInitializeCommit'
+  >]: Mock<ReleaseSource<FakeSpecification>[Key]>;
 } {
   return {
     prepare: vi.fn().mockResolvedValue(undefined),
@@ -88,6 +89,21 @@ describe('release-workflow', () => {
       );
       expect(source.prepare.mock.invocationCallOrder[0]).toBeLessThan(
         commitAllChangesSpy.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('allows the "Initialize Release" commit to be empty if the source asks for it', async () => {
+      const project = buildMockProject();
+      const source = { ...buildFakeSource(), allowEmptyInitializeCommit: true };
+      mockCreateReleaseBranch('2.0.0', true);
+      const commitAllChangesSpy = vi.spyOn(repoModule, 'commitAllChanges');
+
+      await startRelease({ project, releaseType: 'ordinary', source });
+
+      expect(commitAllChangesSpy).toHaveBeenCalledWith(
+        project.directoryPath,
+        'Initialize Release 2.0.0',
+        { allowEmpty: true },
       );
     });
 
@@ -305,6 +321,71 @@ describe('release-workflow', () => {
 
         expect(await fileExists(releaseSpecificationPath)).toBe(false);
         expect(source.validateReleaseSpecification).not.toHaveBeenCalled();
+      });
+    });
+
+    it('keeps the spec and does not finish the release when validation fails', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const source = buildFakeSource();
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'RELEASE_SPEC.yml',
+        );
+        await fs.promises.writeFile(releaseSpecificationPath, 'existing spec');
+        mockCreateReleaseBranch('2.0.0', false);
+        source.validateReleaseSpecification.mockRejectedValue(
+          new Error('invalid spec'),
+        );
+
+        await expect(
+          followReleaseWorkflow({
+            project,
+            tempDirectoryPath: sandbox.directoryPath,
+            firstRemovingExistingReleaseSpecification: false,
+            releaseType: 'ordinary',
+            source,
+            stdout: new MockWritable(),
+          }),
+        ).rejects.toThrow('invalid spec');
+
+        expect(await fileExists(releaseSpecificationPath)).toBe(true);
+        expect(source.apply).not.toHaveBeenCalled();
+        expect(yarnCommands.fixConstraints).not.toHaveBeenCalled();
+        expect(yarnCommands.updateYarnLockfile).not.toHaveBeenCalled();
+        expect(yarnCommands.deduplicateDependencies).not.toHaveBeenCalled();
+        expect(repoModule.commitAllChanges).not.toHaveBeenCalled();
+      });
+    });
+
+    it('keeps the spec and does not finish the release when applying fails', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const source = buildFakeSource();
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'RELEASE_SPEC.yml',
+        );
+        await fs.promises.writeFile(releaseSpecificationPath, 'existing spec');
+        mockCreateReleaseBranch('2.0.0', false);
+        source.apply.mockRejectedValue(new Error('apply failed'));
+
+        await expect(
+          followReleaseWorkflow({
+            project,
+            tempDirectoryPath: sandbox.directoryPath,
+            firstRemovingExistingReleaseSpecification: false,
+            releaseType: 'ordinary',
+            source,
+            stdout: new MockWritable(),
+          }),
+        ).rejects.toThrow('apply failed');
+
+        expect(await fileExists(releaseSpecificationPath)).toBe(true);
+        expect(yarnCommands.fixConstraints).not.toHaveBeenCalled();
+        expect(yarnCommands.updateYarnLockfile).not.toHaveBeenCalled();
+        expect(yarnCommands.deduplicateDependencies).not.toHaveBeenCalled();
+        expect(repoModule.commitAllChanges).not.toHaveBeenCalled();
       });
     });
   });

@@ -1,7 +1,9 @@
 import type { WriteStream } from 'fs';
 
+import { createChangesetsReleaseSource } from './changesets-release-source.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
+import { followReleaseWorkflow } from './release-workflow.js';
 import { startUI } from './ui.js';
 
 /**
@@ -36,6 +38,7 @@ export async function main({
     interactive,
     port,
     formatter,
+    releaseMode,
   } = await determineInitialParameters({ argv, cwd, stderr });
 
   if (project.isMonorepo) {
@@ -43,7 +46,22 @@ export async function main({
       'Project appears to have workspaces. Following monorepo workflow.\n',
     );
 
-    if (interactive) {
+    if (releaseMode === 'changesets') {
+      if (interactive) {
+        throw new Error(
+          'The interactive UI (--interactive) is not supported in Changesets mode yet. Run without --interactive to edit the release spec in your editor, or pass --no-changesets to use the legacy workflow.',
+        );
+      }
+
+      await followReleaseWorkflow({
+        project,
+        tempDirectoryPath,
+        firstRemovingExistingReleaseSpecification: reset,
+        releaseType,
+        source: createChangesetsReleaseSource({ project, formatter, stderr }),
+        stdout,
+      });
+    } else if (interactive) {
       await startUI({
         project,
         releaseType,
