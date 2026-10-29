@@ -44,6 +44,7 @@ linkStyle default opacity:0.5
   changesets_lint --> auto_changelog;
   changesets_utils --> auto_changelog;
   create_release_branch --> auto_changelog;
+  create_release_branch --> changesets_utils;
 ```
 
 <!-- end dependency graph -->
