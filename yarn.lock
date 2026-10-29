@@ -265,7 +265,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@changesets/assemble-release-plan@npm:^7.0.0":
+"@changesets/assemble-release-plan@npm:7.0.0, @changesets/assemble-release-plan@npm:^7.0.0":
   version: 7.0.0
   resolution: "@changesets/assemble-release-plan@npm:7.0.0"
   dependencies:
@@ -1081,12 +1081,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@metamask/create-release-branch@workspace:packages/create-release-branch"
   dependencies:
+    "@changesets/assemble-release-plan": "npm:7.0.0"
     "@changesets/config": "npm:^4.0.1"
     "@changesets/get-release-plan": "npm:5.0.2"
     "@changesets/types": "npm:^7.0.0"
     "@manypkg/get-packages": "npm:^3.1.0"
     "@metamask/action-utils": "npm:^2.0.0"
     "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/changesets-utils": "npm:^0.0.0"
     "@metamask/utils": "npm:^11.12.0"
     "@tailwindcss/vite": "npm:^4.0.9"
     "@types/debug": "npm:^4.1.7"
