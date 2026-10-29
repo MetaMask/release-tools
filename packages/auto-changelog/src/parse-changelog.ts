@@ -91,6 +91,64 @@ function extractRepoName(repoUrl: string): string {
 }
 
 /**
+ * Finds the lines that hold the release sections of a changelog managed by
+ * Changesets, where the "Unreleased" section is optional.
+ *
+ * The content starts after the "Unreleased" header, or at the first release
+ * header. It ends at the "Unreleased" link reference definition, or at the
+ * first link reference definition after the start.
+ *
+ * @param changelogLines - The lines of the changelog.
+ * @returns The index of the first content line, and the index after the last
+ * content line.
+ * @throws If a release header is found outside the content.
+ */
+function getChangesetsContentBounds(changelogLines: string[]): {
+  start: number;
+  end: number;
+} {
+  const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
+  let start = unreleasedHeaderIndex + 1;
+  if (unreleasedHeaderIndex === -1) {
+    const firstReleaseHeaderIndex = changelogLines.findIndex((line) =>
+      line.startsWith('## ['),
+    );
+    start =
+      firstReleaseHeaderIndex === -1
+        ? changelogLines.length
+        : firstReleaseHeaderIndex;
+  }
+
+  let end = changelogLines.findIndex((line) =>
+    line.startsWith(`[${unreleased}]:`),
+  );
+  if (end === -1) {
+    const firstLinkReferenceDefinitionIndex = changelogLines.findIndex(
+      (line, index) => index >= start && /^\[[^\]]+\]: /u.test(line),
+    );
+    end =
+      firstLinkReferenceDefinitionIndex === -1
+        ? changelogLines.length
+        : firstLinkReferenceDefinitionIndex;
+  }
+
+  changelogLines.forEach((line, index) => {
+    const isInsideContent = index >= start && index < end;
+    if (
+      !isInsideContent &&
+      index !== unreleasedHeaderIndex &&
+      line.startsWith('## ')
+    ) {
+      throw new Error(
+        `Release header found outside the changelog content: '${truncated(line)}'`,
+      );
+    }
+  });
+
+  return { start, end };
+}
+
+/**
  * Constructs a Changelog instance that represents the given changelog, which
  * is parsed for release and change information.
  *
@@ -103,6 +161,9 @@ function extractRepoName(repoUrl: string): string {
  * An optional, which is required only in case of package renamed.
  * @param options.shouldExtractPrLinks - When true, look for and parse pull
  * request links at the end of change entries.
+ * @param options.changesets - Whether the changelog is managed by Changesets.
+ * In this mode, the "Unreleased" section and its link reference definition
+ * are optional.
  * @returns A changelog instance that reflects the changelog text provided.
  */
 export function parseChangelog({
@@ -112,6 +173,7 @@ export function parseChangelog({
   formatter,
   packageRename,
   shouldExtractPrLinks = false,
+  changesets = false,
 }: {
   changelogContent: string;
   repoUrl: string;
@@ -119,6 +181,7 @@ export function parseChangelog({
   formatter?: Formatter;
   packageRename?: PackageRename;
   shouldExtractPrLinks?: boolean;
+  changesets?: boolean;
 }): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
   const changelog = new Changelog({
@@ -126,24 +189,33 @@ export function parseChangelog({
     tagPrefix,
     ...(formatter !== undefined && { formatter }),
     ...(packageRename !== undefined && { packageRename }),
+    changesets,
   });
   const repoName = extractRepoName(repoUrl);
 
-  const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
-  if (unreleasedHeaderIndex === -1) {
-    throw new Error(`Failed to find ${unreleased} header`);
-  }
-  const unreleasedLinkReferenceDefinition = changelogLines.findIndex((line) => {
-    return line.startsWith(`[${unreleased}]:`);
-  });
-  if (unreleasedLinkReferenceDefinition === -1) {
-    throw new Error(`Failed to find ${unreleased} link reference definition`);
-  }
+  let contentfulChangelogLines: string[];
+  if (changesets) {
+    const { start, end } = getChangesetsContentBounds(changelogLines);
+    contentfulChangelogLines = changelogLines.slice(start, end);
+  } else {
+    const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
+    if (unreleasedHeaderIndex === -1) {
+      throw new Error(`Failed to find ${unreleased} header`);
+    }
+    const unreleasedLinkReferenceDefinition = changelogLines.findIndex(
+      (line) => {
+        return line.startsWith(`[${unreleased}]:`);
+      },
+    );
+    if (unreleasedLinkReferenceDefinition === -1) {
+      throw new Error(`Failed to find ${unreleased} link reference definition`);
+    }
 
-  const contentfulChangelogLines = changelogLines.slice(
-    unreleasedHeaderIndex + 1,
-    unreleasedLinkReferenceDefinition,
-  );
+    contentfulChangelogLines = changelogLines.slice(
+      unreleasedHeaderIndex + 1,
+      unreleasedLinkReferenceDefinition,
+    );
+  }
 
   let mostRecentRelease: string;
   let mostRecentCategory: ChangeCategory | undefined | null;
