@@ -224,26 +224,47 @@ export function findMissingWorkspaceDependentNamesOfType(
 }
 
 /**
+ * Collects the names of the workspace packages that have changes since their
+ * latest release.
+ *
+ * @param project - The project containing workspace packages.
+ * @returns The set of package names.
+ */
+function getPackagesWithChangesSinceLatestRelease(
+  project: Project,
+): ReadonlySet<string> {
+  return new Set(
+    Object.keys(project.workspacePackages).filter(
+      (packageName) =>
+        project.workspacePackages[packageName].hasChangesSinceLatestRelease,
+    ),
+  );
+}
+
+/**
  * Finds all workspace packages that are direct or peer dependencies of the
- * given package and have changes since their latest release.
+ * given package and have changes.
  *
  * @param project - The project containing workspace packages.
  * @param changedPackage - The package to find dependencies for.
  * @param unvalidatedReleaseSpecificationPackages - The packages in the release
  * specification.
+ * @param packagesWithChanges - The names of the packages that have changes.
  * @returns An array of package names.
  */
 function findMissingUnreleasedDependencies(
   project: Project,
   changedPackage: Package,
   unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
+  packagesWithChanges: ReadonlySet<string>,
 ): string[] {
   return Object.keys({
     ...changedPackage.validatedManifest.dependencies,
     ...changedPackage.validatedManifest.peerDependencies,
   }).filter((dependency) => {
     return (
-      project.workspacePackages[dependency]?.hasChangesSinceLatestRelease &&
+      project.workspacePackages[dependency] !== undefined &&
+      packagesWithChanges.has(dependency) &&
       !unvalidatedReleaseSpecificationPackages[dependency]
     );
   });
@@ -301,6 +322,8 @@ export function findCandidateDependentsOfTypeForMajorBump(
  * @param changedPackage - The package to validate.
  * @param versionSpecifierOrDirective - The version specifier or directive for the package.
  * @param unvalidatedReleaseSpecificationPackages - The packages in the release specification.
+ * @param packagesWithChanges - The names of the packages that have changes.
+ * Defaults to the packages that have changes since their latest release.
  * @returns An array of validation errors, if any.
  */
 export function findCandidateDependencies(
@@ -308,6 +331,9 @@ export function findCandidateDependencies(
   changedPackage: Package,
   versionSpecifierOrDirective: string | null,
   unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
+  packagesWithChanges: ReadonlySet<string> = getPackagesWithChangesSinceLatestRelease(
+    project,
+  ),
 ): string[] {
   if (
     changedPackage &&
@@ -319,6 +345,7 @@ export function findCandidateDependencies(
       project,
       changedPackage,
       unvalidatedReleaseSpecificationPackages,
+      packagesWithChanges,
     );
   }
 
@@ -333,12 +360,17 @@ export function findCandidateDependencies(
  * @param unvalidatedReleaseSpecificationPackages - The packages in the release specification.
  * @param indexOfFirstUsableLine - The index of the first non-comment, non-whitespace line
  * in the release spec.
+ * @param packagesWithChanges - The names of the packages that have changes.
+ * Defaults to the packages that have changes since their latest release.
  * @returns An array of validation errors, if any.
  */
 export function validateAllPackageEntries(
   project: Project,
   unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
   indexOfFirstUsableLine: number,
+  packagesWithChanges: ReadonlySet<string> = getPackagesWithChangesSinceLatestRelease(
+    project,
+  ),
 ): { message: string | string[]; lineNumber?: number }[] {
   const errors: { message: string | string[]; lineNumber?: number }[] = [];
 
@@ -471,6 +503,7 @@ export function validateAllPackageEntries(
         changedPackage,
         versionSpecifierOrDirective,
         unvalidatedReleaseSpecificationPackages,
+        packagesWithChanges,
       );
 
       if (missingDependencies.length > 0) {
@@ -513,12 +546,17 @@ export function validateAllPackageEntries(
  * @param project - Information about the whole project (e.g., names of packages
  * and where they can found).
  * @param releaseSpecificationPath - The path to the release spec file.
+ * @param options - The options.
+ * @param options.packagesWithChanges - The names of the packages that have
+ * changes. Defaults to the packages that have changes since their latest
+ * release.
  * @returns The validated release spec.
  * @throws If there are any issues with the file.
  */
 export async function validateReleaseSpecification(
   project: Project,
   releaseSpecificationPath: string,
+  { packagesWithChanges }: { packagesWithChanges?: ReadonlySet<string> } = {},
 ): Promise<ReleaseSpecification> {
   const releaseSpecificationContents = await readFile(releaseSpecificationPath);
   const indexOfFirstUsableLine = releaseSpecificationContents
@@ -565,6 +603,7 @@ export async function validateReleaseSpecification(
     project,
     unvalidatedReleaseSpecification.packages,
     indexOfFirstUsableLine,
+    packagesWithChanges,
   );
 
   if (errors.length > 0) {
@@ -635,4 +674,22 @@ export async function validateReleaseSpecification(
   }, {});
 
   return { packages, path: releaseSpecificationPath };
+}
+
+/**
+ * Reads the raw package entries of a release spec, including the packages
+ * listed with no version specifier and the packages listed with
+ * "intentionally-skip".
+ *
+ * @param releaseSpecificationPath - The path to the release spec file. The
+ * file must already have passed `validateReleaseSpecification`.
+ * @returns The `packages` map of the release spec.
+ */
+export async function readReleaseSpecificationEntries(
+  releaseSpecificationPath: string,
+): Promise<Record<string, string | null>> {
+  const releaseSpecification = YAML.parse(
+    await readFile(releaseSpecificationPath),
+  ) as { packages: Record<string, string | null> };
+  return releaseSpecification.packages;
 }
