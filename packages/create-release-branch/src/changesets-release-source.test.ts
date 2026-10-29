@@ -299,6 +299,54 @@ describe('changesets-release-source', () => {
       });
     });
 
+    it('writes one notice to stderr that lists every override of the plan', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        const stderr = new MockWritable();
+        const source = createChangesetsReleaseSource({
+          project: await readChangesetsFixtureProject(rootDirectoryPath),
+          formatter: 'prettier',
+          stderr,
+        });
+        const releaseSpecificationPath = await writeReleaseSpecification(
+          rootDirectoryPath,
+          VALID_SPEC.replace('"@example/a": minor', '"@example/a": major')
+            .replace('"@example/b": major', '"@example/b": 3.0.0')
+            .replace('"@example/c": patch', '"@example/c": minor'),
+        );
+
+        await source.validateReleaseSpecification(releaseSpecificationPath);
+
+        expect(stderr.data()).toStrictEqual([
+          [
+            'The release spec overrides the Changesets release plan for these packages:',
+            '- @example/a: planned as minor (1.1.0), released as major (2.0.0)',
+            '- @example/b: planned as major (2.0.0), released as 3.0.0',
+            '- @example/c: planned as patch (1.0.1), released as minor (1.1.0)',
+            '',
+          ].join('\n'),
+        ]);
+      });
+    });
+
+    it('writes no notice to stderr when the spec keeps the planned values', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        const stderr = new MockWritable();
+        const source = createChangesetsReleaseSource({
+          project: await readChangesetsFixtureProject(rootDirectoryPath),
+          formatter: 'prettier',
+          stderr,
+        });
+        const releaseSpecificationPath = await writeReleaseSpecification(
+          rootDirectoryPath,
+          VALID_SPEC,
+        );
+
+        await source.validateReleaseSpecification(releaseSpecificationPath);
+
+        expect(stderr.data()).toStrictEqual([]);
+      });
+    });
+
     it('validates the spec against the Changesets found on each call', async () => {
       await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
         const source = createChangesetsReleaseSource({

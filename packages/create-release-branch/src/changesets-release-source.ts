@@ -4,7 +4,10 @@ import { applyChangesetsRelease } from './changesets-apply.js';
 import { loadChangesetsPlan } from './changesets-plan.js';
 import type { LoadedChangesetsPlan } from './changesets-plan.js';
 import { planChangesetsRelease } from './changesets-release-plan.js';
-import type { ChangesetsReleasePlan } from './changesets-release-plan.js';
+import type {
+  ChangesetsOverride,
+  ChangesetsReleasePlan,
+} from './changesets-release-plan.js';
 import {
   findChangesetsCandidates,
   generateChangesetsReleaseSpecificationTemplate,
@@ -29,6 +32,35 @@ export type ChangesetsReleaseSpecification = {
   plan: LoadedChangesetsPlan;
   releasePlan: ChangesetsReleasePlan;
 };
+
+/**
+ * Describes the values of the release spec that differ from the Changesets
+ * release plan.
+ *
+ * @param overrides - The overrides of the release plan.
+ * @returns The notice, or undefined if there are no overrides.
+ */
+function buildOverrideNotice(
+  overrides: ChangesetsOverride[],
+): string | undefined {
+  if (overrides.length === 0) {
+    return undefined;
+  }
+  const lines = overrides.map(
+    ({ name, plannedType, plannedVersion, versionSpecifier, newVersion }) => {
+      const releasedAs =
+        versionSpecifier === newVersion
+          ? newVersion
+          : `${versionSpecifier} (${newVersion})`;
+      return `- ${name}: planned as ${plannedType} (${plannedVersion}), released as ${releasedAs}`;
+    },
+  );
+  return [
+    'The release spec overrides the Changesets release plan for these packages:',
+    ...lines,
+    '',
+  ].join('\n');
+}
 
 /**
  * Loads the Changesets plan of a project and the packages it offers for
@@ -102,6 +134,10 @@ export function createChangesetsReleaseSource({
         entries,
         releaseSpecificationPath,
       });
+      const overrideNotice = buildOverrideNotice(releasePlan.overrides);
+      if (overrideNotice !== undefined) {
+        stderr.write(overrideNotice);
+      }
       return { plan, releasePlan };
     },
 
