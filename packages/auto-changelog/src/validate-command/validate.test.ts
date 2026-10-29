@@ -494,7 +494,7 @@ describe('validate', () => {
 
     it('removes an empty Unreleased section when fix=true', async () => {
       await writeChangelog(changelogWithEmptyUnreleased);
-      process.exitCode = undefined;
+      process.exitCode = 0;
 
       await validate({
         ...defaultOptions(),
@@ -503,12 +503,44 @@ describe('validate', () => {
       });
 
       expect(await readChangelog()).toBe(changesetsChangelog);
-      expect(process.exitCode).toBeUndefined();
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('keeps a non-empty Unreleased section when fix=true', async () => {
+      const changelogWithUnreleasedChanges = outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Added
+        - New feature ([#2](${repoUrl}/pull/2))
+
+        ## [1.0.0]
+        ### Added
+        - Initial release ([#1](${repoUrl}/pull/1))
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+      await writeChangelog(changelogWithUnreleasedChanges);
+      process.exitCode = 0;
+
+      await validate({
+        ...defaultOptions(),
+        changesets: true,
+        fix: true,
+      });
+
+      expect(await readChangelog()).toBe(changelogWithUnreleasedChanges);
+      expect(process.exitCode).toBe(0);
     });
 
     it('passes for a changelog without an Unreleased section', async () => {
       await writeChangelog(changesetsChangelog);
-      process.exitCode = undefined;
+      process.exitCode = 0;
 
       const result = await validate({
         ...defaultOptions(),
@@ -516,7 +548,7 @@ describe('validate', () => {
       });
 
       expect(result).toBeUndefined();
-      expect(process.exitCode).toBeUndefined();
+      expect(process.exitCode).toBe(0);
     });
   });
 

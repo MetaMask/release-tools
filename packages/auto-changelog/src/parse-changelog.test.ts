@@ -1877,6 +1877,82 @@ describe('parseChangelog', () => {
       );
     });
 
+    it('throws when a release header follows the first link reference definition', () => {
+      expect(() =>
+        parseChangelog({
+          changelogContent: outdent`
+            ${CHANGESETS_HEADER}
+            ## [1.0.0]
+            ### Added
+            - Initial release
+
+            [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+
+            ## [0.9.0]
+            ### Added
+            - Something
+          `,
+          repoUrl,
+          changesets: true,
+        }),
+      ).toThrow(
+        "Release header found outside the changelog content: '## [0.9.0]'",
+      );
+    });
+
+    it('merges legacy Unreleased changes into a release inserted by Changesets', async () => {
+      const changelog = parseChangelog({
+        changelogContent: outdent`
+          ${CHANGESETS_HEADER}
+          ## [Unreleased]
+          ### Added
+          - Legacy feature
+
+          ### Fixed
+          - Legacy fix
+
+          ## [1.1.0]
+          ### Added
+          - New feature
+
+          ### Changed
+          - New change
+
+          ## [1.0.0]
+          ### Added
+          - Initial release
+
+          [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+          [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+        `,
+        repoUrl,
+        changesets: true,
+      });
+
+      changelog.migrateUnreleasedChangesToRelease('1.1.0');
+
+      expect(await changelog.toString()).toBe(outdent`
+        ${CHANGESETS_HEADER}
+        ## [1.1.0]
+        ### Added
+        - Legacy feature
+        - New feature
+
+        ### Changed
+        - New change
+
+        ### Fixed
+        - Legacy fix
+
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [1.1.0]: ${repoUrl}/compare/v1.0.0...v1.1.0
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+    });
+
     it('throws when a release header precedes the first bracketed release header', () => {
       expect(() =>
         parseChangelog({
