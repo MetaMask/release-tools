@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Extract and round-trip pull request links when `parseChangelog` receives a repository URL ending in `.git`.
+- Extract and round-trip pull request links when `parseChangelog` receives a repository URL ending in `.git` ([#141](https://github.com/MetaMask/release-tools/pull/141))
 
 ## [7.0.1]
 
