@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
+import { directoryExists } from '@metamask/node-utils';
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
 import semver from 'semver';
 import type { Argv } from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
-import { directoryExists } from '@metamask/node-utils';
 
 import { format } from './changelog.js';
 import type { Formatter, FormatterName } from './changelog.js';
