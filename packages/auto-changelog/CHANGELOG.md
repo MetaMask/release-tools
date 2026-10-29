@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `--all` flag to the `validate` and `update` commands to run on the changelog of every workspace package in the Yarn project ([#132](https://github.com/MetaMask/release-tools/pull/132))
+  - Packages without a changelog are skipped.
+  - The tag prefix defaults to `<package name>@` for each package.
+  - The flag cannot be combined with `--root`, `--currentVersion`, `--versionBeforePackageRename`, or `--tagPrefixBeforePackageRename`.
+
 ## [7.0.1]
 
 ### Fixed
