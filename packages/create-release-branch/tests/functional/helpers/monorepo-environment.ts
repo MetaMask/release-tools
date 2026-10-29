@@ -8,7 +8,7 @@ import Environment, {
   EnvironmentOptions,
   PackageSpecification,
 } from './environment.js';
-import LocalMonorepo from './local-monorepo.js';
+import LocalMonorepo, { LocalMonorepoOptions } from './local-monorepo.js';
 import { debug, knownKeysOf } from './utils.js';
 
 /**
@@ -18,12 +18,15 @@ import { debug, knownKeysOf } from './utils.js';
  * @property packages - The known packages within this repo (including the
  * root).
  * @property workspaces - The known workspaces within this repo.
+ * @property changesets - If given, the repo uses Changesets with these
+ * Changeset files. See {@link LocalMonorepoOptions}.
  */
 export type MonorepoEnvironmentOptions<
   WorkspacePackageNickname extends string,
 > = {
   packages: Record<WorkspacePackageNickname, PackageSpecification>;
   workspaces: Record<string, string[]>;
+  changesets?: LocalMonorepoOptions<WorkspacePackageNickname>['changesets'];
 } & EnvironmentOptions;
 
 /**
@@ -153,6 +156,7 @@ cat "${releaseSpecificationPath}" > "$1"
   protected buildLocalRepo({
     packages,
     workspaces,
+    changesets,
     createInitialCommit = true,
   }: MonorepoEnvironmentOptions<WorkspacePackageNickname>): LocalMonorepo<WorkspacePackageNickname> {
     return new LocalMonorepo<WorkspacePackageNickname>({
@@ -160,6 +164,7 @@ cat "${releaseSpecificationPath}" > "$1"
       remoteRepoDirectoryPath: this.remoteRepo.getWorkingDirectoryPath(),
       packages,
       workspaces,
+      changesets,
       createInitialCommit,
     });
   }
