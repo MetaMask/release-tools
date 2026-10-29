@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Packages without a changelog are skipped.
   - The tag prefix defaults to `<package name>@` for each package.
   - The flag cannot be combined with `--root`, `--currentVersion`, `--versionBeforePackageRename`, or `--tagPrefixBeforePackageRename`.
+- Add a `--changesets` option to the `validate` command for changelogs managed with Changesets ([#134](https://github.com/MetaMask/release-tools/pull/134))
+  - In this mode, the `Unreleased` section is optional, and `--fix` removes an empty one
+  - The option cannot be combined with `--checkDeps`
 
 ## [7.0.1]
 
