@@ -4,6 +4,7 @@ import YAML from 'yaml';
 
 import type { LoadedChangesetsPlan } from './changesets-plan.js';
 import { fileExists, readFile } from './fs.js';
+import { wrapError } from './misc-utils.js';
 import type { Package } from './package.js';
 import type { Project } from './project.js';
 
@@ -111,6 +112,7 @@ function getPropagationReason(
  * @param pkg - The package.
  * @returns Whether there are unreleased entries. False if the package has no
  * changelog.
+ * @throws If the changelog cannot be parsed. The error names the package.
  */
 async function hasLegacyUnreleasedEntries(
   project: Project,
@@ -119,15 +121,23 @@ async function hasLegacyUnreleasedEntries(
   if (!(await fileExists(pkg.changelogPath))) {
     return false;
   }
-  const changelog = parseChangelog({
-    changelogContent: await readFile(pkg.changelogPath),
-    repoUrl: project.repositoryUrl,
-    tagPrefix: `${pkg.validatedManifest.name}@`,
-    changesets: true,
-  });
-  return Object.values(changelog.getUnreleasedChanges()).some(
-    (changes) => changes.length > 0,
-  );
+  const changelogContent = await readFile(pkg.changelogPath);
+  try {
+    const changelog = parseChangelog({
+      changelogContent,
+      repoUrl: project.repositoryUrl,
+      tagPrefix: `${pkg.validatedManifest.name}@`,
+      changesets: true,
+    });
+    return Object.values(changelog.getUnreleasedChanges()).some(
+      (changes) => changes.length > 0,
+    );
+  } catch (error) {
+    throw wrapError(
+      `Could not parse the changelog of ${pkg.validatedManifest.name} (${pkg.changelogPath}).`,
+      error,
+    );
+  }
 }
 
 /**

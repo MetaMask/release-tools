@@ -362,20 +362,26 @@ describe('changesets-release-specification', () => {
       expect(candidates).toStrictEqual([]);
     });
 
-    it('propagates changelog parse errors', async () => {
-      await expect(
-        findFixtureCandidates({
-          packages: [
-            {
-              name: '@scope/l',
-              version: '1.0.0',
-              changelog: `# Changelog\n\n## [Unreleased]\n\n[Unreleased]: ${REPOSITORY_URL}\n\n## [1.0.0]\n`,
-            },
-          ],
-        }),
-      ).rejects.toThrow(
-        "Release header found outside the changelog content: '## [1.0.0]'",
+    it('names the package whose changelog cannot be parsed', async () => {
+      const promise = findFixtureCandidates({
+        packages: [
+          {
+            name: '@scope/l',
+            version: '1.0.0',
+            changelog: `# Changelog\n\n## [Unreleased]\n\n[Unreleased]: ${REPOSITORY_URL}\n\n## [1.0.0]\n`,
+          },
+        ],
+      });
+
+      await expect(promise).rejects.toThrow(
+        /^Could not parse the changelog of @scope\/l \(\/.+\/packages\/l\/CHANGELOG\.md\)\.$/u,
       );
+      await expect(promise).rejects.toMatchObject({
+        cause: {
+          message:
+            "Release header found outside the changelog content: '## [1.0.0]'",
+        },
+      });
     });
   });
 
