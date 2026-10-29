@@ -21,6 +21,7 @@ import * as fsModule from './fs.js';
 import * as packageManifestModule from './package-manifest.js';
 import {
   getFormatter,
+  migrateUnreleasedChangelogChangesToRelease,
   readMonorepoRootPackage,
   readMonorepoWorkspacePackage,
   updatePackage,
@@ -585,6 +586,127 @@ describe('package', () => {
 
             ## [1.0.0] - 2020-01-01
             ### Changed
+            - Something else
+
+            [Unreleased]: https://repo.url/compare/package@2.0.0...HEAD
+            [2.0.0]: https://repo.url/compare/package@1.0.0...package@2.0.0
+            [1.0.0]: https://repo.url/releases/tag/package@1.0.0
+          `),
+        );
+      });
+    });
+
+    describe('when the changelog is managed by Changesets', () => {
+      const unreleasedChangelog = buildChangelog(`
+        ## [Unreleased]
+        ### Added
+        - Add isNewFunction ([#2](https://repo.url/compare/package/pull/2))
+
+        ## [1.0.0] - 2020-01-01
+        ### Changed
+        - Something else
+
+        [Unreleased]: https://repo.url/compare/package@1.0.0...HEAD
+        [1.0.0]: https://repo.url/releases/tag/package@1.0.0
+      `);
+
+      /**
+       * Releases a package whose changelog has `Unreleased` entries.
+       *
+       * @param changesets - The `changesets` argument to pass, if any.
+       * @returns The new changelog content.
+       */
+      async function releaseUnreleasedChangelog(
+        changesets?: boolean,
+      ): Promise<string> {
+        return await withSandbox(async (sandbox) => {
+          const changelogPath = path.join(
+            sandbox.directoryPath,
+            'CHANGELOG.md',
+          );
+          await fs.promises.writeFile(changelogPath, unreleasedChangelog);
+
+          await updatePackage({
+            project: buildMockProject({ repositoryUrl: 'https://repo.url' }),
+            packageReleasePlan: {
+              package: buildMockPackage({
+                directoryPath: sandbox.directoryPath,
+                manifestPath: path.join(sandbox.directoryPath, 'package.json'),
+                validatedManifest: buildMockManifest(),
+                changelogPath,
+              }),
+              newVersion: '2.0.0',
+            },
+            formatter: 'prettier',
+            ...(changesets !== undefined && { changesets }),
+          });
+
+          return await fs.promises.readFile(changelogPath, 'utf8');
+        });
+      }
+
+      it('drops the emptied Unreleased section and its link if changesets is true', async () => {
+        expect(await releaseUnreleasedChangelog(true)).toBe(
+          buildChangelog(`
+            ## [2.0.0]
+
+            ### Added
+
+            - Add isNewFunction ([#2](https://repo.url/compare/package/pull/2))
+
+            ## [1.0.0] - 2020-01-01
+
+            ### Changed
+
+            - Something else
+
+            [2.0.0]: https://repo.url/compare/package@1.0.0...package@2.0.0
+            [1.0.0]: https://repo.url/releases/tag/package@1.0.0
+          `),
+        );
+      });
+
+      it('keeps the emptied Unreleased section by default when migrating the changelog only', async () => {
+        await withSandbox(async (sandbox) => {
+          const changelogPath = path.join(
+            sandbox.directoryPath,
+            'CHANGELOG.md',
+          );
+          await fs.promises.writeFile(changelogPath, unreleasedChangelog);
+
+          await migrateUnreleasedChangelogChangesToRelease({
+            project: buildMockProject({ repositoryUrl: 'https://repo.url' }),
+            package: buildMockPackage({
+              directoryPath: sandbox.directoryPath,
+              validatedManifest: buildMockManifest(),
+              changelogPath,
+            }),
+            version: '2.0.0',
+            formatter: 'prettier',
+            stderr: createNoopWriteStream(),
+          });
+
+          expect(await fs.promises.readFile(changelogPath, 'utf8')).toContain(
+            '## [Unreleased]\n',
+          );
+        });
+      });
+
+      it('keeps the emptied Unreleased section by default', async () => {
+        expect(await releaseUnreleasedChangelog()).toBe(
+          buildChangelog(`
+            ## [Unreleased]
+
+            ## [2.0.0]
+
+            ### Added
+
+            - Add isNewFunction ([#2](https://repo.url/compare/package/pull/2))
+
+            ## [1.0.0] - 2020-01-01
+
+            ### Changed
+
             - Something else
 
             [Unreleased]: https://repo.url/compare/package@2.0.0...HEAD
