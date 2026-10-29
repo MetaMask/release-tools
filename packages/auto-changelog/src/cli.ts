@@ -559,7 +559,6 @@ async function runCommandOnAllPackages({
       continue;
     }
 
-    console.log(`\n${displayName}`);
     await runCommand({
       argv,
       command,
