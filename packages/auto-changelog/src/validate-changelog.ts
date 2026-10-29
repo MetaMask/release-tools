@@ -144,6 +144,12 @@ type ValidateChangelogOptions = {
    * in the `currentVersion` release section; otherwise the Unreleased section.
    */
   dependencyCheckResult?: DependencyCheckResult;
+  /**
+   * Whether the changelog is managed by Changesets. When true, an empty
+   * Unreleased section must be omitted, and dependency checks are not
+   * supported.
+   */
+  changesets?: boolean;
 };
 
 /**
@@ -183,6 +189,9 @@ function normalizeLineEndings(value: string): string {
  * entries corresponding to each dependency bump. If `versionChanged` is true,
  * entries are checked in the `currentVersion` release section; otherwise the
  * Unreleased section.
+ * @param options.changesets - Whether the changelog is managed by Changesets.
+ * When true, an empty Unreleased section must be omitted, and
+ * `dependencyCheckResult` must not be given.
  * @throws `InvalidChangelogError` - Will throw if the changelog is invalid
  * @throws `MissingCurrentVersionError` - Will throw if `isReleaseCandidate` is
  * `true` and the changelog is missing the release header for the current
@@ -196,6 +205,7 @@ function normalizeLineEndings(value: string): string {
  * request link.
  * @throws `MissingDependencyEntriesError` if dependency changes are provided
  * but the changelog is missing entries for them.
+ * @throws `Error` if both `changesets` and `dependencyCheckResult` are given.
  */
 export async function validateChangelog({
   changelogContent,
@@ -207,7 +217,12 @@ export async function validateChangelog({
   packageRename,
   ensureValidPrLinksPresent,
   dependencyCheckResult,
+  changesets,
 }: ValidateChangelogOptions): Promise<void> {
+  if (changesets && dependencyCheckResult) {
+    throw new Error('Dependency checks are not supported in Changesets mode');
+  }
+
   const normalizedChangelogContent = normalizeLineEndings(changelogContent);
   const changelog = parseChangelog({
     changelogContent: normalizedChangelogContent,
@@ -218,6 +233,7 @@ export async function validateChangelog({
     ...(ensureValidPrLinksPresent !== undefined && {
       shouldExtractPrLinks: ensureValidPrLinksPresent,
     }),
+    ...(changesets !== undefined && { changesets }),
   });
 
   validateReleaseCandidateState(changelog, isReleaseCandidate, currentVersion);
