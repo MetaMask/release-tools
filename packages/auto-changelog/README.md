@@ -252,6 +252,7 @@ try {
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository',
     isReleaseCandidate: false,
     ensureValidPrLinksPresent: true,
+    changesets: false, // Optional: set to true to make the "Unreleased" section optional for changelogs managed with Changesets
   });
   // changelog is valid!
 } catch (error) {
