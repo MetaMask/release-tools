@@ -36,6 +36,7 @@ describe('main', () => {
       interactive: false,
       port: 3000,
       formatter: 'prettier',
+      releaseMode: 'legacy',
     });
     const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
@@ -76,6 +77,7 @@ describe('main', () => {
       interactive: true,
       port: 3000,
       formatter: 'prettier',
+      releaseMode: 'legacy',
     });
     const startUISpy = vi.spyOn(ui, 'startUI').mockResolvedValue();
 
@@ -113,6 +115,7 @@ describe('main', () => {
       interactive: false,
       port: 3000,
       formatter: 'prettier',
+      releaseMode: 'legacy',
     });
     const followMonorepoWorkflowSpy = vi
       .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')

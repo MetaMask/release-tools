@@ -10,6 +10,7 @@ export type CommandLineArguments = {
   interactive: boolean;
   port: number;
   formatter: string;
+  changesets: boolean;
 };
 
 /**
@@ -71,6 +72,12 @@ export async function readCommandLineArguments(
       describe: 'The formatter to use for changelog formatting.',
       choices: ['oxfmt', 'prettier'],
       default: 'prettier',
+    })
+    .option('changesets', {
+      describe:
+        'Use the Changesets workflow when .changeset/config.json exists. Pass --no-changesets to force the legacy workflow.',
+      type: 'boolean',
+      default: true,
     })
     .help()
     .strict()
