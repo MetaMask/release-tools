@@ -248,6 +248,67 @@ describe('changesets-release-plan', () => {
         plan.fullPlan.releases,
       );
       expect(result.legacyReleases).toStrictEqual([]);
+      expect(result.overrides).toStrictEqual([]);
+    });
+
+    it('lists the planned packages whose value in the spec differs from the plan, sorted by name', async () => {
+      const result = await planFixtureRelease({
+        ...PREFILLED_ENTRIES,
+        '@scope/a': 'major',
+        '@scope/b': '3.0.0',
+        '@scope/e': 'patch',
+        '@scope/h': 'minor',
+      });
+
+      expect(result.overrides).toStrictEqual([
+        {
+          name: '@scope/a',
+          plannedType: 'minor',
+          plannedVersion: '1.1.0',
+          versionSpecifier: 'major',
+          newVersion: '2.0.0',
+        },
+        {
+          name: '@scope/b',
+          plannedType: 'major',
+          plannedVersion: '2.0.0',
+          versionSpecifier: '3.0.0',
+          newVersion: '3.0.0',
+        },
+        {
+          name: '@scope/h',
+          plannedType: 'patch',
+          plannedVersion: '1.0.1',
+          versionSpecifier: 'minor',
+          newVersion: '1.1.0',
+        },
+      ]);
+    });
+
+    it('returns the selected changesets with the releases they keep', async () => {
+      const { '@scope/a': _removed, ...entries } = PREFILLED_ENTRIES;
+
+      const result = await planFixtureRelease(entries);
+
+      expect(
+        result.selectedChangesets.map(({ id, releases }) => ({
+          id,
+          releases,
+        })),
+      ).toStrictEqual([
+        {
+          id: 'calm-dogs-run',
+          releases: [{ name: '@scope/b', type: 'major' }],
+        },
+        {
+          id: 'eager-owls-fly',
+          releases: [{ name: '@scope/d', type: 'minor' }],
+        },
+        {
+          id: 'quiet-fish-nap',
+          releases: [{ name: '@scope/f', type: 'none' }],
+        },
+      ]);
     });
 
     it('does not modify the loaded plan', async () => {
@@ -553,6 +614,9 @@ describe('changesets-release-plan', () => {
         expect(
           result.filteredPlan.changesets.map(({ id }) => id),
         ).toStrictEqual(['calm-dogs-run']);
+        expect(result.selectedChangesets.map(({ id }) => id)).toStrictEqual([
+          'calm-dogs-run',
+        ]);
         expect(
           result.filteredPlan.releases.map(({ name, changesets }) => ({
             name,

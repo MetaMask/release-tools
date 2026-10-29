@@ -24,12 +24,36 @@ import { semver, SemVer } from './semver.js';
  *
  * @property filteredPlan - The release plan built from the selected
  * Changesets, with the overrides of the release spec applied.
+ * @property selectedChangesets - Copies of the Changesets that the release
+ * consumes, each with only the releases that it keeps.
  * @property legacyReleases - The packages that no Changeset releases but whose
  * changelog has `Unreleased` entries, with their new versions.
+ * @property overrides - The released packages of the Changesets release plan
+ * whose value in the release spec differs from the planned bump type, sorted
+ * by name.
  */
 export type ChangesetsReleasePlan = {
   filteredPlan: ReleasePlan;
+  selectedChangesets: NewChangeset[];
   legacyReleases: { name: string; newVersion: string }[];
+  overrides: ChangesetsOverride[];
+};
+
+/**
+ * A value in the release spec that differs from the Changesets release plan.
+ *
+ * @property name - The name of the package.
+ * @property plannedType - The bump type in the Changesets release plan.
+ * @property plannedVersion - The version in the Changesets release plan.
+ * @property versionSpecifier - The value in the release spec.
+ * @property newVersion - The version that the release gives the package.
+ */
+export type ChangesetsOverride = {
+  name: string;
+  plannedType: BumpType;
+  plannedVersion: string;
+  versionSpecifier: string;
+  newVersion: string;
 };
 
 type BumpType = 'major' | 'minor' | 'patch';
@@ -151,7 +175,8 @@ function getBumpingReleasesByName(
  * @param args.entries - The raw `packages` map of the release spec, which must
  * already have passed `validateReleaseSpecification`.
  * @param args.releaseSpecificationPath - The path to the release spec file.
- * @returns The filtered release plan and the legacy releases.
+ * @returns The filtered release plan, the selected Changesets, the legacy
+ * releases, and the overrides.
  * @throws If the re-planned release does not match the release spec. The
  * error lists every problem.
  */
@@ -355,6 +380,26 @@ export function planChangesetsRelease({
     );
   }
 
+  const overrides: ChangesetsOverride[] = [];
+  for (const { name, type, newVersion } of releases) {
+    const versionSpecifier = getOverride(name);
+    const { plannedType, plannedVersion } = candidatesByName.get(name) ?? {};
+    if (
+      type !== 'none' &&
+      versionSpecifier !== undefined &&
+      plannedType !== undefined &&
+      plannedVersion !== undefined
+    ) {
+      overrides.push({
+        name,
+        plannedType,
+        plannedVersion,
+        versionSpecifier,
+        newVersion,
+      });
+    }
+  }
+
   return {
     filteredPlan: {
       ...replannedPlan,
@@ -363,6 +408,10 @@ export function planChangesetsRelease({
       ),
       releases,
     },
+    selectedChangesets: changesets,
     legacyReleases,
+    overrides: overrides.sort((left, right) =>
+      compareNames(left.name, right.name),
+    ),
   };
 }
