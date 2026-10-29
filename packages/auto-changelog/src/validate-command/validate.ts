@@ -1,3 +1,5 @@
+import path from 'path';
+
 import type { Formatter } from '../changelog.js';
 import type { Version } from '../constants.js';
 import { readFile, writeFile } from '../fs.js';
@@ -154,7 +156,10 @@ export async function validate(options: ValidateOptions): Promise<void> {
       }
 
       const diff = generateDiff(validChangelog, invalidChangelog);
-      return error(`Changelog not well-formatted. Diff:\n\n${diff}`);
+      const relativeChangelogPath = path.relative(process.cwd(), changelogPath);
+      return error(
+        `Changelog "${relativeChangelogPath}" not well-formatted. Diff:\n\n${diff}\n`,
+      );
     } else if (caughtError instanceof MissingDependencyEntriesError) {
       if (dependencyCheckResult && fix && currentPr) {
         const prNumbers =

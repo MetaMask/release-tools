@@ -13,6 +13,7 @@ import { unreleased } from './constants.js';
 import type { Version } from './constants.js';
 import { readFile, writeFile } from './fs.js';
 import { createEmptyChangelog } from './init.js';
+import { getProjectRoots } from './project.js';
 import { findNearestPackageJson, getRepositoryUrl } from './repo.js';
 import type { PackageRename } from './shared-types.js';
 import { updateChangelog } from './update-changelog.js';
@@ -202,6 +203,21 @@ the current working directory), and where the changelog path is resolved from \
 (defaults to the current working directory).`;
 
 /**
+ * Configure the `--all` option, which runs a command on the changelog of each
+ * workspace package in the Yarn project rather than a single changelog.
+ *
+ * @param _yargs - The yargs instance to configure.
+ * @returns A Yargs instance with the `--all` option.
+ */
+function configureAllOption(_yargs: Argv): Argv {
+  return _yargs.option('all', {
+    default: false,
+    description: `Run on the changelog of every workspace package in the Yarn project, rather than only the project at the current working directory. Packages without a changelog are skipped. Cannot be combined with '--root', '--currentVersion', '--versionBeforePackageRename', or '--tagPrefixBeforePackageRename'.`,
+    type: 'boolean',
+  });
+}
+
+/**
  * Configure options that are common to all commands.
  *
  * @param _yargs - The yargs instance to configure.
@@ -224,7 +240,7 @@ function configureCommonCommandOptions(_yargs: Argv): Argv {
       type: 'string',
     })
     .option('tagPrefix', {
-      default: 'v',
+      defaultDescription: `'v', or '<package name>@' with --all`,
       description: 'The prefix used in tags before the version number.',
       type: 'string',
     })
@@ -251,7 +267,8 @@ type CliArguments = {
   file: string;
   repo: string;
   root?: string;
-  tagPrefix: string;
+  all: boolean;
+  tagPrefix?: string;
   versionBeforePackageRename?: string;
   tagPrefixBeforePackageRename?: string;
   autoCategorize: boolean;
@@ -278,181 +295,45 @@ type CliArguments = {
   $0: string;
 };
 
-/**
- * The entrypoint for the auto-changelog CLI.
- *
- * @returns A promise that resolves when the selected command completes.
- */
-async function main(): Promise<void> {
-  // Yargs cannot infer subcommand option types from a shared `argv`.
-  const argv = (await yargs(hideBin(process.argv))
-    .command(
-      'update',
-      'Update CHANGELOG.md with any changes made since the most recent release.\nUsage: $0 update [options]',
-      (_yargs) =>
-        configureCommonCommandOptions(_yargs)
-          .option('rc', {
-            default: false,
-            description: `Add new changes to the current release header, rather than to the '${unreleased}' section.`,
-            type: 'boolean',
-          })
-          .option('currentVersion', {
-            description:
-              'The current version of the project that the changelog belongs to.',
-            type: 'string',
-          })
-          .option('autoCategorize', {
-            default: false,
-            description:
-              'Automatically categorize commits based on their messages.',
-          })
-          .option('prettier', {
-            description: `Expect the changelog to be formatted with Prettier.`,
-            deprecated: 'Use "--formatter prettier" instead.',
-            type: 'boolean',
-          })
-          .option('formatter', {
-            description: 'The formatter to use for formatting the changelog.',
-            choices: ['prettier', 'oxfmt'],
-            default: 'prettier',
-            type: 'string',
-          })
-          .option('useChangelogEntry', {
-            default: false,
-            description:
-              'Read `CHANGELOG entry:` from the commit body and the no-changelog label',
-            type: 'boolean',
-          })
-          .option('useShortPrLink', {
-            default: false,
-            description: 'Use short PR links in the changelog entries',
-            type: 'boolean',
-          })
-          .option('requirePrNumbers', {
-            default: false,
-            description:
-              'Only include commits with PR numbers in the changelog. Commits without PR numbers will be filtered out',
-            type: 'boolean',
-          })
-          .option('normalizeToPastTense', {
-            default: false,
-            description:
-              'Convert recognized leading imperative verbs to past tense.',
-            type: 'boolean',
-          })
-          .option('excludeChoreWithoutChangelogEntry', {
-            default: false,
-            description:
-              'Exclude chore commits that do not have a CHANGELOG entry.',
-            type: 'boolean',
-          })
-          .option('preventBackfill', {
-            default: false,
-            description:
-              'Skip commits older than an entry in the target changelog section.',
-            type: 'boolean',
-          })
-          .option('verbose', {
-            default: false,
-            description: 'Print commit-level changelog update diagnostics.',
-            type: 'boolean',
-          })
-          .epilog(updateEpilog),
-    )
-    .command(
-      'validate',
-      'Validate the changelog, ensuring that it is well-formatted.\nUsage: $0 validate [options]',
-      (_yargs) =>
-        configureCommonCommandOptions(_yargs)
-          .option('rc', {
-            default: false,
-            description: `Verify that the current version has a release header in the changelog`,
-            type: 'boolean',
-          })
-          .option('currentVersion', {
-            description:
-              'The current version of the project that the changelog belongs to.',
-            type: 'string',
-          })
-          .option('fix', {
-            default: false,
-            description: `Attempt to fix any formatting errors in the changelog`,
-            type: 'boolean',
-          })
-          .option('prettier', {
-            description: `Expect the changelog to be formatted with Prettier.`,
-            deprecated: 'Use "--formatter prettier" instead.',
-            type: 'boolean',
-          })
-          .option('formatter', {
-            description: 'The formatter to use for formatting the changelog.',
-            choices: ['prettier', 'oxfmt', 'none'],
-            default: 'none',
-            type: 'string',
-          })
-          .option('prLinks', {
-            default: false,
-            description:
-              'Verify that each changelog entry has one or more links to associated pull requests within the repository',
-            type: 'boolean',
-          })
-          // Dependency bump checking options
-          .option('checkDeps', {
-            default: false,
-            description:
-              'Check that changelog has entries for dependency version bumps.',
-            type: 'boolean',
-          })
-          .option('fromRef', {
-            describe:
-              'Starting git reference for dependency checking. If not provided, auto-detects from merge base with the base branch.',
-            type: 'string',
-          })
-          .option('toRef', {
-            describe: 'Ending git reference for dependency checking.',
-            type: 'string',
-            default: 'HEAD',
-          })
-          .option('remote', {
-            alias: 'r',
-            describe:
-              'Remote name for auto-detecting the base branch (used with --checkDeps).',
-            default: 'origin',
-            type: 'string',
-          })
-          .option('baseBranch', {
-            alias: 'b',
-            describe:
-              "Base branch reference to compare against (defaults to <remote>/main). For stacked PRs (branch off a branch), set this to the parent branch so only the current branch's changes are checked.",
-            type: 'string',
-          })
-          .option('currentPr', {
-            describe:
-              'PR number to use in changelog entries. Required when --checkDeps and --fix are both enabled.',
-            type: 'string',
-          })
-          .epilog(validateEpilog),
-    )
-    .command('init', 'Initialize a new empty changelog', (_yargs) => {
-      configureCommonCommandOptions(_yargs);
-    })
-    .strict()
-    .demandCommand()
-    .help('help')
-    .usage(
-      `Utilities for validating and updating "Keep a Changelog" formatted changelogs.\nUsage: $0 [command] [options]`,
-    )
-    .parse()) as CliArguments;
+type RunCommandOptions = {
+  argv: CliArguments;
+  command: string | number;
+  formatter: Formatter;
+  /**
+   * The root directory of the project to run the command on. When omitted, the
+   * command runs on the project at the current working directory.
+   */
+  projectRootDirectory: string | undefined;
+  /**
+   * Whether the command runs on every workspace package (`--all`). This changes
+   * the default tag prefix to be per package.
+   */
+  isAll: boolean;
+};
 
+/**
+ * Run a command on the changelog of a single project.
+ *
+ * @param options - Options.
+ * @param options.argv - The parsed command-line arguments.
+ * @param options.command - The command to run.
+ * @param options.formatter - The Markdown formatter to use.
+ * @param options.projectRootDirectory - The root directory of the project.
+ * @param options.isAll - Whether the command runs on every workspace package.
+ * @returns A promise that resolves when the command completes.
+ */
+async function runCommand({
+  argv,
+  command,
+  formatter,
+  projectRootDirectory,
+  isAll,
+}: RunCommandOptions): Promise<void> {
   const {
     file: changelogFilename,
     rc: isReleaseCandidate,
     repo: repoUrl,
-    root: projectRootDirectory,
-    tagPrefix,
     fix,
-    prettier: usePrettier,
-    formatter: formatterOption,
     versionBeforePackageRename,
     tagPrefixBeforePackageRename,
     autoCategorize,
@@ -473,53 +354,7 @@ async function main(): Promise<void> {
     currentPr,
   } = argv;
   let { currentVersion } = argv;
-  if (projectRootDirectory) {
-    try {
-      const stat = await fs.stat(projectRootDirectory);
-      if (!stat.isDirectory()) {
-        return error(
-          `Project root must be a directory: '${projectRootDirectory}'`,
-        );
-      }
-    } catch (caughtError) {
-      if (hasErrorCode(caughtError)) {
-        if (caughtError.code === 'ENOENT') {
-          return error(
-            `Root directory specified does not exist: '${projectRootDirectory}'`,
-          );
-        } else if (caughtError.code === 'EACCES') {
-          return error(
-            `Access to root directory is forbidden by file access permissions: '${projectRootDirectory}'`,
-          );
-        }
-      }
-      throw caughtError;
-    }
-  }
-
-  if (!argv._) {
-    throw new Error('No command provided');
-  }
-  const command = argv._[0];
-
-  const formatter = async (changelog: string): Promise<string> => {
-    // If the deprecated `--prettier` flag is used, it takes precedence over the
-    // `--formatter` option. Otherwise, use the specified formatter, unless it's
-    // "none".
-    if (typeof usePrettier === 'boolean') {
-      if (usePrettier) {
-        return await format(changelog, 'prettier');
-      }
-
-      return changelog;
-    }
-
-    if (formatterOption && formatterOption !== 'none') {
-      return await format(changelog, formatterOption as FormatterName);
-    }
-
-    return changelog;
-  };
+  let { tagPrefix } = argv;
 
   // When a project root is given, use its `package.json`. Otherwise walk up
   // from the current working directory to the nearest `package.json` (falling
@@ -529,11 +364,22 @@ async function main(): Promise<void> {
     ? path.join(projectRootDirectory, 'package.json')
     : (findNearestPackageJson() ?? path.resolve('package.json'));
 
-  if (!currentVersion) {
+  if (!currentVersion || (isAll && tagPrefix === undefined)) {
     try {
       const manifestText = await readFile(manifestPath);
-      const manifest = JSON.parse(manifestText) as { version: string };
-      currentVersion = manifest.version;
+      const manifest = JSON.parse(manifestText) as {
+        name?: string;
+        version: string;
+      };
+      currentVersion ??= manifest.version;
+      if (tagPrefix === undefined && isAll) {
+        if (!manifest.name) {
+          return error(
+            `Package manifest has no name to derive a tag prefix from: '${manifestPath}'\nSet the tag prefix using the '--tagPrefix' flag.`,
+          );
+        }
+        tagPrefix = `${manifest.name}@`;
+      }
     } catch (caughtError) {
       if (hasErrorCode(caughtError)) {
         if (caughtError.code === 'ENOENT') {
@@ -555,6 +401,7 @@ async function main(): Promise<void> {
       throw caughtError;
     }
   }
+  tagPrefix ??= 'v';
 
   if (!currentVersion) {
     return error(
@@ -666,8 +513,294 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((caughtError: unknown) => {
-  error(
-    caughtError instanceof Error ? caughtError.message : String(caughtError),
-  );
-});
+/**
+ * Run a command on the changelog of every workspace package in the Yarn
+ * project at the current working directory. Packages without a changelog are
+ * skipped. If the project has no workspaces besides the root, the root package
+ * is used.
+ *
+ * @param options - Options.
+ * @param options.argv - The parsed command-line arguments.
+ * @param options.command - The command to run.
+ * @param options.formatter - The Markdown formatter to use.
+ * @returns A promise that resolves when the command completes on every package.
+ */
+async function runCommandOnAllPackages({
+  argv,
+  command,
+  formatter,
+}: Omit<RunCommandOptions, 'projectRootDirectory' | 'isAll'>): Promise<void> {
+  const unsupportedOptions = [
+    ['--root', argv.root],
+    ['--currentVersion', argv.currentVersion],
+    ['--versionBeforePackageRename', argv.versionBeforePackageRename],
+    ['--tagPrefixBeforePackageRename', argv.tagPrefixBeforePackageRename],
+  ]
+    .filter(([, value]) => value !== undefined)
+    .map(([name]) => `"${name}"`);
+
+  if (unsupportedOptions.length > 0) {
+    return error(
+      `The "--all" flag cannot be combined with ${unsupportedOptions.join(', ')}.`,
+    );
+  }
+
+  const { repoRoot, packageRoots } = await getProjectRoots(process.cwd());
+  const projectRoots = packageRoots.length > 0 ? packageRoots : [repoRoot];
+
+  for (const projectRoot of projectRoots) {
+    const displayName = path.relative(repoRoot, projectRoot) || '.';
+    const changelogPath = path.resolve(projectRoot, argv.file);
+
+    try {
+      await fs.access(changelogPath, fsConstants.F_OK);
+    } catch {
+      console.log(`Skipping "${displayName}": No "${argv.file}" found.`);
+      continue;
+    }
+
+    await runCommand({
+      argv,
+      command,
+      formatter,
+      projectRootDirectory: projectRoot,
+      isAll: true,
+    });
+  }
+}
+
+/**
+ * The entrypoint for the auto-changelog CLI.
+ *
+ * @returns A promise that resolves when the selected command completes.
+ */
+async function main(): Promise<void> {
+  // Yargs cannot infer subcommand option types from a shared `argv`.
+  const argv = (await yargs(hideBin(process.argv))
+    .command(
+      'update',
+      'Update CHANGELOG.md with any changes made since the most recent release.\nUsage: $0 update [options]',
+      (_yargs) =>
+        configureAllOption(configureCommonCommandOptions(_yargs))
+          .option('rc', {
+            default: false,
+            description: `Add new changes to the current release header, rather than to the '${unreleased}' section.`,
+            type: 'boolean',
+          })
+          .option('currentVersion', {
+            description:
+              'The current version of the project that the changelog belongs to.',
+            type: 'string',
+          })
+          .option('autoCategorize', {
+            default: false,
+            description:
+              'Automatically categorize commits based on their messages.',
+          })
+          .option('prettier', {
+            description: `Expect the changelog to be formatted with Prettier.`,
+            deprecated: 'Use "--formatter prettier" instead.',
+            type: 'boolean',
+          })
+          .option('formatter', {
+            description: 'The formatter to use for formatting the changelog.',
+            choices: ['prettier', 'oxfmt'],
+            default: 'prettier',
+            type: 'string',
+          })
+          .option('useChangelogEntry', {
+            default: false,
+            description:
+              'Read `CHANGELOG entry:` from the commit body and the no-changelog label',
+            type: 'boolean',
+          })
+          .option('useShortPrLink', {
+            default: false,
+            description: 'Use short PR links in the changelog entries',
+            type: 'boolean',
+          })
+          .option('requirePrNumbers', {
+            default: false,
+            description:
+              'Only include commits with PR numbers in the changelog. Commits without PR numbers will be filtered out',
+            type: 'boolean',
+          })
+          .option('normalizeToPastTense', {
+            default: false,
+            description:
+              'Convert recognized leading imperative verbs to past tense.',
+            type: 'boolean',
+          })
+          .option('excludeChoreWithoutChangelogEntry', {
+            default: false,
+            description:
+              'Exclude chore commits that do not have a CHANGELOG entry.',
+            type: 'boolean',
+          })
+          .option('preventBackfill', {
+            default: false,
+            description:
+              'Skip commits older than an entry in the target changelog section.',
+            type: 'boolean',
+          })
+          .option('verbose', {
+            default: false,
+            description: 'Print commit-level changelog update diagnostics.',
+            type: 'boolean',
+          })
+          .epilog(updateEpilog),
+    )
+    .command(
+      'validate',
+      'Validate the changelog, ensuring that it is well-formatted.\nUsage: $0 validate [options]',
+      (_yargs) =>
+        configureAllOption(configureCommonCommandOptions(_yargs))
+          .option('rc', {
+            default: false,
+            description: `Verify that the current version has a release header in the changelog`,
+            type: 'boolean',
+          })
+          .option('currentVersion', {
+            description:
+              'The current version of the project that the changelog belongs to.',
+            type: 'string',
+          })
+          .option('fix', {
+            default: false,
+            description: `Attempt to fix any formatting errors in the changelog`,
+            type: 'boolean',
+          })
+          .option('prettier', {
+            description: `Expect the changelog to be formatted with Prettier.`,
+            deprecated: 'Use "--formatter prettier" instead.',
+            type: 'boolean',
+          })
+          .option('formatter', {
+            description: 'The formatter to use for formatting the changelog.',
+            choices: ['prettier', 'oxfmt', 'none'],
+            default: 'none',
+            type: 'string',
+          })
+          .option('prLinks', {
+            default: false,
+            description:
+              'Verify that each changelog entry has one or more links to associated pull requests within the repository',
+            type: 'boolean',
+          })
+          // Dependency bump checking options
+          .option('checkDeps', {
+            default: false,
+            description:
+              'Check that changelog has entries for dependency version bumps.',
+            type: 'boolean',
+          })
+          .option('fromRef', {
+            describe:
+              'Starting git reference for dependency checking. If not provided, auto-detects from merge base with the base branch.',
+            type: 'string',
+          })
+          .option('toRef', {
+            describe: 'Ending git reference for dependency checking.',
+            type: 'string',
+            default: 'HEAD',
+          })
+          .option('remote', {
+            alias: 'r',
+            describe:
+              'Remote name for auto-detecting the base branch (used with --checkDeps).',
+            default: 'origin',
+            type: 'string',
+          })
+          .option('baseBranch', {
+            alias: 'b',
+            describe:
+              "Base branch reference to compare against (defaults to <remote>/main). For stacked PRs (branch off a branch), set this to the parent branch so only the current branch's changes are checked.",
+            type: 'string',
+          })
+          .option('currentPr', {
+            describe:
+              'PR number to use in changelog entries. Required when --checkDeps and --fix are both enabled.',
+            type: 'string',
+          })
+          .epilog(validateEpilog),
+    )
+    .command('init', 'Initialize a new empty changelog', (_yargs) => {
+      configureCommonCommandOptions(_yargs);
+    })
+    .strict()
+    .demandCommand()
+    .help('help')
+    .usage(
+      `Utilities for validating and updating "Keep a Changelog" formatted changelogs.\nUsage: $0 [command] [options]`,
+    )
+    .parse()) as CliArguments;
+
+  const {
+    all,
+    root: projectRootDirectory,
+    prettier: usePrettier,
+    formatter: formatterOption,
+  } = argv;
+
+  if (!argv._) {
+    throw new Error('No command provided.');
+  }
+
+  const command = argv._[0];
+  const formatter = async (changelog: string): Promise<string> => {
+    // If the deprecated `--prettier` flag is used, it takes precedence over the
+    // `--formatter` option. Otherwise, use the specified formatter, unless it's
+    // "none".
+    if (typeof usePrettier === 'boolean') {
+      if (usePrettier) {
+        return await format(changelog, 'prettier');
+      }
+
+      return changelog;
+    }
+
+    if (formatterOption && formatterOption !== 'none') {
+      return await format(changelog, formatterOption as FormatterName);
+    }
+
+    return changelog;
+  };
+
+  if (all) {
+    return await runCommandOnAllPackages({ argv, command, formatter });
+  }
+
+  if (projectRootDirectory) {
+    try {
+      const stat = await fs.stat(projectRootDirectory);
+      if (!stat.isDirectory()) {
+        return error(
+          `Project root must be a directory: "${projectRootDirectory}".`,
+        );
+      }
+    } catch (caughtError) {
+      if (hasErrorCode(caughtError)) {
+        if (caughtError.code === 'ENOENT') {
+          return error(
+            `Root directory specified does not exist: "${projectRootDirectory}".`,
+          );
+        } else if (caughtError.code === 'EACCES') {
+          return error(
+            `Access to root directory is forbidden by file access permissions: "${projectRootDirectory}".`,
+          );
+        }
+      }
+      throw caughtError;
+    }
+  }
+
+  await runCommand({
+    argv,
+    command,
+    formatter,
+    projectRootDirectory,
+    isAll: false,
+  });
+}
+
+await main();
