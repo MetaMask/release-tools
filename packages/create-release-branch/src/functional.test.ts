@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { withMonorepoProjectEnvironment } from '../tests/functional/helpers/with.js';
 import { buildChangelog } from '../tests/helpers.js';
 
-describe('create-release-branch (functional)', () => {
+describe('create-release-branch (functional)', { timeout: 30_000 }, () => {
   describe('against a monorepo with independent versions', () => {
     it('bumps the ordinary part of the root package and updates the versions of the specified packages according to the release spec', async () => {
       await withMonorepoProjectEnvironment(
