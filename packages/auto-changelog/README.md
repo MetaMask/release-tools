@@ -159,6 +159,18 @@ or
 
 `npm run auto-changelog validate --pr-links`
 
+#### Validate a changelog managed with Changesets
+
+Changesets writes release sections directly, so the changelog does not need an "Unreleased" section. Use `--changesets` to make the "Unreleased" section optional. With `--fix`, an empty "Unreleased" section and its link are removed. A non-empty "Unreleased" section is kept.
+
+`yarn run auto-changelog validate --changesets`
+
+or
+
+`npm run auto-changelog validate --changesets`
+
+You cannot combine `--changesets` with `--checkDeps`.
+
 ### Check Dependencies
 
 #### Check and validate dependency bump changelog entries
@@ -240,6 +252,7 @@ try {
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository',
     isReleaseCandidate: false,
     ensureValidPrLinksPresent: true,
+    changesets: false, // Optional: set to true to make the "Unreleased" section optional for changelogs managed with Changesets
   });
   // changelog is valid!
 } catch (error) {

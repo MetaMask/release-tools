@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a `--changesets` option to the `validate` command for changelogs managed with Changesets ([#134](https://github.com/MetaMask/release-tools/pull/134))
+  - In this mode, the `Unreleased` section is optional, and `--fix` removes an empty one
+  - The option cannot be combined with `--checkDeps`
+- Add a `changesets` option to `parseChangelog`, `validateChangelog` and the `Changelog` constructor, so changelogs managed with Changesets no longer need an `Unreleased` section ([#134](https://github.com/MetaMask/release-tools/pull/134))
+
 ## [7.0.1]
 
 ### Fixed

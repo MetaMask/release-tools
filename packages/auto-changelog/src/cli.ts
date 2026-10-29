@@ -274,6 +274,7 @@ type CliArguments = {
   remote: string;
   baseBranch?: string;
   currentPr?: string;
+  changesets: boolean;
   _: (string | number)[];
   $0: string;
 };
@@ -396,6 +397,12 @@ async function main(): Promise<void> {
               'Verify that each changelog entry has one or more links to associated pull requests within the repository',
             type: 'boolean',
           })
+          .option('changesets', {
+            default: false,
+            description:
+              'Validate a changelog managed with Changesets: the Unreleased section is optional, and an empty one is removed by --fix.',
+            type: 'boolean',
+          })
           // Dependency bump checking options
           .option('checkDeps', {
             default: false,
@@ -471,6 +478,7 @@ async function main(): Promise<void> {
     remote,
     baseBranch,
     currentPr,
+    changesets,
   } = argv;
   let { currentVersion } = argv;
   if (projectRootDirectory) {
@@ -656,6 +664,7 @@ async function main(): Promise<void> {
       remote,
       ...(baseBranch !== undefined && { baseBranch }),
       ...(currentPr !== undefined && { currentPr }),
+      changesets,
     });
   } else if (command === 'init') {
     await init({

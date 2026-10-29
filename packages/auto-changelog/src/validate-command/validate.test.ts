@@ -439,6 +439,119 @@ describe('validate', () => {
     });
   });
 
+  describe('changesets mode', () => {
+    const changesetsChangelog = outdent`
+      # Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+      ## [1.0.0]
+      ### Added
+      - Initial release ([#1](${repoUrl}/pull/1))
+
+      [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+    `;
+
+    const changelogWithEmptyUnreleased = outdent`
+      # Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+      ## [Unreleased]
+
+      ## [1.0.0]
+      ### Added
+      - Initial release ([#1](${repoUrl}/pull/1))
+
+      [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+      [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+    `;
+
+    it('sets exitCode=1 when combined with checkDeps', async () => {
+      await writeChangelog(changesetsChangelog);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Do nothing
+      });
+
+      await validate({
+        ...defaultOptions(),
+        changesets: true,
+        checkDeps: true,
+      });
+
+      expect(process.exitCode).toBe(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        '--changesets cannot be combined with --checkDeps.',
+      );
+      expect(getDependencyChangesMock).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+      process.exitCode = 0;
+    });
+
+    it('removes an empty Unreleased section when fix=true', async () => {
+      await writeChangelog(changelogWithEmptyUnreleased);
+      process.exitCode = 0;
+
+      await validate({
+        ...defaultOptions(),
+        changesets: true,
+        fix: true,
+      });
+
+      expect(await readChangelog()).toBe(changesetsChangelog);
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('keeps a non-empty Unreleased section when fix=true', async () => {
+      const changelogWithUnreleasedChanges = outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Added
+        - New feature ([#2](${repoUrl}/pull/2))
+
+        ## [1.0.0]
+        ### Added
+        - Initial release ([#1](${repoUrl}/pull/1))
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+      await writeChangelog(changelogWithUnreleasedChanges);
+      process.exitCode = 0;
+
+      await validate({
+        ...defaultOptions(),
+        changesets: true,
+        fix: true,
+      });
+
+      expect(await readChangelog()).toBe(changelogWithUnreleasedChanges);
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('passes for a changelog without an Unreleased section', async () => {
+      await writeChangelog(changesetsChangelog);
+      process.exitCode = 0;
+
+      const result = await validate({
+        ...defaultOptions(),
+        changesets: true,
+      });
+
+      expect(result).toBeUndefined();
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   describe('unexpected errors', () => {
     it('rethrows non-changelog errors', async () => {
       // Use a path that doesn't exist to trigger a real fs error

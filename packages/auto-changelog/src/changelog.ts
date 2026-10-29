@@ -204,6 +204,7 @@ function stringifyRelease(
  * @param changes - The set of changes to include, organized by release.
  * @param repoUrl - The URL of the repository.
  * @param useShortPrLink - Whether to use short PR links in the changelog entries.
+ * @param includeUnreleased - Whether to include the "Unreleased" section.
  * @returns The stringified set of release sections.
  */
 function stringifyReleases(
@@ -211,13 +212,18 @@ function stringifyReleases(
   changes: ChangelogChanges,
   repoUrl: string,
   useShortPrLink = false,
+  includeUnreleased = true,
 ): string {
-  const stringifiedUnreleased = stringifyRelease(
-    unreleased,
-    changes[unreleased],
-    repoUrl,
-    useShortPrLink,
-  );
+  const stringifiedUnreleased = includeUnreleased
+    ? [
+        stringifyRelease(
+          unreleased,
+          changes[unreleased],
+          repoUrl,
+          useShortPrLink,
+        ),
+      ]
+    : [];
   const stringifiedReleases = releases.map(({ version, date, status }) => {
     const categories = changes[version];
     return stringifyRelease(version, categories, repoUrl, useShortPrLink, {
@@ -226,7 +232,7 @@ function stringifyReleases(
     });
   });
 
-  return [stringifiedUnreleased, ...stringifiedReleases].join('\n\n');
+  return [...stringifiedUnreleased, ...stringifiedReleases].join('\n\n');
 }
 
 /**
@@ -277,6 +283,8 @@ function getTagUrl(repoUrl: string, tag: string): string {
  * @param releases - The releases to generate link definitions for.
  * @param packageRename - The package rename properties
  * An optional, which is required only in case of package renamed.
+ * @param includeUnreleased - Whether to include the "Unreleased" link
+ * reference definition.
  * @returns The stringified release link definitions.
  */
 function stringifyLinkReferenceDefinitions(
@@ -284,7 +292,19 @@ function stringifyLinkReferenceDefinitions(
   tagPrefix: string,
   releases: ReleaseMetadata[],
   packageRename?: PackageRename,
+  includeUnreleased = true,
 ): string {
+  const releaseLinkReferenceDefinitions = getReleaseLinkReferenceDefinitions(
+    repoUrl,
+    tagPrefix,
+    releases,
+    packageRename,
+  ).join('\n');
+
+  if (!includeUnreleased) {
+    return `${releaseLinkReferenceDefinitions}\n`;
+  }
+
   const unreleasedLinkReferenceDefinition =
     getUnreleasedLinkReferenceDefinition(
       repoUrl,
@@ -293,12 +313,6 @@ function stringifyLinkReferenceDefinitions(
       packageRename,
     );
 
-  const releaseLinkReferenceDefinitions = getReleaseLinkReferenceDefinitions(
-    repoUrl,
-    tagPrefix,
-    releases,
-    packageRename,
-  ).join('\n');
   return `${unreleasedLinkReferenceDefinition}\n${releaseLinkReferenceDefinitions}${
     releases.length > 0 ? '\n' : ''
   }`;
@@ -501,6 +515,8 @@ export default class Changelog {
 
   readonly #packageRename: PackageRename | undefined;
 
+  readonly #changesets: boolean;
+
   /**
    * Construct an empty changelog.
    *
@@ -510,17 +526,22 @@ export default class Changelog {
    * @param options.formatter - A function that formats the changelog string.
    * @param options.packageRename - The package rename properties.
    * An optional, which is required only in case of package renamed.
+   * @param options.changesets - Whether the changelog is managed by Changesets.
+   * In this mode, the "Unreleased" section and its link reference definition
+   * are omitted when there are no unreleased changes.
    */
   constructor({
     repoUrl,
     tagPrefix = 'v',
     formatter = (changelog): string => changelog,
     packageRename,
+    changesets = false,
   }: {
     repoUrl: string;
     tagPrefix?: string;
     formatter?: Formatter;
     packageRename?: PackageRename;
+    changesets?: boolean;
   }) {
     this.#releases = [];
     this.#changes = { [unreleased]: {} };
@@ -528,6 +549,7 @@ export default class Changelog {
     this.#tagPrefix = tagPrefix;
     this.#formatter = formatter;
     this.#packageRename = packageRename;
+    this.#changesets = changesets;
   }
 
   /**
@@ -800,16 +822,31 @@ export default class Changelog {
    * @returns The stringified changelog.
    */
   async toString(useShortPrLink = false): Promise<string> {
-    const changelog = `${changelogTitle}
+    const includeUnreleased =
+      !this.#changesets || Object.keys(this.#changes[unreleased]).length > 0;
+    const header = `${changelogTitle}
 ${changelogDescription}
+`;
 
-${stringifyReleases(this.#releases, this.#changes, this.#repoUrl, useShortPrLink)}
+    if (!includeUnreleased && this.#releases.length === 0) {
+      return await this.#formatter(header);
+    }
+
+    const changelog = `${header}
+${stringifyReleases(
+  this.#releases,
+  this.#changes,
+  this.#repoUrl,
+  useShortPrLink,
+  includeUnreleased,
+)}
 
 ${stringifyLinkReferenceDefinitions(
   this.#repoUrl,
   this.#tagPrefix,
   this.#releases,
   this.#packageRename,
+  includeUnreleased,
 )}`;
 
     return await this.#formatter(changelog);
