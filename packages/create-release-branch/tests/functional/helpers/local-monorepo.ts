@@ -1,5 +1,12 @@
 import path from 'path';
 
+import {
+  ChangesetsFixtureChangeset,
+  DEFAULT_CHANGESETS_CONFIG,
+  LOCAL_CHANGELOG_CONFIG,
+  LOCAL_CHANGELOG_FILES,
+  writeChangesetFile,
+} from '../../unit/changesets-fixture.js';
 import { PackageSpecification } from './environment.js';
 import LocalRepo, { LocalRepoOptions } from './local-repo.js';
 import { knownKeysOf } from './utils.js';
@@ -11,10 +18,14 @@ import { knownKeysOf } from './utils.js';
  * @property packages - The known packages within this repo (including the
  * root).
  * @property workspaces - The known workspaces within this repo.
+ * @property changesets - If given, the repo uses Changesets: it gets a
+ * `.changeset/config.json` that uses the local changelog module, and these
+ * Changeset files.
  */
 export type LocalMonorepoOptions<WorkspacePackageNickname extends string> = {
   packages: Record<WorkspacePackageNickname, PackageSpecification>;
   workspaces: Record<string, string[]>;
+  changesets?: ChangesetsFixtureChangeset[] | undefined;
 } & LocalRepoOptions;
 
 /**
@@ -37,12 +48,19 @@ export default class LocalMonorepo<
    */
   readonly #workspaces: LocalMonorepoOptions<WorkspacePackageNickname>['workspaces'];
 
+  /**
+   * The Changeset files within this repo, if it uses Changesets.
+   */
+  readonly #changesets: LocalMonorepoOptions<WorkspacePackageNickname>['changesets'];
+
   constructor({
     packages,
     workspaces,
+    changesets,
     ...rest
   }: LocalMonorepoOptions<WorkspacePackageNickname>) {
     super(rest);
+    this.#changesets = changesets;
     this.#packages = {
       $root$: {
         name: 'monorepo',
@@ -158,7 +176,8 @@ export default class LocalMonorepo<
 
   /**
    * Writes an initial package.json for the root package as well as any
-   * workspace packages (if specified).
+   * workspace packages (if specified), and the Changesets files (if
+   * specified).
    */
   protected async afterCreate(): Promise<void> {
     await super.afterCreate();
@@ -186,6 +205,19 @@ export default class LocalMonorepo<
         );
       }),
     );
+
+    if (this.#changesets !== undefined) {
+      await this.writeJsonFile('.changeset/config.json', {
+        ...DEFAULT_CHANGESETS_CONFIG,
+        ...LOCAL_CHANGELOG_CONFIG,
+      });
+      for (const [filePath, content] of Object.entries(LOCAL_CHANGELOG_FILES)) {
+        await this.writeFile(filePath, content);
+      }
+      for (const changeset of this.#changesets) {
+        await writeChangesetFile(this.getWorkingDirectoryPath(), changeset);
+      }
+    }
 
     await this.runCommand('yarn', ['plugin', 'import', 'constraints']);
   }
