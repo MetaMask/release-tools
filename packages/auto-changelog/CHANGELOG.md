@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Extract and round-trip pull request links when `parseChangelog` receives a repository URL ending in `.git`.
+
 ## [7.0.1]
 
 ### Fixed
