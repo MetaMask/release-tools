@@ -1,32 +1,9 @@
 import type { WriteStream } from 'fs';
-import path from 'path';
 
-import { determineEditor } from './editor.js';
-import {
-  ensureDirectoryPathExists,
-  fileExists,
-  removeFile,
-  writeFile,
-} from './fs.js';
 import { Formatter, ReleaseType } from './initial-parameters.js';
-import {
-  Project,
-  updateChangelogsForChangedPackages,
-  restoreChangelogsForSkippedPackages,
-} from './project.js';
-import { planRelease, executeReleasePlan } from './release-plan.js';
-import {
-  generateReleaseSpecificationTemplateForMonorepo,
-  waitForUserToEditReleaseSpecification,
-  validateReleaseSpecification,
-} from './release-specification.js';
-import { commitAllChanges } from './repo.js';
-import { createReleaseBranch } from './workflow-operations.js';
-import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './yarn-commands.js';
+import { createLegacyReleaseSource } from './legacy-release-source.js';
+import { Project } from './project.js';
+import { followReleaseWorkflow } from './release-workflow.js';
 
 /**
  * For a monorepo, the process works like this:
@@ -81,86 +58,17 @@ export async function followMonorepoWorkflow({
   stdout: Pick<WriteStream, 'write'>;
   stderr: Pick<WriteStream, 'write'>;
 }): Promise<void> {
-  const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
+  await followReleaseWorkflow({
     project,
-    releaseType,
-  });
-
-  if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, stderr });
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-    );
-  }
-
-  const releaseSpecificationPath = path.join(
     tempDirectoryPath,
-    'RELEASE_SPEC.yml',
-  );
-
-  if (
-    !firstRemovingExistingReleaseSpecification &&
-    (await fileExists(releaseSpecificationPath))
-  ) {
-    stdout.write(
-      'Release spec already exists. Picking back up from previous run.\n',
-    );
-  } else {
-    const editor = await determineEditor();
-
-    const releaseSpecificationTemplate =
-      await generateReleaseSpecificationTemplateForMonorepo({
-        project,
-        isEditorAvailable: editor !== null,
-      });
-    await ensureDirectoryPathExists(tempDirectoryPath);
-    await writeFile(releaseSpecificationPath, releaseSpecificationTemplate);
-
-    if (!editor) {
-      stdout.write(
-        `${[
-          'A template has been generated that specifies this release. Please open the following file in your editor of choice, then re-run this tool:',
-          `${releaseSpecificationPath}`,
-        ].join('\n\n')}\n`,
-      );
-      return;
-    }
-
-    try {
-      await waitForUserToEditReleaseSpecification(
-        releaseSpecificationPath,
-        editor,
-      );
-    } catch (error) {
-      await removeFile(releaseSpecificationPath);
-      throw error;
-    }
-  }
-
-  const { packages } = await validateReleaseSpecification(
-    project,
-    releaseSpecificationPath,
-  );
-
-  await restoreChangelogsForSkippedPackages({
-    project,
-    releaseSpecificationPackages: packages,
-    defaultBranch,
+    firstRemovingExistingReleaseSpecification,
+    releaseType,
+    source: createLegacyReleaseSource({
+      project,
+      defaultBranch,
+      formatter,
+      stderr,
+    }),
+    stdout,
   });
-
-  const releasePlan = await planRelease({
-    project,
-    releaseSpecificationPackages: packages,
-    newReleaseVersion,
-  });
-  await executeReleasePlan(project, releasePlan, formatter, stderr);
-  await removeFile(releaseSpecificationPath);
-  await fixConstraints(project.directoryPath);
-  await updateYarnLockfile(project.directoryPath);
-  await deduplicateDependencies(project.directoryPath);
-  await commitAllChanges(
-    project.directoryPath,
-    `Update Release ${newReleaseVersion}`,
-  );
 }
