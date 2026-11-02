@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
@@ -24,7 +25,7 @@ vi.mock('open', () => ({
 describe('main', () => {
   it('executes the CLI monorepo workflow if the project is a monorepo and interactive is false', async () => {
     const project = buildMockProject({ isMonorepo: true });
-    const stdout = fs.createWriteStream('/dev/null');
+    const stdout = new MockWritable();
     const stderr = fs.createWriteStream('/dev/null');
     vi.spyOn(
       initialParametersModule,
@@ -61,6 +62,9 @@ describe('main', () => {
       releaseType: 'backport',
       output: expect.any(Object) as CliOutput,
     });
+    expect(stdout.data()).toContain(
+      'Project appears to have workspaces. Following monorepo workflow.\n',
+    );
   });
 
   it('executes the interactive UI monorepo workflow if the project is a monorepo and interactive is true', async () => {
