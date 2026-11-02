@@ -1020,7 +1020,6 @@ describe('monorepo-workflow-operations', () => {
               errors: [
                 {
                   message: '"foo" is not a package in the project',
-                  packageName: 'foo',
                   entryIndex: 0,
                 },
               ],
