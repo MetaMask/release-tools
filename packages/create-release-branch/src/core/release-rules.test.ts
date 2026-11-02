@@ -64,7 +64,6 @@ The following direct dependents of package 'a', which is being released with a m
     packages:
       b: intentionally-skip
 `.trim(),
-            packageName: 'a',
           },
         ],
         dependencyFindings: {
@@ -130,12 +129,10 @@ The following direct dependents of package 'a', which is being released with a m
             '"asdf" is not a valid version specifier for package "a"',
             '(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")',
           ],
-          packageName: 'a',
           entryIndex: 0,
         },
         {
           message: '"b" is not a package in the project',
-          packageName: 'b',
           entryIndex: 1,
         },
       ]);

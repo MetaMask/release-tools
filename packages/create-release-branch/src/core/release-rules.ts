@@ -18,7 +18,7 @@ export enum IncrementableVersionParts {
 }
 
 const SKIP_PACKAGE_DIRECTIVE = null;
-export const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
+const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
 
 /**
  * The maintainer's choice for each package, as given: a bump type, an exact
@@ -46,13 +46,11 @@ export type DependencyFinding = {
  * A problem with the release choices.
  *
  * @property message - The message, as a single string or as separate lines.
- * @property packageName - The name of the package the problem is about.
  * @property entryIndex - The index of the choice in `Object.entries(choices)`,
  * for problems that point at a single entry.
  */
 export type ReleaseChoiceError = {
   message: string | string[];
-  packageName?: string;
   entryIndex?: number;
 };
 
@@ -270,7 +268,6 @@ export function checkReleaseChoices(
       if (changedPackage === undefined) {
         errors.push({
           message: `${JSON.stringify(changedPackageName)} is not a package in the project`,
-          packageName: changedPackageName,
           entryIndex,
         });
       }
@@ -286,7 +283,6 @@ export function checkReleaseChoices(
             `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
             `(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")`,
           ],
-          packageName: changedPackageName,
           entryIndex,
         });
       }
@@ -302,7 +298,6 @@ export function checkReleaseChoices(
               `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
               `("${changedPackageName}" is already at version "${versionSpecifierOrDirective}")`,
             ],
-            packageName: changedPackageName,
             entryIndex,
           });
         } else if (comparison < 0) {
@@ -314,7 +309,6 @@ export function checkReleaseChoices(
                   .version,
               )}")`,
             ],
-            packageName: changedPackageName,
             entryIndex,
           });
         }
@@ -340,7 +334,6 @@ export function checkReleaseChoices(
             `  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:`,
             buildIntentionallySkipExample(missingDirectDependentNames),
           ].join('\n\n'),
-          packageName: changedPackageName,
         });
       }
 
@@ -364,7 +357,6 @@ export function checkReleaseChoices(
             `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
             buildIntentionallySkipExample(missingPeerDependentNames),
           ].join('\n\n'),
-          packageName: changedPackageName,
         });
       }
 
@@ -386,7 +378,6 @@ export function checkReleaseChoices(
             `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
             buildIntentionallySkipExample(missingDependencies),
           ].join('\n\n'),
-          packageName: changedPackageName,
         });
       }
 
