@@ -392,7 +392,8 @@ export function planChangesetsRelease({
       type !== 'none' &&
       versionSpecifier !== undefined &&
       plannedType !== undefined &&
-      plannedVersion !== undefined
+      plannedVersion !== undefined &&
+      (type !== plannedType || newVersion !== plannedVersion)
     ) {
       overrides.push({
         name,

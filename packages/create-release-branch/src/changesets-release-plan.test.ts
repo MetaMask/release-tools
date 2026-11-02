@@ -285,6 +285,15 @@ describe('changesets-release-plan', () => {
       ]);
     });
 
+    it('does not list an exact version equal to the planned version as an override', async () => {
+      const result = await planFixtureRelease({
+        ...PREFILLED_ENTRIES,
+        '@scope/b': '2.0.0',
+      });
+
+      expect(result.overrides).toStrictEqual([]);
+    });
+
     it('returns the selected changesets with the releases they keep', async () => {
       const { '@scope/a': _removed, ...entries } = PREFILLED_ENTRIES;
 
@@ -573,6 +582,65 @@ describe('changesets-release-plan', () => {
         },
       );
 
+      it('propagates raising overrides through a chain of dependents', async () => {
+        const result = await planFixtureRelease(
+          {
+            '@scope/b': 'major',
+            '@scope/c': 'major',
+            '@scope/k': 'major',
+            '@scope/z': 'patch',
+          },
+          {
+            ...RAISING_FIXTURE,
+            packages: [
+              { name: '@scope/b', version: '1.0.0' },
+              {
+                name: '@scope/c',
+                version: '1.0.0',
+                dependencies: { '@scope/b': '^1.0.0' },
+              },
+              {
+                name: '@scope/k',
+                version: '1.0.0',
+                dependencies: { '@scope/c': '^1.0.0' },
+              },
+              {
+                name: '@scope/z',
+                version: '1.0.0',
+                dependencies: { '@scope/k': '^1.0.0' },
+              },
+            ],
+          },
+        );
+
+        expect(summarizeReleases(result)).toStrictEqual([
+          {
+            name: '@scope/b',
+            type: 'major',
+            oldVersion: '1.0.0',
+            newVersion: '2.0.0',
+          },
+          {
+            name: '@scope/c',
+            type: 'major',
+            oldVersion: '1.0.0',
+            newVersion: '2.0.0',
+          },
+          {
+            name: '@scope/k',
+            type: 'major',
+            oldVersion: '1.0.0',
+            newVersion: '2.0.0',
+          },
+          {
+            name: '@scope/z',
+            type: 'patch',
+            oldVersion: '1.0.0',
+            newVersion: '1.0.1',
+          },
+        ]);
+      });
+
       it('does not release it when the release that propagates it is excluded', async () => {
         await expect(
           planFixtureRelease(
@@ -630,7 +698,7 @@ describe('changesets-release-plan', () => {
       });
     });
 
-    it('lowers a propagated release after re-planning', async () => {
+    it('raises a propagated peer dependent after re-planning', async () => {
       const result = await planFixtureRelease(
         { '@scope/b': 'major', '@scope/p': 'minor' },
         {
