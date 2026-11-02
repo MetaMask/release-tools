@@ -3,17 +3,17 @@ import { diff } from 'semver';
 import YAML from 'yaml';
 
 import { Editor } from './editor.js';
-import { readFile } from './fs.js';
+import { Package } from './project/package.js';
+import { Project } from './project/project.js';
+import { readFile } from './utils/fs.js';
 import {
   debug,
   hasProperty,
   wrapError,
   isObject,
   runCommand,
-} from './misc-utils.js';
-import { Package } from './package.js';
-import { Project } from './project.js';
-import { isValidSemver, semver, SemVer } from './semver.js';
+} from './utils/misc-utils.js';
+import { isValidSemver, semver, SemVer } from './utils/semver.js';
 
 /**
  * The SemVer-compatible parts of a version string that can be bumped by this

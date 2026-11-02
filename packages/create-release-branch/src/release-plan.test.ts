@@ -3,11 +3,11 @@ import { SemVer } from 'semver';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
-import * as packageUtils from './package.js';
+import * as packageUtils from './project/package.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
 import { IncrementableVersionParts } from './release-specification.js';
 
-vi.mock('./package');
+vi.mock('./project/package');
 
 describe('release-plan-utils', () => {
   describe('planRelease', () => {

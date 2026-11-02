@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import * as miscUtils from './misc-utils.js';
+import * as miscUtils from '../utils/misc-utils.js';
 import {
   deduplicateDependencies,
   fixConstraints,
   updateYarnLockfile,
 } from './yarn-commands.js';
 
-vi.mock('./misc-utils');
+vi.mock('../utils/misc-utils');
 
 describe('yarn-commands', () => {
   describe('fixConstraints', () => {

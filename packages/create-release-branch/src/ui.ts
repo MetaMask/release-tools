@@ -3,15 +3,20 @@ import type { WriteStream } from 'fs';
 import openBrowser from 'open';
 import { join } from 'path';
 
+import { commitAllChanges } from './core/repo.js';
+import {
+  deduplicateDependencies,
+  fixConstraints,
+  updateYarnLockfile,
+} from './core/yarn-commands.js';
 import { getCurrentDirectoryPath } from './dirname.js';
-import { readFile } from './fs.js';
 import { Formatter } from './initial-parameters.js';
-import { Package } from './package.js';
-import type { Project } from './project.js';
+import { Package } from './project/package.js';
+import type { Project } from './project/project.js';
 import {
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
-} from './project.js';
+} from './project/project.js';
 import { executeReleasePlan, planRelease } from './release-plan.js';
 import {
   findWorkspaceDependentNamesOfType,
@@ -20,14 +25,9 @@ import {
   IncrementableVersionParts,
   validateAllPackageEntries,
 } from './release-specification.js';
-import { commitAllChanges } from './repo.js';
-import { SemVer, semver } from './semver.js';
+import { readFile } from './utils/fs.js';
+import { SemVer, semver } from './utils/semver.js';
 import { createReleaseBranch } from './workflow-operations.js';
-import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './yarn-commands.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 

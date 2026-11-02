@@ -10,14 +10,15 @@ import {
   buildChangelog,
   normalizeMultilineString,
   withSandbox,
-} from '../tests/helpers.js';
+} from '../../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
   buildMockManifest,
   createNoopWriteStream,
-} from '../tests/unit/helpers.js';
-import * as fsModule from './fs.js';
+} from '../../tests/unit/helpers.js';
+import * as repoModule from '../core/repo.js';
+import * as fsModule from '../utils/fs.js';
 import * as packageManifestModule from './package-manifest.js';
 import {
   getFormatter,
@@ -26,10 +27,9 @@ import {
   updatePackage,
   updatePackageChangelog,
 } from './package.js';
-import * as repoModule from './repo.js';
 
 vi.mock('./package-manifest');
-vi.mock('./repo');
+vi.mock('../core/repo');
 vi.mock('@metamask/auto-changelog', async () => ({
   ...(await vi.importActual('@metamask/auto-changelog')),
   updateChangelog: vi.fn(),

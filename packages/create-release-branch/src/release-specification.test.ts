@@ -7,16 +7,16 @@ import YAML from 'yaml';
 
 import { withSandbox } from '../tests/helpers.js';
 import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
-import * as miscUtils from './misc-utils.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
   validateReleaseSpecification,
 } from './release-specification.js';
+import * as miscUtils from './utils/misc-utils.js';
 
-vi.mock('./misc-utils', async () => {
+vi.mock('./utils/misc-utils', async () => {
   return {
-    ...(await vi.importActual('./misc-utils')),
+    ...(await vi.importActual('./utils/misc-utils')),
     runCommand: vi.fn(),
   };
 });

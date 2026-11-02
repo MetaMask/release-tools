@@ -6,24 +6,24 @@ import type { Mock } from 'vitest';
 
 import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
 import { buildMockProject, Require } from '../tests/unit/helpers.js';
+import * as repoModule from './core/repo.js';
+import * as yarnCommands from './core/yarn-commands.js';
 import * as editorModule from './editor.js';
 import type { Editor } from './editor.js';
 import { Formatter } from './initial-parameters.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
-import type { Project } from './project.js';
+import type { Project } from './project/project.js';
 import * as releasePlanModule from './release-plan.js';
 import type { ReleasePlan } from './release-plan.js';
 import * as releaseSpecificationModule from './release-specification.js';
 import type { ReleaseSpecification } from './release-specification.js';
-import * as repoModule from './repo.js';
 import * as workflowOperations from './workflow-operations.js';
-import * as yarnCommands from './yarn-commands.js';
 
 vi.mock('./editor');
 vi.mock('./release-plan');
 vi.mock('./release-specification');
-vi.mock('./repo');
-vi.mock('./yarn-commands.js');
+vi.mock('./core/repo');
+vi.mock('./core/yarn-commands.js');
 
 /**
  * Tests the given path to determine whether it represents a file.

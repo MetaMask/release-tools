@@ -1,32 +1,32 @@
 import type { WriteStream } from 'fs';
 import path from 'path';
 
-import { determineEditor } from './editor.js';
+import { commitAllChanges } from './core/repo.js';
 import {
-  ensureDirectoryPathExists,
-  fileExists,
-  removeFile,
-  writeFile,
-} from './fs.js';
+  deduplicateDependencies,
+  fixConstraints,
+  updateYarnLockfile,
+} from './core/yarn-commands.js';
+import { determineEditor } from './editor.js';
 import { Formatter, ReleaseType } from './initial-parameters.js';
 import {
   Project,
   updateChangelogsForChangedPackages,
   restoreChangelogsForSkippedPackages,
-} from './project.js';
+} from './project/project.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
   validateReleaseSpecification,
 } from './release-specification.js';
-import { commitAllChanges } from './repo.js';
-import { createReleaseBranch } from './workflow-operations.js';
 import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './yarn-commands.js';
+  ensureDirectoryPathExists,
+  fileExists,
+  removeFile,
+  writeFile,
+} from './utils/fs.js';
+import { createReleaseBranch } from './workflow-operations.js';
 
 /**
  * For a monorepo, the process works like this:

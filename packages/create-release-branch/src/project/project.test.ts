@@ -4,14 +4,16 @@ import path from 'path';
 import { SemVer } from 'semver';
 import { describe, expect, it, vi } from 'vitest';
 
-import { withProtectedProcessEnv, withSandbox } from '../tests/helpers.js';
+import { withProtectedProcessEnv, withSandbox } from '../../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
   createNoopWriteStream,
-} from '../tests/unit/helpers.js';
-import * as fs from './fs.js';
-import * as miscUtils from './misc-utils.js';
+} from '../../tests/unit/helpers.js';
+import * as repoModule from '../core/repo.js';
+import { IncrementableVersionParts } from '../release-specification.js';
+import * as fs from '../utils/fs.js';
+import * as miscUtils from '../utils/misc-utils.js';
 import * as packageModule from './package.js';
 import {
   getValidRepositoryUrl,
@@ -19,11 +21,9 @@ import {
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
 } from './project.js';
-import { IncrementableVersionParts } from './release-specification.js';
-import * as repoModule from './repo.js';
 
 vi.mock('./package');
-vi.mock('./repo');
+vi.mock('../core/repo');
 vi.mock('@metamask/action-utils', async () => ({
   ...(await vi.importActual('@metamask/action-utils')),
   getWorkspaceLocations: vi.fn(),
