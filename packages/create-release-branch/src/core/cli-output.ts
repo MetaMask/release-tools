@@ -1,3 +1,7 @@
+import { Chalk } from 'chalk';
+import type { ChalkInstance } from 'chalk';
+import ora from 'ora';
+
 import type { WriteStreamLike } from '../utils/fs.js';
 
 /**
@@ -22,35 +26,72 @@ export type CliOutput = {
 };
 
 /**
- * Creates a `CliOutput` that writes plain text to the given streams.
+ * Applies a color to the text, leaving any leading and trailing whitespace
+ * outside of the color codes.
+ *
+ * @param text - The text.
+ * @param color - The color to apply.
+ * @returns The colored text.
+ */
+function colorize(text: string, color: ChalkInstance): string {
+  const content = text.trim();
+  const start = text.indexOf(content);
+  return `${text.slice(0, start)}${color(content)}${text.slice(start + content.length)}`;
+}
+
+/**
+ * Creates a `CliOutput` that writes to the given streams.
+ *
+ * When styled, success, warnings, and errors are colored, and each step shows
+ * a spinner on standard error. Otherwise, the text is written as given and
+ * steps write nothing.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
  * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.styled - Whether to show colors and spinners. Defaults to true
+ * when standard out is a terminal and `NO_COLOR` is not set.
  * @returns The output.
  */
 export function createCliOutput({
   stdout,
   stderr,
+  styled = Boolean(stdout.isTTY) && process.env.NO_COLOR === undefined,
 }: {
-  stdout: WriteStreamLike;
-  stderr: WriteStreamLike;
+  stdout: WriteStreamLike & { isTTY?: boolean };
+  stderr: NodeJS.WritableStream;
+  styled?: boolean;
 }): CliOutput {
+  const chalk = new Chalk({ level: styled ? 1 : 0 });
+
   return {
     info(text) {
       stdout.write(text);
     },
     success(text) {
-      stdout.write(text);
+      stdout.write(colorize(text, chalk.green));
     },
     warn(text) {
-      stderr.write(text);
+      stderr.write(colorize(text, chalk.yellow));
     },
     error(text) {
-      stderr.write(text);
+      stderr.write(colorize(text, chalk.red));
     },
-    async step(_label, run) {
-      return await run();
+    async step(label, run) {
+      if (!styled) {
+        return await run();
+      }
+
+      const spinner = ora({ text: label, stream: stderr });
+      spinner.start();
+      try {
+        const result = await run();
+        spinner.succeed();
+        return result;
+      } catch (error) {
+        spinner.fail();
+        throw error;
+      }
     },
   };
 }

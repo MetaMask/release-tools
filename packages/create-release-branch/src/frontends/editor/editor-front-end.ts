@@ -91,6 +91,7 @@ async function followEditorWorkflow({
     project,
     releaseType,
     mode,
+    output,
   });
 
   const releaseSpecificationPath = path.join(
@@ -140,7 +141,7 @@ async function followEditorWorkflow({
     async (choices) => await checkChoices({ project, mode, choices }),
   );
 
-  await applyRelease({ mode, plan, newReleaseVersion });
+  await applyRelease({ mode, plan, newReleaseVersion, output });
   await removeFile(releaseSpecificationPath);
-  await finishRelease({ project, newReleaseVersion });
+  await finishRelease({ project, newReleaseVersion, output });
 }

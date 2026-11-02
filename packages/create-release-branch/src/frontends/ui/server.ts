@@ -46,6 +46,7 @@ async function startUI({
     project,
     releaseType,
     mode,
+    output,
   });
 
   const app = createApp({
@@ -205,8 +206,9 @@ export function createApp({
           mode,
           plan: result.plan,
           newReleaseVersion,
+          output,
         });
-        await finishRelease({ project, newReleaseVersion });
+        await finishRelease({ project, newReleaseVersion, output });
 
         res.json({ status: 'success' });
 

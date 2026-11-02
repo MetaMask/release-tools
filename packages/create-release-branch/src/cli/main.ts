@@ -28,7 +28,7 @@ export async function main({
   argv: string[];
   cwd: string;
   stdout: Pick<WriteStream, 'write'>;
-  stderr: Pick<WriteStream, 'write'>;
+  stderr: NodeJS.WritableStream;
 }): Promise<void> {
   const output = createCliOutput({ stdout, stderr });
   const {
