@@ -4,27 +4,74 @@ import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
-import { buildMockProject, Require } from '../tests/unit/helpers.js';
-import { createCliOutput } from './core/cli-output.js';
-import type { CliOutput } from './core/cli-output.js';
-import * as workflowOperations from './core/release-branch.js';
-import * as repoModule from './core/repo.js';
-import type { Formatter, VersionSpecifiers } from './core/types.js';
-import * as yarnCommands from './core/yarn-commands.js';
+import {
+  withSandbox,
+  Sandbox,
+  isErrorWithCode,
+} from '../../../tests/helpers.js';
+import { buildMockProject, Require } from '../../../tests/unit/helpers.js';
+import { createCliOutput } from '../../core/cli-output.js';
+import type { CliOutput } from '../../core/cli-output.js';
+import * as releaseBranchModule from '../../core/release-branch.js';
+import * as repoModule from '../../core/repo.js';
+import type {
+  Formatter,
+  ReleaseType,
+  VersionSpecifiers,
+} from '../../core/types.js';
+import * as yarnCommands from '../../core/yarn-commands.js';
+import { createLegacyMode } from '../../modes/legacy/legacy-mode.js';
+import * as releasePlanModule from '../../modes/legacy/release-plan.js';
+import type { ReleasePlan } from '../../modes/legacy/release-plan.js';
+import type { Project } from '../../project/project.js';
+import { createEditorFrontEnd } from './editor-front-end.js';
 import * as editorModule from './editor.js';
 import type { Editor } from './editor.js';
-import * as releasePlanModule from './modes/legacy/release-plan.js';
-import type { ReleasePlan } from './modes/legacy/release-plan.js';
-import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
-import type { Project } from './project/project.js';
 import * as releaseSpecificationModule from './release-specification.js';
 
 vi.mock('./editor');
-vi.mock('./modes/legacy/release-plan');
+vi.mock('../../modes/legacy/release-plan');
 vi.mock('./release-specification');
-vi.mock('./core/repo');
-vi.mock('./core/yarn-commands.js');
+vi.mock('../../core/repo');
+vi.mock('../../core/yarn-commands.js');
+
+/**
+ * Runs the editor front end with the legacy mode, the way `main` does.
+ *
+ * @param args - The arguments.
+ * @param args.project - Information about the project.
+ * @param args.tempDirectoryPath - A directory in which to hold the generated
+ * release spec file.
+ * @param args.firstRemovingExistingReleaseSpecification - Whether to replace a
+ * release spec that a previous run left behind.
+ * @param args.releaseType - The type of release.
+ * @param args.defaultBranch - The name of the default branch in the repository.
+ * @param args.formatter - The formatter to use for formatting the changelog.
+ * @param args.output - Where to write user-facing messages.
+ */
+async function followMonorepoWorkflow({
+  project,
+  tempDirectoryPath,
+  firstRemovingExistingReleaseSpecification,
+  releaseType,
+  defaultBranch,
+  formatter,
+  output,
+}: {
+  project: Project;
+  tempDirectoryPath: string;
+  firstRemovingExistingReleaseSpecification: boolean;
+  releaseType: ReleaseType;
+  defaultBranch: string;
+  formatter: Formatter;
+  output: CliOutput;
+}): Promise<void> {
+  const mode = createLegacyMode({ project, defaultBranch, formatter, output });
+  await createEditorFrontEnd({
+    tempDirectoryPath,
+    reset: firstRemovingExistingReleaseSpecification,
+  }).run({ project, mode, releaseType, output });
+}
 
 /**
  * Tests the given path to determine whether it represents a file.
@@ -52,7 +99,7 @@ async function fileExists(entryPath: string): Promise<boolean> {
  */
 function getDependencySpies(): {
   determineEditorSpy: Mock<typeof editorModule.determineEditor>;
-  createReleaseBranchSpy: Mock<typeof workflowOperations.createReleaseBranch>;
+  createReleaseBranchSpy: Mock<typeof releaseBranchModule.createReleaseBranch>;
   generateReleaseSpecificationTemplateForMonorepoSpy: Mock<
     typeof releaseSpecificationModule.generateReleaseSpecificationTemplateForMonorepo
   >;
@@ -71,7 +118,10 @@ function getDependencySpies(): {
 } {
   return {
     determineEditorSpy: vi.spyOn(editorModule, 'determineEditor'),
-    createReleaseBranchSpy: vi.spyOn(workflowOperations, 'createReleaseBranch'),
+    createReleaseBranchSpy: vi.spyOn(
+      releaseBranchModule,
+      'createReleaseBranch',
+    ),
     generateReleaseSpecificationTemplateForMonorepoSpy: vi.spyOn(
       releaseSpecificationModule,
       'generateReleaseSpecificationTemplateForMonorepo',
@@ -251,7 +301,7 @@ async function setupFollowMonorepoWorkflow({
   const output = createCliOutput({ stdout, stderr: new MockWritable() });
   determineEditorSpy.mockResolvedValue(isEditorAvailable ? editor : null);
   vi.when(generateReleaseSpecificationTemplateForMonorepoSpy)
-    .calledWith({ candidates: [], isEditorAvailable })
+    .calledWith({ modeName: 'legacy', candidates: [], isEditorAvailable })
     .thenResolve('');
 
   if (errorUponEditingReleaseSpec) {
@@ -343,8 +393,8 @@ async function setupFollowMonorepoWorkflow({
   };
 }
 
-describe('monorepo-workflow-operations', () => {
-  describe('followMonorepoWorkflow', () => {
+describe('editor-front-end', () => {
+  describe('createEditorFrontEnd', () => {
     describe('when firstRemovingExistingReleaseSpecification is false, the release spec file does not already exist, and an editor is available', () => {
       it('should call createReleaseBranch with the correct arguments if given releaseType: "ordinary"', async () => {
         await withSandbox(async (sandbox) => {
@@ -1749,6 +1799,7 @@ describe('monorepo-workflow-operations', () => {
           expect(
             generateReleaseSpecificationTemplateForMonorepoSpy,
           ).toHaveBeenCalledWith({
+            modeName: 'legacy',
             candidates: [],
             isEditorAvailable: true,
           });
@@ -2135,6 +2186,7 @@ describe('monorepo-workflow-operations', () => {
           expect(
             generateReleaseSpecificationTemplateForMonorepoSpy,
           ).toHaveBeenCalledWith({
+            modeName: 'legacy',
             candidates: [],
             isEditorAvailable: false,
           });

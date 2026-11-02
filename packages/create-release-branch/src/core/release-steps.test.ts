@@ -83,6 +83,32 @@ describe('release-steps', () => {
         { allowEmpty: true },
       );
     });
+
+    it('prepares before the Initialize commit', async () => {
+      const project = buildMockProject();
+      const calls: string[] = [];
+      const mode = buildMockMode({
+        prepare: vi.fn().mockImplementation(async () => {
+          calls.push('prepare');
+        }),
+      });
+      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
+        version: '2.0.0',
+        firstRun: true,
+      });
+      vi.spyOn(repoModule, 'commitAllChanges').mockImplementation(
+        async (directoryPath, commitMessage) => {
+          calls.push(`commitAllChanges ${directoryPath} ${commitMessage}`);
+        },
+      );
+
+      await startRelease({ project, releaseType: 'ordinary', mode });
+
+      expect(calls).toStrictEqual([
+        'prepare',
+        'commitAllChanges /path/to/project Initialize Release 2.0.0',
+      ]);
+    });
   });
 
   describe('checkChoices', () => {

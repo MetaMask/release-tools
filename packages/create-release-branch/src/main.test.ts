@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
 import type { CliOutput } from './core/cli-output.js';
+import type { Mode } from './core/mode.js';
+import * as editorFrontEndModule from './frontends/editor/editor-front-end.js';
 import * as initialParametersModule from './initial-parameters.js';
 import { main } from './main.js';
-import * as monorepoWorkflowOperations from './monorepo-workflow-operations.js';
 import * as ui from './ui.js';
 
 vi.mock('./initial-parameters');
-vi.mock('./monorepo-workflow-operations');
+vi.mock('./frontends/editor/editor-front-end');
 vi.mock('./ui');
 vi.mock('./dirname', () => ({
   getCurrentDirectoryPath: vi.fn().mockReturnValue('/path/to/somewhere'),
@@ -38,9 +39,10 @@ describe('main', () => {
       port: 3000,
       formatter: 'prettier',
     });
-    const followMonorepoWorkflowSpy = vi
-      .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
-      .mockResolvedValue();
+    const runSpy = vi.fn();
+    const createEditorFrontEndSpy = vi
+      .spyOn(editorFrontEndModule, 'createEditorFrontEnd')
+      .mockReturnValue({ run: runSpy });
 
     await main({
       argv: [],
@@ -49,13 +51,14 @@ describe('main', () => {
       stderr,
     });
 
-    expect(followMonorepoWorkflowSpy).toHaveBeenCalledWith({
-      project,
+    expect(createEditorFrontEndSpy).toHaveBeenCalledWith({
       tempDirectoryPath: '/path/to/temp/directory',
-      firstRemovingExistingReleaseSpecification: true,
+      reset: true,
+    });
+    expect(runSpy).toHaveBeenCalledWith({
+      project,
+      mode: expect.objectContaining({ name: 'legacy' }) as Mode<unknown>,
       releaseType: 'backport',
-      defaultBranch: 'main',
-      formatter: 'prettier',
       output: expect.any(Object) as CliOutput,
     });
   });
@@ -113,9 +116,10 @@ describe('main', () => {
       port: 3000,
       formatter: 'prettier',
     });
-    const followMonorepoWorkflowSpy = vi
-      .spyOn(monorepoWorkflowOperations, 'followMonorepoWorkflow')
-      .mockResolvedValue();
+    const createEditorFrontEndSpy = vi.spyOn(
+      editorFrontEndModule,
+      'createEditorFrontEnd',
+    );
 
     await main({
       argv: [],
@@ -124,6 +128,6 @@ describe('main', () => {
       stderr,
     });
 
-    expect(followMonorepoWorkflowSpy).not.toHaveBeenCalled();
+    expect(createEditorFrontEndSpy).not.toHaveBeenCalled();
   });
 });

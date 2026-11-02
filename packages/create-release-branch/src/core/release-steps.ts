@@ -55,6 +55,22 @@ export async function startRelease<Data>({
 }
 
 /**
+ * The result of `checkChoices`: the errors, or the plan if there are none. In
+ * both cases, the missing dependencies and dependents for each package that
+ * has any.
+ */
+export type CheckChoicesResult<Data> =
+  | {
+      errors: ReleaseChoiceError[];
+      dependencyFindings: Record<string, DependencyFinding>;
+    }
+  | {
+      errors: [];
+      dependencyFindings: Record<string, DependencyFinding>;
+      plan: ModePlan<Data>;
+    };
+
+/**
  * Checks the release choices with the shared rules, then plans the release
  * with the mode if the rules found no errors.
  *
@@ -73,11 +89,7 @@ export async function checkChoices<Data>({
   project: Project;
   mode: Mode<Data>;
   choices: ReleaseChoices;
-}): Promise<{
-  errors: ReleaseChoiceError[];
-  dependencyFindings: Record<string, DependencyFinding>;
-  plan?: ModePlan<Data>;
-}> {
+}): Promise<CheckChoicesResult<Data>> {
   const candidates = await mode.listCandidates(choices);
   const packagesWithChanges = new Set(
     candidates

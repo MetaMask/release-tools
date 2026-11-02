@@ -4,27 +4,27 @@ import { SemVer } from 'semver';
 import { describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
-import { withSandbox } from '../tests/helpers.js';
+import { withSandbox } from '../../../tests/helpers.js';
 import {
   buildMockProject,
   buildMockPackage,
   createNoopCliOutput,
-} from '../tests/unit/helpers.js';
-import { checkChoices } from './core/release-steps.js';
-import type { VersionSpecifiers } from './core/types.js';
-import { listLegacyCandidates } from './modes/legacy/candidates.js';
-import { createLegacyMode } from './modes/legacy/legacy-mode.js';
-import type { Project } from './project/project.js';
+} from '../../../tests/unit/helpers.js';
+import { checkChoices } from '../../core/release-steps.js';
+import type { VersionSpecifiers } from '../../core/types.js';
+import { listLegacyCandidates } from '../../modes/legacy/candidates.js';
+import { createLegacyMode } from '../../modes/legacy/legacy-mode.js';
+import type { Project } from '../../project/project.js';
+import * as miscUtils from '../../utils/misc-utils.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
   validateReleaseSpecification as validateReleaseSpecificationWithCheck,
 } from './release-specification.js';
-import * as miscUtils from './utils/misc-utils.js';
 
-vi.mock('./utils/misc-utils', async () => {
+vi.mock('../../utils/misc-utils', async () => {
   return {
-    ...(await vi.importActual('./utils/misc-utils')),
+    ...(await vi.importActual('../../utils/misc-utils')),
     runCommand: vi.fn(),
   };
 });
@@ -73,6 +73,7 @@ describe('release-specification', () => {
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'legacy',
         candidates: listLegacyCandidates(project),
         isEditorAvailable: true,
       });
@@ -129,6 +130,7 @@ packages:
 
       await expect(
         generateReleaseSpecificationTemplateForMonorepo({
+          modeName: 'legacy',
           candidates: listLegacyCandidates(project),
           isEditorAvailable: false,
         }),
@@ -151,6 +153,7 @@ packages:
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'legacy',
         candidates: listLegacyCandidates(project),
         isEditorAvailable: false,
       });
@@ -189,6 +192,40 @@ packages:
   a: null
   b: null
 `.trimStart(),
+      );
+    });
+
+    it('uses the instructions of the changesets mode', async () => {
+      const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'changesets',
+        candidates: [{ name: 'a', currentVersion: '1.0.0', kind: 'changes' }],
+        isEditorAvailable: false,
+      });
+
+      expect(template).toContain(
+        '# By default, all packages released by pending Changesets are listed here,',
+      );
+      expect(template).toContain(
+        `
+# When you're finished, save this file and then run create-release-branch again.
+# The tool will update the versions of the packages you've listed and will apply
+# the Changesets to their changelogs.
+
+packages:
+  a: null
+`.trim(),
+      );
+    });
+
+    it('throws the changesets message if the changesets mode has no packages', async () => {
+      await expect(
+        generateReleaseSpecificationTemplateForMonorepo({
+          modeName: 'changesets',
+          candidates: [],
+          isEditorAvailable: true,
+        }),
+      ).rejects.toThrow(
+        'Could not generate release specification: There are no packages to release.',
       );
     });
   });
@@ -2070,6 +2107,35 @@ ${releaseSpecificationPath}
           },
           path: releaseSpecificationPath,
         });
+      });
+    });
+
+    it("keeps today's line numbers for a generated template", async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject({
+          workspacePackages: {
+            a: buildMockPackage('a', { hasChangesSinceLatestRelease: true }),
+          },
+        });
+        const template = await generateReleaseSpecificationTemplateForMonorepo({
+          modeName: 'legacy',
+          candidates: listLegacyCandidates(project),
+          isEditorAvailable: true,
+        });
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'release-spec',
+        );
+        await fs.promises.writeFile(
+          releaseSpecificationPath,
+          template.replace('  a: null', '  a: foo'),
+        );
+
+        await expect(
+          validateReleaseSpecification(project, releaseSpecificationPath),
+        ).rejects.toThrow(
+          '* Line 29: "foo" is not a valid version specifier for package "a"',
+        );
       });
     });
   });

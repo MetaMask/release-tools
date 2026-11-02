@@ -190,16 +190,16 @@ function createApp({
       try {
         const releasedPackages = req.body as ReleaseChoices;
 
-        const { errors, plan } = await checkChoices({
+        const result = await checkChoices({
           project,
           mode,
           choices: releasedPackages,
         });
 
-        if (plan === undefined) {
+        if (!('plan' in result)) {
           res.json({
             status: 'error',
-            errors: errors.map(({ message, entryIndex }) =>
+            errors: result.errors.map(({ message, entryIndex }) =>
               entryIndex === undefined
                 ? { message }
                 : { message, lineNumber: entryIndex + 2 },
@@ -208,7 +208,11 @@ function createApp({
           return;
         }
 
-        await applyRelease({ mode, plan, newReleaseVersion: version });
+        await applyRelease({
+          mode,
+          plan: result.plan,
+          newReleaseVersion: version,
+        });
         await finishRelease({ project, newReleaseVersion: version });
 
         res.json({ status: 'success' });
