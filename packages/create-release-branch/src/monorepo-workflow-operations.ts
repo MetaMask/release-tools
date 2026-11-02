@@ -9,6 +9,7 @@ import {
 } from './core/yarn-commands.js';
 import { determineEditor } from './editor.js';
 import { Formatter, ReleaseType } from './initial-parameters.js';
+import { listLegacyCandidates } from './modes/legacy/candidates.js';
 import {
   Project,
   updateChangelogsForChangedPackages,
@@ -111,7 +112,7 @@ export async function followMonorepoWorkflow({
 
     const releaseSpecificationTemplate =
       await generateReleaseSpecificationTemplateForMonorepo({
-        project,
+        candidates: listLegacyCandidates(project),
         isEditorAvailable: editor !== null,
       });
     await ensureDirectoryPathExists(tempDirectoryPath);

@@ -20,7 +20,7 @@ export const IncrementableVersionParts = {
 export type IncrementableVersionPart =
   (typeof IncrementableVersionParts)[keyof typeof IncrementableVersionParts];
 
-const SKIP_PACKAGE_DIRECTIVE = null;
+export const SKIP_PACKAGE_DIRECTIVE = null;
 const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
 
 /**

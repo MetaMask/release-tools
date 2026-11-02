@@ -1,8 +1,10 @@
 import YAML from 'yaml';
 
+import type { Candidate } from './core/candidates.js';
 import {
   checkReleaseChoices,
   normalizeReleaseChoices,
+  SKIP_PACKAGE_DIRECTIVE,
 } from './core/release-rules.js';
 import type {
   IncrementableVersionPart,
@@ -32,24 +34,21 @@ export type ReleaseSpecification = {
   path: string;
 };
 
-const SKIP_PACKAGE_DIRECTIVE = null;
-
 /**
  * Generates a skeleton for a release specification, which describes how a
  * project should be updated.
  *
  * @param args - The set of arguments to this function.
- * @param args.project - Information about the project.
- * @param args.project.workspacePackages - The workspace packages in the project.
+ * @param args.candidates - The packages to list in the release spec.
  * @param args.isEditorAvailable - Whether or not an executable can be found on
  * the user's computer to edit the release spec once it is generated.
  * @returns The release specification template.
  */
 export async function generateReleaseSpecificationTemplateForMonorepo({
-  project: { workspacePackages },
+  candidates,
   isEditorAvailable,
 }: {
-  project: Project;
+  candidates: Candidate[];
   isEditorAvailable: boolean;
 }): Promise<string> {
   const afterEditingInstructions = isEditorAvailable
@@ -90,18 +89,14 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
 ${afterEditingInstructions}
   `.trim();
 
-  const changedWorkspacePackages = Object.values(workspacePackages).filter(
-    (pkg) => pkg.hasChangesSinceLatestRelease,
-  );
-
-  if (changedWorkspacePackages.length === 0) {
+  if (candidates.length === 0) {
     throw new Error(
       'Could not generate release specification: There are no packages that have changed since their latest release.',
     );
   }
 
-  const packages = changedWorkspacePackages.reduce((obj, pkg) => {
-    return { ...obj, [pkg.validatedManifest.name]: SKIP_PACKAGE_DIRECTIVE };
+  const packages = candidates.reduce((obj, candidate) => {
+    return { ...obj, [candidate.name]: SKIP_PACKAGE_DIRECTIVE };
   }, {});
 
   return [instructions, YAML.stringify({ packages })].join('\n\n');
