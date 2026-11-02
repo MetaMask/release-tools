@@ -56,7 +56,7 @@ describe('main', () => {
       releaseType: 'backport',
       defaultBranch: 'main',
       formatter: 'prettier',
-      output: expect.objectContaining({ stdout }) as Output,
+      output: expect.any(Object) as Output,
     });
   });
 
@@ -92,7 +92,7 @@ describe('main', () => {
       defaultBranch: 'main',
       port: 3000,
       formatter: 'prettier',
-      output: expect.objectContaining({ stdout }) as Output,
+      output: expect.any(Object) as Output,
     });
   });
 

@@ -12,8 +12,6 @@ import type { WriteStreamLike } from '../utils/fs.js';
  * @property warn - Writes a warning to standard error.
  * @property error - Writes an error to standard error.
  * @property step - Runs a long-running action and returns its result.
- * @property stdout - The standard out stream, for code that needs a stream
- * (for example, to hand to a child process).
  */
 export type Output = {
   info(text: string): void;
@@ -21,7 +19,6 @@ export type Output = {
   warn(text: string): void;
   error(text: string): void;
   step<Result>(label: string, run: () => Promise<Result>): Promise<Result>;
-  stdout: WriteStreamLike;
 };
 
 /**
@@ -55,6 +52,5 @@ export function createOutput({
     async step(_label, run) {
       return await run();
     },
-    stdout,
   };
 }

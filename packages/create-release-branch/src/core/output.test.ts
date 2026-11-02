@@ -29,14 +29,6 @@ describe('output', () => {
       expect(stdout.data()).toStrictEqual([]);
     });
 
-    it('exposes the given stdout stream', () => {
-      const stdout = new MockWritable();
-      const stderr = new MockWritable();
-      const output = createOutput({ stdout, stderr });
-
-      expect(output.stdout).toBe(stdout);
-    });
-
     it('step runs the callback, returns its result, and writes nothing', async () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
