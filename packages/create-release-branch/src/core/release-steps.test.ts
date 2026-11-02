@@ -95,9 +95,13 @@ describe('release-steps', () => {
           calls.push('prepare');
         }),
       });
-      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
-        '2.0.0',
-      );
+      vi.spyOn(
+        releaseBranchModule,
+        'determineReleaseVersion',
+      ).mockImplementation(() => {
+        calls.push('determineReleaseVersion');
+        return '2.0.0';
+      });
       vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockImplementation(
         async () => {
           calls.push('ensureReleaseBranch');
@@ -118,6 +122,7 @@ describe('release-steps', () => {
       });
 
       expect(calls).toStrictEqual([
+        'determineReleaseVersion',
         'start Creating the release branch',
         'ensureReleaseBranch',
         'end Creating the release branch',

@@ -107,68 +107,50 @@ describe('cli-output', () => {
       expect(stderr.data()).toStrictEqual([]);
     });
 
-    it('writes the same bytes as plain output when not a TTY', async () => {
-      const plainStdout = new MockWritable();
-      const plainStderr = new MockWritable();
-      const stdout = new MockWritable();
-      const stderr = new MockWritable();
+    it.each([
+      {
+        condition: 'not a TTY',
+        buildStream: (): MockWritable => new MockWritable(),
+        arrange: (): void => undefined,
+      },
+      {
+        condition: 'NO_COLOR is set',
+        buildStream: buildTerminalStream,
+        arrange: (): void => {
+          vi.stubEnv('NO_COLOR', '1');
+        },
+      },
+      {
+        condition: 'chalk detects no color support',
+        buildStream: buildTerminalStream,
+        arrange: (): void => {
+          chalk.level = 0;
+          chalkStderr.level = 0;
+        },
+      },
+    ])(
+      'writes the same bytes as plain output when $condition',
+      async ({ buildStream, arrange }) => {
+        arrange();
+        const plainStdout = new MockWritable();
+        const plainStderr = new MockWritable();
+        const stdout = buildStream();
+        const stderr = buildStream();
 
-      await writeEveryKindOfMessage(
-        createCliOutput({
-          stdout: plainStdout,
-          stderr: plainStderr,
-          styled: { stdout: false, stderr: false },
-        }),
-      );
-      await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
+        await writeEveryKindOfMessage(
+          createCliOutput({
+            stdout: plainStdout,
+            stderr: plainStderr,
+            styled: { stdout: false, stderr: false },
+          }),
+        );
+        await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
 
-      expect(stdout.data()).toStrictEqual(plainStdout.data());
-      expect(stderr.data()).toStrictEqual(plainStderr.data());
-      expect(ora).not.toHaveBeenCalled();
-    });
-
-    it('writes the same bytes as plain output when NO_COLOR is set', async () => {
-      vi.stubEnv('NO_COLOR', '1');
-      const plainStdout = new MockWritable();
-      const plainStderr = new MockWritable();
-      const stdout = buildTerminalStream();
-      const stderr = buildTerminalStream();
-
-      await writeEveryKindOfMessage(
-        createCliOutput({
-          stdout: plainStdout,
-          stderr: plainStderr,
-          styled: { stdout: false, stderr: false },
-        }),
-      );
-      await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
-
-      expect(stdout.data()).toStrictEqual(plainStdout.data());
-      expect(stderr.data()).toStrictEqual(plainStderr.data());
-      expect(ora).not.toHaveBeenCalled();
-    });
-
-    it('writes the same bytes as plain output when chalk detects no color support', async () => {
-      chalk.level = 0;
-      chalkStderr.level = 0;
-      const plainStdout = new MockWritable();
-      const plainStderr = new MockWritable();
-      const stdout = buildTerminalStream();
-      const stderr = buildTerminalStream();
-
-      await writeEveryKindOfMessage(
-        createCliOutput({
-          stdout: plainStdout,
-          stderr: plainStderr,
-          styled: { stdout: false, stderr: false },
-        }),
-      );
-      await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
-
-      expect(stdout.data()).toStrictEqual(plainStdout.data());
-      expect(stderr.data()).toStrictEqual(plainStderr.data());
-      expect(ora).not.toHaveBeenCalled();
-    });
+        expect(stdout.data()).toStrictEqual(plainStdout.data());
+        expect(stderr.data()).toStrictEqual(plainStderr.data());
+        expect(ora).not.toHaveBeenCalled();
+      },
+    );
 
     it('styles only stdout when stderr is not a terminal', async () => {
       const stdout = buildTerminalStream();

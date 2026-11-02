@@ -42,15 +42,10 @@ export async function startRelease<Data>({
   mode: Mode<Data>;
   output: CliOutput;
 }): Promise<{ newReleaseVersion: string }> {
-  const { newReleaseVersion, firstRun } = await output.step(
+  const newReleaseVersion = determineReleaseVersion(project, releaseType);
+  const { firstRun } = await output.step(
     'Creating the release branch',
-    async () => {
-      const version = determineReleaseVersion(project, releaseType);
-      return {
-        newReleaseVersion: version,
-        ...(await ensureReleaseBranch(project, version)),
-      };
-    },
+    async () => await ensureReleaseBranch(project, newReleaseVersion),
   );
 
   if (firstRun) {
