@@ -19,6 +19,7 @@ export type ChangesetsFixturePackage = {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
   /**
    * The content of `CHANGELOG.md`. No changelog is written if omitted.
    */

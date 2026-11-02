@@ -1,5 +1,6 @@
 import type { ComprehensiveRelease } from '@changesets/types';
 import { parseChangelog } from '@metamask/auto-changelog';
+import { satisfies } from 'semver';
 import YAML from 'yaml';
 
 import type { LoadedChangesetsPlan } from './changesets-plan.js';
@@ -69,6 +70,30 @@ function isBumpingRelease(
 }
 
 /**
+ * Turns a `workspace:` range into the semver range that Changesets compares
+ * the new version of the dependency against.
+ *
+ * @param range - The range declared by the dependent.
+ * @param release - The release of the dependency.
+ * @returns The semver range. Other ranges are returned unchanged.
+ */
+function resolveWorkspaceRange(range: string, release: BumpingRelease): string {
+  if (!range.startsWith('workspace:')) {
+    return range;
+  }
+  const workspaceRange = range.slice('workspace:'.length);
+  switch (workspaceRange) {
+    case '*':
+      return release.oldVersion;
+    case '^':
+    case '~':
+      return `${workspaceRange}${release.oldVersion}`;
+    default:
+      return workspaceRange;
+  }
+}
+
+/**
  * Explains why the release plan adds a package that no Changeset releases.
  *
  * @param packageName - The name of the propagated package.
@@ -84,20 +109,27 @@ function getPropagationReason(
   const manifest = plan.packages.packages.find(
     ({ packageJson }) => packageJson.name === packageName,
   )?.packageJson;
+  const withLabel = (
+    ranges: Record<string, string> | undefined,
+    label: string,
+  ): { name: string; range: string; label: string }[] =>
+    Object.entries(ranges ?? {}).map(([name, range]) => ({
+      name,
+      range,
+      label,
+    }));
   const dependencies = [
-    ...Object.keys(manifest?.dependencies ?? {}).map((name) => ({
-      name,
-      label: 'dependency',
-    })),
-    ...Object.keys(manifest?.peerDependencies ?? {}).map((name) => ({
-      name,
-      label: 'peer dependency',
-    })),
+    ...withLabel(manifest?.dependencies, 'dependency'),
+    ...withLabel(manifest?.optionalDependencies, 'dependency'),
+    ...withLabel(manifest?.peerDependencies, 'peer dependency'),
   ].sort((left, right) => compareNames(left.name, right.name));
 
-  for (const { name, label } of dependencies) {
+  for (const { name, range, label } of dependencies) {
     const release = releasesByName.get(name);
-    if (release) {
+    if (
+      release &&
+      !satisfies(release.newVersion, resolveWorkspaceRange(range, release))
+    ) {
       return `released because ${label} ${name} is released as ${release.type}`;
     }
   }

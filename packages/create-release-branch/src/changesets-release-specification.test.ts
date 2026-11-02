@@ -280,7 +280,7 @@ describe('changesets-release-specification', () => {
       ]);
     });
 
-    it('picks the first released dependency by name for the reason', async () => {
+    it('picks the first released dependency out of range by name for the reason', async () => {
       const candidates = await findFixtureCandidates({
         packages: [
           { name: '@scope/a', version: '1.0.0' },
@@ -301,8 +301,12 @@ describe('changesets-release-specification', () => {
         changesets: [
           {
             id: 'calm-dogs-run',
-            releases: { '@scope/b': 'major', '@scope/y': 'major' },
-            summary: 'Break b and y',
+            releases: {
+              '@scope/a': 'minor',
+              '@scope/b': 'major',
+              '@scope/y': 'major',
+            },
+            summary: 'Extend a, break b and y',
           },
         ],
       });
@@ -316,6 +320,64 @@ describe('changesets-release-specification', () => {
         changesetCount: 0,
         reason: 'released because dependency @scope/b is released as major',
       });
+    });
+
+    it('resolves "workspace:" ranges like Changesets for the reason', async () => {
+      const candidates = await findFixtureCandidates({
+        packages: [
+          { name: '@scope/a', version: '1.0.0' },
+          { name: '@scope/aa', version: '1.0.0' },
+          { name: '@scope/b', version: '1.0.0' },
+          {
+            name: '@scope/c',
+            version: '1.0.0',
+            dependencies: {
+              '@scope/a': 'workspace:^',
+              '@scope/aa': 'workspace:^1.0.0',
+              '@scope/b': 'workspace:*',
+            },
+          },
+        ],
+        changesets: [
+          {
+            id: 'quiet-owls-nap',
+            releases: {
+              '@scope/a': 'minor',
+              '@scope/aa': 'minor',
+              '@scope/b': 'patch',
+            },
+            summary: 'Extend a and aa, fix b',
+          },
+        ],
+      });
+
+      expect(candidates.find(({ name }) => name === '@scope/c')?.reason).toBe(
+        'released because dependency @scope/b is released as patch',
+      );
+    });
+
+    it('names a released optional dependency in the reason', async () => {
+      const candidates = await findFixtureCandidates({
+        packages: [
+          { name: '@scope/b', version: '1.0.0' },
+          {
+            name: '@scope/c',
+            version: '1.0.0',
+            optionalDependencies: { '@scope/b': '^1.0.0' },
+          },
+        ],
+        changesets: [
+          {
+            id: 'loud-bees-hum',
+            releases: { '@scope/b': 'major' },
+            summary: 'Break b',
+          },
+        ],
+      });
+
+      expect(candidates.find(({ name }) => name === '@scope/c')?.reason).toBe(
+        'released because dependency @scope/b is released as major',
+      );
     });
 
     it('omits the reason of a propagated release that no released dependency explains', async () => {
