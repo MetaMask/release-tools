@@ -24,7 +24,7 @@ import {
  * @param args.releaseType - The type of release ("ordinary" or "backport"),
  * which affects how the version is bumped.
  * @param args.mode - The release mode.
- * @returns The version of the new release, and whether this is the first run.
+ * @returns The version of the new release.
  */
 export async function startRelease<Data>({
   project,
@@ -34,7 +34,7 @@ export async function startRelease<Data>({
   project: Project;
   releaseType: ReleaseType;
   mode: Mode<Data>;
-}): Promise<{ newReleaseVersion: string; firstRun: boolean }> {
+}): Promise<{ newReleaseVersion: string }> {
   const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
     project,
     releaseType,
@@ -49,7 +49,7 @@ export async function startRelease<Data>({
     );
   }
 
-  return { newReleaseVersion, firstRun };
+  return { newReleaseVersion };
 }
 
 /**

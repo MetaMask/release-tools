@@ -70,14 +70,8 @@ describe('release-steps', () => {
         mode,
       });
 
-      expect(firstResult).toStrictEqual({
-        newReleaseVersion: '2.0.0',
-        firstRun: true,
-      });
-      expect(secondResult).toStrictEqual({
-        newReleaseVersion: '2.0.0',
-        firstRun: false,
-      });
+      expect(firstResult).toStrictEqual({ newReleaseVersion: '2.0.0' });
+      expect(secondResult).toStrictEqual({ newReleaseVersion: '2.0.0' });
       expect(createReleaseBranchSpy).toHaveBeenCalledWith({
         project,
         releaseType: 'ordinary',
