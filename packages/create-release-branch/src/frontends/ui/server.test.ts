@@ -7,6 +7,7 @@ import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  buildMockMode,
   buildMockPackage,
   buildMockProject,
   createNoopCliOutput,
@@ -26,25 +27,6 @@ vi.mock('open');
 vi.mock('../../core/release-branch');
 vi.mock('../../core/repo');
 vi.mock('../../core/yarn-commands');
-
-/**
- * Builds a mode for use in tests. All methods are mock functions.
- *
- * @param overrides - The properties to override in the mode.
- * @returns The mock mode.
- */
-function buildMockMode(overrides: Partial<Mode<string>> = {}): Mode<string> {
-  return {
-    name: 'legacy',
-    allowEmptyInitializeCommit: false,
-    prepare: vi.fn(),
-    listCandidates: vi.fn().mockResolvedValue([]),
-    plan: vi.fn(),
-    apply: vi.fn(),
-    getReleaseNotes: vi.fn(),
-    ...overrides,
-  };
-}
 
 /**
  * Builds a project in which package "b" depends on package "a".
