@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Show colors and progress spinners in the CLI output ([#<n>](https://github.com/MetaMask/release-tools/pull/<n>))
+- Show colors and progress spinners in the CLI output ([#154](https://github.com/MetaMask/release-tools/pull/154))
 
 ### Fixed
 
