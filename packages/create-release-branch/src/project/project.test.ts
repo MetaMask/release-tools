@@ -8,7 +8,7 @@ import { withProtectedProcessEnv, withSandbox } from '../../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
-  createNoopWriteStream,
+  createNoopOutput,
 } from '../../tests/unit/helpers.js';
 import * as repoModule from '../core/repo.js';
 import { IncrementableVersionParts } from '../release-specification.js';
@@ -66,7 +66,7 @@ describe('project', () => {
           }),
         };
         const projectTagNames = ['tag1', 'tag2', 'tag3'];
-        const stderr = createNoopWriteStream();
+        const output = createNoopOutput();
         vi.when(vi.spyOn(repoModule, 'getTagNames'))
           .calledWith(projectDirectoryPath)
           .thenResolve(projectTagNames);
@@ -99,7 +99,7 @@ describe('project', () => {
             rootPackageVersion,
             projectDirectoryPath,
             projectTagNames,
-            stderr,
+            output,
           })
           .thenResolve(workspacePackages.a);
         vi.when(readMonorepoWorkspacePackageMock)
@@ -114,7 +114,7 @@ describe('project', () => {
             rootPackageVersion,
             projectDirectoryPath,
             projectTagNames,
-            stderr,
+            output,
           })
           .thenResolve(workspacePackages.b);
         await mkdir(path.join(projectDirectoryPath, 'packages'));
@@ -125,7 +125,7 @@ describe('project', () => {
         );
 
         expect(
-          await readProject(projectDirectoryPath, { stderr }),
+          await readProject(projectDirectoryPath, { output }),
         ).toStrictEqual({
           directoryPath: projectDirectoryPath,
           repositoryUrl: projectRepositoryUrl,
@@ -317,7 +317,7 @@ describe('project', () => {
 
   describe('updateChangelogsForChangedPackages', () => {
     it('should update changelog files of all the packages that has changes since latest release', async () => {
-      const stderr = createNoopWriteStream();
+      const output = createNoopOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
@@ -338,26 +338,26 @@ describe('project', () => {
       await updateChangelogsForChangedPackages({
         project,
         formatter: 'prettier',
-        stderr,
+        output,
       });
 
       expect(updatePackageChangelogSpy).toHaveBeenCalledWith({
         project,
         package: project.workspacePackages.a,
         formatter: 'prettier',
-        stderr,
+        output,
       });
 
       expect(updatePackageChangelogSpy).toHaveBeenCalledWith({
         project,
         package: project.workspacePackages.b,
         formatter: 'prettier',
-        stderr,
+        output,
       });
     });
 
     it('should not update changelog files of all the packages that has not changed since latest release', async () => {
-      const stderr = createNoopWriteStream();
+      const output = createNoopOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
@@ -375,13 +375,13 @@ describe('project', () => {
       await updateChangelogsForChangedPackages({
         project,
         formatter: 'prettier',
-        stderr,
+        output,
       });
 
       expect(updatePackageChangelogSpy).not.toHaveBeenCalledWith({
         project,
         package: project.workspacePackages.a,
-        stderr,
+        output,
       });
     });
   });

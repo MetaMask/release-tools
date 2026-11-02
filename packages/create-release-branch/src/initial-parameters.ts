@@ -2,8 +2,8 @@ import os from 'os';
 import path from 'path';
 
 import { readCommandLineArguments } from './command-line-arguments.js';
+import type { Output } from './core/output.js';
 import { readProject, Project } from './project/project.js';
-import { WriteStreamLike } from './utils/fs.js';
 
 /**
  * The type of release being created as determined by the parent release.
@@ -39,22 +39,22 @@ type InitialParameters = {
  * @param args - The arguments to this function.
  * @param args.argv - The arguments to this executable.
  * @param args.cwd - The directory in which this executable was run.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @returns The initial parameters.
  */
 export async function determineInitialParameters({
   argv,
   cwd,
-  stderr,
+  output,
 }: {
   argv: string[];
   cwd: string;
-  stderr: WriteStreamLike;
+  output: Output;
 }): Promise<InitialParameters> {
   const args = await readCommandLineArguments(argv);
 
   const projectDirectoryPath = path.resolve(cwd, args.projectDirectory);
-  const project = await readProject(projectDirectoryPath, { stderr });
+  const project = await readProject(projectDirectoryPath, { output });
   const tempDirectoryPath =
     args.tempDirectory === undefined
       ? path.join(

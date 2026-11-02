@@ -1,5 +1,6 @@
 import type { WriteStream } from 'fs';
 
+import { createOutput } from './core/output.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
 import { startUI } from './ui.js';
@@ -27,6 +28,7 @@ export async function main({
   stdout: Pick<WriteStream, 'write'>;
   stderr: Pick<WriteStream, 'write'>;
 }): Promise<void> {
+  const output = createOutput({ stdout, stderr });
   const {
     project,
     tempDirectoryPath,
@@ -36,10 +38,10 @@ export async function main({
     interactive,
     port,
     formatter,
-  } = await determineInitialParameters({ argv, cwd, stderr });
+  } = await determineInitialParameters({ argv, cwd, output });
 
   if (project.isMonorepo) {
-    stdout.write(
+    output.info(
       'Project appears to have workspaces. Following monorepo workflow.\n',
     );
 
@@ -50,8 +52,7 @@ export async function main({
         defaultBranch,
         port,
         formatter,
-        stdout,
-        stderr,
+        output,
       });
     } else {
       await followMonorepoWorkflow({
@@ -61,12 +62,11 @@ export async function main({
         releaseType,
         defaultBranch,
         formatter,
-        stdout,
-        stderr,
+        output,
       });
     }
   } else {
-    stdout.write(
+    output.info(
       'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
     );
   }

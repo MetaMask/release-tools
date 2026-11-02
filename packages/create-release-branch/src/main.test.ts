@@ -2,6 +2,7 @@ import fs from 'fs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
+import type { Output } from './core/output.js';
 import * as initialParametersModule from './initial-parameters.js';
 import { main } from './main.js';
 import * as monorepoWorkflowOperations from './monorepo-workflow-operations.js';
@@ -55,8 +56,7 @@ describe('main', () => {
       releaseType: 'backport',
       defaultBranch: 'main',
       formatter: 'prettier',
-      stdout,
-      stderr,
+      output: expect.objectContaining({ stdout }) as Output,
     });
   });
 
@@ -92,8 +92,7 @@ describe('main', () => {
       defaultBranch: 'main',
       port: 3000,
       formatter: 'prettier',
-      stdout,
-      stderr,
+      output: expect.objectContaining({ stdout }) as Output,
     });
   });
 

@@ -1,6 +1,6 @@
-import { WriteStream } from 'fs';
 import { SemVer } from 'semver';
 
+import type { Output } from './core/output.js';
 import { Formatter } from './initial-parameters.js';
 import { Package, updatePackage } from './project/package.js';
 import { Project } from './project/project.js';
@@ -99,13 +99,13 @@ export async function planRelease({
  * @param releasePlan - Compiled instructions on how exactly to update the
  * project in order to prepare a new release.
  * @param formatter - The formatter to use for formatting the changelog.
- * @param stderr - A stream that can be used to write to standard error.
+ * @param output - Where to write user-facing messages.
  */
 export async function executeReleasePlan(
   project: Project,
   releasePlan: ReleasePlan,
   formatter: Formatter,
-  stderr: Pick<WriteStream, 'write'>,
+  output: Output,
 ): Promise<void> {
   await Promise.all(
     releasePlan.packages.map(async (workspaceReleasePlan) => {
@@ -116,7 +116,7 @@ export async function executeReleasePlan(
         project,
         packageReleasePlan: workspaceReleasePlan,
         formatter,
-        stderr,
+        output,
       });
     }),
   );

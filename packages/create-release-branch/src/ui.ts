@@ -1,8 +1,8 @@
 import express from 'express';
-import type { WriteStream } from 'fs';
 import openBrowser from 'open';
 import { join } from 'path';
 
+import type { Output } from './core/output.js';
 import { commitAllChanges } from './core/repo.js';
 import {
   deduplicateDependencies,
@@ -37,8 +37,7 @@ type UIOptions = {
   defaultBranch: string;
   port: number;
   formatter: Formatter;
-  stdout: Pick<WriteStream, 'write'>;
-  stderr: Pick<WriteStream, 'write'>;
+  output: Output;
 };
 
 /**
@@ -50,8 +49,7 @@ type UIOptions = {
  * @param options.defaultBranch - The default branch name.
  * @param options.port - The port number for the server.
  * @param options.formatter - The formatter to use for formatting the changelog.
- * @param options.stdout - The stdout stream.
- * @param options.stderr - The stderr stream.
+ * @param options.output - Where to write user-facing messages.
  */
 export async function startUI({
   project,
@@ -59,8 +57,7 @@ export async function startUI({
   defaultBranch,
   port,
   formatter,
-  stdout,
-  stderr,
+  output,
 }: UIOptions): Promise<void> {
   const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
     project,
@@ -68,7 +65,7 @@ export async function startUI({
   });
 
   if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, stderr });
+    await updateChangelogsForChangedPackages({ project, formatter, output });
     await commitAllChanges(
       project.directoryPath,
       `Initialize Release ${newReleaseVersion}`,
@@ -79,35 +76,35 @@ export async function startUI({
     project,
     defaultBranch,
     formatter,
-    stderr,
+    output,
     version: newReleaseVersion,
     closeServer: () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       server.close();
-      stdout.write('Release process completed. Server shutdown.\n');
+      output.success('Release process completed. Server shutdown.\n');
     },
   });
 
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
 
-    stdout.write(`\nAttempting to open UI in browser...`);
+    output.info(`\nAttempting to open UI in browser...`);
     openBrowser(url)
       .then(() => {
-        stdout.write(`\nUI server running at ${url}\n`);
+        output.info(`\nUI server running at ${url}\n`);
       })
       .catch((error: unknown) => {
-        stderr.write(`\n---------------------------------------------------\n`);
-        stderr.write(`Error automatically opening browser: ${String(error)}\n`);
-        stderr.write(`Please open the following URL manually:\n`);
-        stderr.write(`${url}\n`);
-        stderr.write(`---------------------------------------------------\n\n`);
+        output.error(`\n---------------------------------------------------\n`);
+        output.error(`Error automatically opening browser: ${String(error)}\n`);
+        output.error(`Please open the following URL manually:\n`);
+        output.error(`${url}\n`);
+        output.error(`---------------------------------------------------\n\n`);
       });
   });
 
   return new Promise((resolve, reject) => {
     server.on('error', (error: Error) => {
-      stderr.write(`Failed to start server: ${error.message}\n`);
+      output.error(`Failed to start server: ${error.message}\n`);
       reject(error);
     });
 
@@ -124,7 +121,7 @@ export async function startUI({
  * @param options.project - The project object.
  * @param options.defaultBranch - The default branch name.
  * @param options.formatter - The formatter to use for formatting the changelog.
- * @param options.stderr - The stderr stream.
+ * @param options.output - Where to write user-facing messages.
  * @param options.version - The release version.
  * @param options.closeServer - The function to close the server.
  * @returns The Express application.
@@ -133,14 +130,14 @@ function createApp({
   project,
   defaultBranch,
   formatter,
-  stderr,
+  output,
   version,
   closeServer,
 }: {
   project: Project;
   defaultBranch: string;
   formatter: Formatter;
-  stderr: Pick<WriteStream, 'write'>;
+  output: Output;
   version: string;
   closeServer: () => void;
 }): express.Application {
@@ -200,7 +197,7 @@ function createApp({
 
       res.send(changelogContent);
     } catch (error) {
-      stderr.write(`Changelog error: ${String(error)}\n`);
+      output.error(`Changelog error: ${String(error)}\n`);
       res.status(500).send('Internal Server Error');
     }
   });
@@ -271,7 +268,7 @@ function createApp({
 
         res.json({ status: 'success' });
       } catch (error) {
-        stderr.write(`Release error: ${String(error)}\n`);
+        output.error(`Release error: ${String(error)}\n`);
         res.status(400).send('Invalid request');
       }
     },
@@ -333,7 +330,7 @@ function createApp({
           releaseSpecificationPackages,
           newReleaseVersion: version,
         });
-        await executeReleasePlan(project, releasePlan, formatter, stderr);
+        await executeReleasePlan(project, releasePlan, formatter, output);
         await fixConstraints(project.directoryPath);
         await updateYarnLockfile(project.directoryPath);
         await deduplicateDependencies(project.directoryPath);
@@ -346,7 +343,7 @@ function createApp({
 
         closeServer();
       } catch (error) {
-        stderr.write(`Release error: ${String(error)}\n`);
+        output.error(`Release error: ${String(error)}\n`);
         res.status(400).send('Invalid request');
       }
     },
