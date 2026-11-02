@@ -3,9 +3,9 @@ import YAML from 'yaml';
 
 import type { Package } from '../project/package.js';
 import type { Project } from '../project/project.js';
-import type { ReleaseSpecification } from '../release-specification.js';
 import { hasProperty } from '../utils/misc-utils.js';
 import { isValidSemver, semver, SemVer } from '../utils/semver.js';
+import type { VersionSpecifiers } from './types.js';
 
 /**
  * The SemVer-compatible parts of a version string that can be bumped by this
@@ -417,39 +417,36 @@ export function checkReleaseChoices(
  */
 export function normalizeReleaseChoices(
   choices: ReleaseChoices,
-): ReleaseSpecification['packages'] {
-  return Object.keys(choices).reduce<ReleaseSpecification['packages']>(
-    (obj, packageName) => {
-      const versionSpecifierOrDirective = choices[packageName];
+): VersionSpecifiers {
+  return Object.keys(choices).reduce<VersionSpecifiers>((obj, packageName) => {
+    const versionSpecifierOrDirective = choices[packageName];
 
+    if (
+      versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
+      versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
+    ) {
       if (
-        versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
-        versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
+        Object.values(IncrementableVersionParts).includes(
+          // Typecast: It doesn't matter what type versionSpecifierOrDirective
+          // is as we are checking for inclusion.
+          versionSpecifierOrDirective as IncrementableVersionPart,
+        )
       ) {
-        if (
-          Object.values(IncrementableVersionParts).includes(
-            // Typecast: It doesn't matter what type versionSpecifierOrDirective
-            // is as we are checking for inclusion.
-            versionSpecifierOrDirective as IncrementableVersionPart,
-          )
-        ) {
-          return {
-            ...obj,
-            // Typecast: We know what this is as we've checked it above.
-            [packageName]:
-              versionSpecifierOrDirective as IncrementableVersionPart,
-          };
-        }
-
         return {
           ...obj,
-          // Typecast: We know that this will safely parse.
-          [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
+          // Typecast: We know what this is as we've checked it above.
+          [packageName]:
+            versionSpecifierOrDirective as IncrementableVersionPart,
         };
       }
 
-      return obj;
-    },
-    {},
-  );
+      return {
+        ...obj,
+        // Typecast: We know that this will safely parse.
+        [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
+      };
+    }
+
+    return obj;
+  }, {});
 }

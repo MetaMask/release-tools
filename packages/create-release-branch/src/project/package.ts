@@ -10,8 +10,8 @@ import { format } from 'util';
 
 import type { CliOutput } from '../core/cli-output.js';
 import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
-import { Formatter } from '../initial-parameters.js';
-import { PackageReleasePlan } from '../release-plan.js';
+import type { Formatter } from '../core/types.js';
+import type { PackageReleasePlan } from '../modes/legacy/release-plan.js';
 import { readFile, writeFile, writeJsonFile } from '../utils/fs.js';
 import { isErrorWithCode } from '../utils/misc-utils.js';
 import { SemVer } from '../utils/semver.js';

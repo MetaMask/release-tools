@@ -4,8 +4,7 @@ import { resolve } from 'path';
 
 import type { CliOutput } from '../core/cli-output.js';
 import { getTagNames, restoreFiles } from '../core/repo.js';
-import { Formatter } from '../initial-parameters.js';
-import { ReleaseSpecification } from '../release-specification.js';
+import type { Formatter, VersionSpecifiers } from '../core/types.js';
 import { fileExists } from '../utils/fs.js';
 import {
   convertToHttpsGitHubRepositoryUrl,
@@ -256,7 +255,7 @@ export async function restoreChangelogsForSkippedPackages({
     Project,
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
-  releaseSpecificationPackages: ReleaseSpecification['packages'];
+  releaseSpecificationPackages: VersionSpecifiers;
   defaultBranch: string;
 }): Promise<void> {
   const existingSkippedPackageChangelogPaths = (
