@@ -55,9 +55,10 @@ vi.mock('./package', async (importOriginal) => {
 const RECOVERY_COMMAND =
   'git restore :/ && git clean -fd -e RELEASE_SPEC.yml :/';
 
-const RECOVERY_MESSAGE = `The release could not be completed. Changesets that were only partly released have been restored. Discard the remaining uncommitted changes (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
+const RECOVERY_MESSAGE = `The release could not be completed. Discard the uncommitted changes (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
 
-const RESTORATION_FAILED_MESSAGE = `The release could not be completed, and the Changesets that were only partly released could not be restored. Discard every uncommitted change to get the Changesets back (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
+const UNCOMMITTED_CHANGESETS_MESSAGE =
+  'The .changeset directory has uncommitted changes. Commit or remove them, then run this tool again.';
 
 const REPOSITORY_URL = LOCAL_CHANGELOG_REPOSITORY_URL;
 
@@ -368,6 +369,31 @@ async function readChangesetFiles(
   );
 }
 
+/**
+ * Commits every change in a fixture.
+ *
+ * @param rootDirectoryPath - The root of the fixture.
+ */
+async function commitFixture(rootDirectoryPath: string): Promise<void> {
+  await execa('git', ['add', '-A'], { cwd: rootDirectoryPath });
+  await execa('git', ['commit', '-m', 'Update the fixture'], {
+    cwd: rootDirectoryPath,
+  });
+}
+
+/**
+ * Lists the uncommitted changes of a fixture.
+ *
+ * @param rootDirectoryPath - The root of the fixture.
+ * @returns The output of `git status --porcelain`.
+ */
+async function getFixtureStatus(rootDirectoryPath: string): Promise<string> {
+  const { stdout } = await execa('git', ['status', '--porcelain'], {
+    cwd: rootDirectoryPath,
+  });
+  return stdout;
+}
+
 describe('changesets-apply', () => {
   describe('applyChangesetsRelease', () => {
     describe('after releasing every package except @example/d', () => {
@@ -530,6 +556,7 @@ describe('changesets-apply', () => {
     it('releases the rest of a straddling changeset in a later release', async () => {
       await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
         await release(rootDirectoryPath, ENTRIES);
+        await commitFixture(rootDirectoryPath);
         await release(rootDirectoryPath, { '@example/d': 'minor' }, '3.0.0');
 
         expect(
@@ -629,6 +656,7 @@ describe('changesets-apply', () => {
           releases: { '@example/a': 'patch' },
           summary: 'A summary without a category',
         });
+        await commitFixture(rootDirectoryPath);
         const changesetFiles = await readChangesetFiles(rootDirectoryPath);
         const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
         vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -654,18 +682,60 @@ describe('changesets-apply', () => {
       });
     });
 
-    it('restores residual changesets if the release fails after the changesets are consumed', async () => {
+    it('explains how to recover if the release fails after the changesets are consumed', async () => {
       await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
         const updateError = new Error('Could not update the package');
         vi.mocked(updatePackage).mockRejectedValueOnce(updateError);
+        vi.mocked(restoreResidualChangesets).mockClear();
 
         const promise = release(rootDirectoryPath, ENTRIES);
 
         await expect(promise).rejects.toThrow(RECOVERY_MESSAGE);
         await expect(promise).rejects.toMatchObject({ cause: updateError });
-        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual({
-          'eager-owls-fly.md': RESIDUAL_STRADDLING_CHANGESET,
+        expect(restoreResidualChangesets).not.toHaveBeenCalled();
+      });
+    });
+
+    it('fails before changing any file if a changeset is not committed', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        await writeChangesetFile(rootDirectoryPath, {
+          id: 'new-frogs-hop',
+          releases: { '@example/a': 'patch' },
+          summary: buildLocalChangelogSummary('Fixed', 'Fix a again', 15),
         });
+        const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
+        const statusBefore = await getFixtureStatus(rootDirectoryPath);
+
+        await expect(
+          applyChangesetsRelease({
+            ...prepared,
+            newReleaseVersion: '2.0.0',
+            formatter: 'prettier',
+            stderr: createNoopWriteStream(),
+          }),
+        ).rejects.toThrow(UNCOMMITTED_CHANGESETS_MESSAGE);
+        expect(await getFixtureStatus(rootDirectoryPath)).toBe(statusBefore);
+      });
+    });
+
+    it('fails before changing any file if a committed changeset is modified', async () => {
+      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
+        await fs.promises.appendFile(
+          path.join(rootDirectoryPath, '.changeset', 'brave-cats-sing.md'),
+          '\nMore details.\n',
+        );
+        const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
+        const statusBefore = await getFixtureStatus(rootDirectoryPath);
+
+        await expect(
+          applyChangesetsRelease({
+            ...prepared,
+            newReleaseVersion: '2.0.0',
+            formatter: 'prettier',
+            stderr: createNoopWriteStream(),
+          }),
+        ).rejects.toThrow(UNCOMMITTED_CHANGESETS_MESSAGE);
+        expect(await getFixtureStatus(rootDirectoryPath)).toBe(statusBefore);
       });
     });
 
@@ -757,7 +827,7 @@ describe('changesets-apply', () => {
               'packages',
               'n',
               'CHANGELOG.md',
-            )}) has no release yet but has a link reference definition, so the release cannot be added to it. Remove the empty Unreleased section and its link reference definition, then run this tool again.`,
+            )}) has no release yet but has a link reference definition, so the release cannot be added to it. Remove the link reference definition of the Unreleased section ([Unreleased]: ...), then run this tool again.`,
           );
           expect(statusBefore).toBe('');
           const { stdout: statusAfter } = await execa(
@@ -810,73 +880,6 @@ describe('changesets-apply', () => {
           });
         },
       );
-    });
-
-    it('reports both errors if the restoration fails after the release failed', async () => {
-      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
-        const updateError = new Error('Could not update the package');
-        vi.mocked(updatePackage).mockRejectedValueOnce(updateError);
-        const restorationError = new Error('Could not write the changeset');
-        vi.mocked(restoreResidualChangesets).mockRejectedValueOnce(
-          restorationError,
-        );
-
-        const promise = release(rootDirectoryPath, ENTRIES);
-
-        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
-        const error = await promise.catch(
-          (caughtError: unknown) => caughtError,
-        );
-        expect((error as Error).cause).toBeInstanceOf(AggregateError);
-        expect(((error as Error).cause as AggregateError).errors).toStrictEqual(
-          [updateError, restorationError],
-        );
-      });
-    });
-
-    it('reports the restoration error if only the restoration fails', async () => {
-      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
-        const prepared = await prepareRelease(rootDirectoryPath, ENTRIES);
-        const restorationError = new Error('Could not write the changeset');
-        vi.mocked(restoreResidualChangesets).mockRejectedValueOnce(
-          restorationError,
-        );
-
-        const promise = applyChangesetsRelease({
-          ...prepared,
-          newReleaseVersion: '2.0.0',
-          formatter: 'prettier',
-          stderr: createNoopWriteStream(),
-        });
-
-        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
-        await expect(promise).rejects.toMatchObject({
-          cause: restorationError,
-        });
-      });
-    });
-
-    it('reports every restoration error and still restores the other changesets', async () => {
-      await withChangesetsFixture(FIXTURE, async (rootDirectoryPath) => {
-        const firstError = new Error('Could not write the first changeset');
-        const secondError = new Error('Could not write the second changeset');
-        vi.mocked(restoreResidualChangesets)
-          .mockRejectedValueOnce(firstError)
-          .mockRejectedValueOnce(secondError);
-
-        const promise = release(rootDirectoryPath, ENTRIES);
-
-        await expect(promise).rejects.toThrow(RESTORATION_FAILED_MESSAGE);
-        await expect(promise).rejects.toMatchObject({
-          cause: {
-            message: 'Restoring several Changesets failed.',
-            errors: [firstError, secondError],
-          },
-        });
-        expect(await readChangesetFiles(rootDirectoryPath)).toStrictEqual({
-          'eager-owls-fly.md': RESIDUAL_STRADDLING_CHANGESET,
-        });
-      });
     });
   });
 });

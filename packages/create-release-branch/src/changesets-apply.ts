@@ -13,13 +13,15 @@ import { readPackageManifest } from './package-manifest.js';
 import type { Package } from './package.js';
 import { getFormatter, updatePackage } from './package.js';
 import type { Project } from './project.js';
+import { hasUncommittedChanges } from './repo.js';
 
 const RECOVERY_COMMAND =
   'git restore :/ && git clean -fd -e RELEASE_SPEC.yml :/';
 
-const RECOVERY_MESSAGE = `The release could not be completed. Changesets that were only partly released have been restored. Discard the remaining uncommitted changes (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
+const RECOVERY_MESSAGE = `The release could not be completed. Discard the uncommitted changes (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
 
-const RESTORATION_FAILED_MESSAGE = `The release could not be completed, and the Changesets that were only partly released could not be restored. Discard every uncommitted change to get the Changesets back (${RECOVERY_COMMAND}, from anywhere in the repository), then run this tool again to resume from the release spec.`;
+const UNCOMMITTED_CHANGESETS_MESSAGE =
+  'The .changeset directory has uncommitted changes. Commit or remove them, then run this tool again.';
 
 /**
  * The headings before which `applyReleasePlan` inserts a new release block. In
@@ -59,7 +61,7 @@ async function checkChangelogsAcceptReleases(
       LINK_REFERENCE_DEFINITION_PATTERN.test(changelogContent)
     ) {
       problems.push(
-        `The changelog of ${name} (${changelogPath}) has no release yet but has a link reference definition, so the release cannot be added to it. Remove the empty Unreleased section and its link reference definition, then run this tool again.`,
+        `The changelog of ${name} (${changelogPath}) has no release yet but has a link reference definition, so the release cannot be added to it. Remove the link reference definition of the Unreleased section ([Unreleased]: ...), then run this tool again.`,
       );
     }
   }
@@ -167,38 +169,30 @@ async function applyReleases({
 
 /**
  * Restores the Changesets that the release consumed with the releases that it
- * left out. A Changeset is restored only if its file is gone, so Changesets
- * are left as they are if the release failed before it consumed them.
+ * left out. A Changeset is restored only if its file is gone.
  *
  * @param project - The project.
  * @param plan - The loaded Changesets plan.
  * @param releasePlan - The release plan built from the release spec.
- * @returns The errors of the Changesets that could not be restored.
  */
 async function restoreConsumedChangesets(
   project: Project,
   plan: LoadedChangesetsPlan,
   releasePlan: ChangesetsReleasePlan,
-): Promise<unknown[]> {
+): Promise<void> {
   const changesetDir = path.join(project.directoryPath, '.changeset');
-  const errors: unknown[] = [];
   for (const { id, releases } of releasePlan.selectedChangesets) {
-    try {
-      if (await fileExists(path.join(changesetDir, `${id}.md`))) {
-        continue;
-      }
-      await restoreResidualChangesets({
-        changesetDir,
-        changesets: plan.originalChangesets.filter(
-          (changeset) => changeset.id === id,
-        ),
-        releasedPackageNames: releases.map(({ name }) => name),
-      });
-    } catch (error) {
-      errors.push(error);
+    if (await fileExists(path.join(changesetDir, `${id}.md`))) {
+      continue;
     }
+    await restoreResidualChangesets({
+      changesetDir,
+      changesets: plan.originalChangesets.filter(
+        (changeset) => changeset.id === id,
+      ),
+      releasedPackageNames: releases.map(({ name }) => name),
+    });
   }
-  return errors;
 }
 
 /**
@@ -206,7 +200,7 @@ async function restoreConsumedChangesets(
  * ranges, writes the changelogs, deletes the consumed Changesets, releases the
  * packages that only have legacy `Unreleased` entries, and bumps the root
  * package. Consumed Changesets that are only partly released are then restored
- * with their remaining releases, even if the release fails.
+ * with their remaining releases.
  *
  * @param args - The arguments.
  * @param args.project - The project.
@@ -215,9 +209,10 @@ async function restoreConsumedChangesets(
  * @param args.newReleaseVersion - The new version of the root package.
  * @param args.formatter - The formatter to use for formatting the changelogs.
  * @param args.stderr - A stream that can be used to write to standard error.
- * @throws If a changelog cannot receive its release block, before any file
- * changes. If a later step fails, the error explains how to recover, and its
- * cause is the original error (an `AggregateError` if several steps failed).
+ * @throws If the `.changeset` directory has uncommitted changes or a changelog
+ * cannot receive its release block, before any file changes. If a later step
+ * fails, the error explains how to recover, and its cause is the original
+ * error.
  */
 export async function applyChangesetsRelease({
   project,
@@ -234,9 +229,11 @@ export async function applyChangesetsRelease({
   formatter: Formatter;
   stderr: Pick<WriteStream, 'write'>;
 }): Promise<void> {
+  if (await hasUncommittedChanges(project.directoryPath, '.changeset')) {
+    throw new Error(UNCOMMITTED_CHANGESETS_MESSAGE);
+  }
   await checkChangelogsAcceptReleases(project, releasePlan);
 
-  const releaseErrors: unknown[] = [];
   try {
     await applyReleases({
       project,
@@ -246,30 +243,8 @@ export async function applyChangesetsRelease({
       formatter,
       stderr,
     });
+    await restoreConsumedChangesets(project, plan, releasePlan);
   } catch (error) {
-    releaseErrors.push(error);
-  }
-
-  const restorationErrors = await restoreConsumedChangesets(
-    project,
-    plan,
-    releasePlan,
-  );
-
-  const errors = [...releaseErrors, ...restorationErrors];
-  if (errors.length > 0) {
-    throw wrapError(
-      restorationErrors.length > 0
-        ? RESTORATION_FAILED_MESSAGE
-        : RECOVERY_MESSAGE,
-      errors.length === 1
-        ? errors[0]
-        : new AggregateError(
-            errors,
-            releaseErrors.length > 0
-              ? 'The release failed, then restoring the Changesets failed too.'
-              : 'Restoring several Changesets failed.',
-          ),
-    );
+    throw wrapError(RECOVERY_MESSAGE, error);
   }
 }

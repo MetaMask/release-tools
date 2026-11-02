@@ -191,6 +191,26 @@ export async function restoreFiles(
 }
 
 /**
+ * Checks whether a path in the given git repository has uncommitted changes,
+ * including untracked files.
+ *
+ * @param repositoryDirectoryPath - The file system path to the git repository.
+ * @param pathspec - The path to check, relative to the repository directory.
+ * @returns Whether `git status` reports any change under the path.
+ */
+export async function hasUncommittedChanges(
+  repositoryDirectoryPath: string,
+  pathspec: string,
+): Promise<boolean> {
+  const statusLines = await getLinesFromGitCommandWithin(
+    repositoryDirectoryPath,
+    'status',
+    ['--porcelain', '--', pathspec],
+  );
+  return statusLines.length > 0;
+}
+
+/**
  * Checks if a specific branch exists in the given git repository.
  *
  * @param repositoryDirectoryPath - The file system path to the git repository.
