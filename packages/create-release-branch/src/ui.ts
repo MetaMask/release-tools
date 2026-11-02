@@ -127,7 +127,7 @@ function createApp({
   closeServer,
 }: {
   project: Project;
-  source: ReleaseSource<ReleaseSpecification>;
+  source: ReleaseSource<Pick<ReleaseSpecification, 'packages'>>;
   stderr: Pick<WriteStream, 'write'>;
   version: string;
   closeServer: () => void;
@@ -311,10 +311,7 @@ function createApp({
         }, {});
 
         await source.apply({
-          releaseSpecification: {
-            packages: releaseSpecificationPackages,
-            path: '',
-          },
+          releaseSpecification: { packages: releaseSpecificationPackages },
           newReleaseVersion: version,
         });
         await finishRelease({ project, newReleaseVersion: version });

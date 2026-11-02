@@ -36,7 +36,7 @@ export function createLegacyReleaseSource({
   defaultBranch: string;
   formatter: Formatter;
   stderr: Pick<WriteStream, 'write'>;
-}): ReleaseSource<ReleaseSpecification> {
+}): ReleaseSource<Pick<ReleaseSpecification, 'packages'>> {
   return {
     async prepare() {
       await updateChangelogsForChangedPackages({ project, formatter, stderr });

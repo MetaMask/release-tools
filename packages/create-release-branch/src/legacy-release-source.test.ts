@@ -115,7 +115,7 @@ describe('legacy-release-source', () => {
         );
 
         await source.apply({
-          releaseSpecification: { packages, path: '/path/to/RELEASE_SPEC.yml' },
+          releaseSpecification: { packages },
           newReleaseVersion: '2.0.0',
         });
 
