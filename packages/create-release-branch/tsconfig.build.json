@@ -7,6 +7,7 @@
     "types": ["node"]
   },
   "references": [
+    { "path": "../apply-release-plan/tsconfig.build.json" },
     { "path": "../auto-changelog/tsconfig.build.json" },
     { "path": "../changesets-utils/tsconfig.build.json" }
   ],
