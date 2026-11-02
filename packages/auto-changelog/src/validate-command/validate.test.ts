@@ -217,7 +217,9 @@ describe('validate', () => {
 
       expect(process.exitCode).toBe(1);
       expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Changelog not well-formatted'),
+        expect.stringContaining(
+          `Changelog "${path.relative(process.cwd(), changelogPath)}" not well-formatted`,
+        ),
       );
       errorSpy.mockRestore();
       process.exitCode = 0;
