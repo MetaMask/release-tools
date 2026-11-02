@@ -87,7 +87,7 @@ describe('release-steps', () => {
       );
     });
 
-    it('prepares before the Initialize commit, each in a step', async () => {
+    it('prepares in a step before the Initialize commit', async () => {
       const project = buildMockProject();
       const calls: string[] = [];
       const mode = buildMockMode({
@@ -124,9 +124,7 @@ describe('release-steps', () => {
         'start Updating changelogs',
         'prepare',
         'end Updating changelogs',
-        'start Committing the release',
         'commitAllChanges /path/to/project Initialize Release 2.0.0',
-        'end Committing the release',
       ]);
     });
 

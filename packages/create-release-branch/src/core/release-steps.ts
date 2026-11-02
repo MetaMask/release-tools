@@ -57,14 +57,10 @@ export async function startRelease<Data>({
     await output.step('Updating changelogs', async () => await mode.prepare());
     // `prepare` may change nothing, and the release branch still needs this
     // commit.
-    await output.step(
-      'Committing the release',
-      async () =>
-        await commitAllChanges(
-          project.directoryPath,
-          `Initialize Release ${newReleaseVersion}`,
-          { allowEmpty: true },
-        ),
+    await commitAllChanges(
+      project.directoryPath,
+      `Initialize Release ${newReleaseVersion}`,
+      { allowEmpty: true },
     );
   }
 

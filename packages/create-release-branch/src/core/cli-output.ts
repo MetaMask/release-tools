@@ -1,4 +1,4 @@
-import { Chalk } from 'chalk';
+import chalk, { Chalk, chalkStderr } from 'chalk';
 import type { ChalkInstance } from 'chalk';
 import ora from 'ora';
 
@@ -40,49 +40,79 @@ function colorize(text: string, color: ChalkInstance): string {
 }
 
 /**
+ * Determines whether a stream is a terminal that shows colors.
+ *
+ * @param stream - The stream.
+ * @param colorLevel - The color level that chalk detected for the stream.
+ * @returns Whether to style what is written to the stream.
+ */
+function isColorTerminal(
+  stream: { isTTY?: boolean },
+  colorLevel: number,
+): boolean {
+  return (
+    Boolean(stream.isTTY) &&
+    colorLevel > 0 &&
+    process.env.NO_COLOR === undefined
+  );
+}
+
+/**
  * Creates a `CliOutput` that writes to the given streams.
  *
- * When styled, success, warnings, and errors are colored, and each step shows
- * a spinner on standard error. Otherwise, the text is written as given and
+ * When standard out is styled, success messages are colored. When standard
+ * error is styled, warnings and errors are colored, and each step shows a
+ * spinner on standard error. Otherwise, the text is written as given and
  * steps write nothing.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
  * @param args.stderr - A stream that can be used to write to standard error.
- * @param args.styled - Whether to show colors and spinners. Defaults to true
- * when standard out is a terminal and `NO_COLOR` is not set.
+ * @param args.styled - Whether to style each stream. By default, a stream is
+ * styled when it is a terminal, chalk detects color support for it, and
+ * `NO_COLOR` is not set.
  * @returns The output.
  */
 export function createCliOutput({
   stdout,
   stderr,
-  styled = Boolean(stdout.isTTY) && process.env.NO_COLOR === undefined,
+  styled = {
+    stdout: isColorTerminal(stdout, chalk.level),
+    stderr: isColorTerminal(stderr, chalkStderr.level),
+  },
 }: {
   stdout: WriteStreamLike & { isTTY?: boolean };
-  stderr: NodeJS.WritableStream;
-  styled?: boolean;
+  stderr: NodeJS.WritableStream & { isTTY?: boolean };
+  styled?: { stdout: boolean; stderr: boolean };
 }): CliOutput {
-  const chalk = new Chalk({ level: styled ? 1 : 0 });
+  const stdoutColors = new Chalk({ level: styled.stdout ? 1 : 0 });
+  const stderrColors = new Chalk({ level: styled.stderr ? 1 : 0 });
 
   return {
     info(text) {
       stdout.write(text);
     },
     success(text) {
-      stdout.write(colorize(text, chalk.green));
+      stdout.write(colorize(text, stdoutColors.green));
     },
     warn(text) {
-      stderr.write(colorize(text, chalk.yellow));
+      stderr.write(colorize(text, stderrColors.yellow));
     },
     error(text) {
-      stderr.write(colorize(text, chalk.red));
+      stderr.write(colorize(text, stderrColors.red));
     },
     async step(label, run) {
-      if (!styled) {
+      if (!styled.stderr) {
         return await run();
       }
 
-      const spinner = ora({ text: label, stream: stderr });
+      // Leave stdin alone so that a prompt during the step (such as a GPG
+      // pinentry for the release commit) still receives keystrokes.
+      const spinner = ora({
+        text: label,
+        stream: stderr,
+        discardStdin: false,
+      });
       spinner.start();
       try {
         const result = await run();
