@@ -6,9 +6,9 @@ import {
   buildMockPackage,
   createNoopCliOutput,
 } from '../tests/unit/helpers.js';
+import { IncrementableVersionParts } from './core/release-rules.js';
 import * as packageUtils from './project/package.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
-import { IncrementableVersionParts } from './release-specification.js';
 
 vi.mock('./project/package');
 

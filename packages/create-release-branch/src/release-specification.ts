@@ -1,28 +1,18 @@
-import { diff } from 'semver';
 import YAML from 'yaml';
 
+import {
+  checkReleaseChoices,
+  normalizeReleaseChoices,
+} from './core/release-rules.js';
+import type {
+  IncrementableVersionParts,
+  ReleaseChoices,
+} from './core/release-rules.js';
 import { Editor } from './editor.js';
-import { Package } from './project/package.js';
 import { Project } from './project/project.js';
 import { readFile } from './utils/fs.js';
-import {
-  debug,
-  hasProperty,
-  wrapError,
-  isObject,
-  runCommand,
-} from './utils/misc-utils.js';
-import { isValidSemver, semver, SemVer } from './utils/semver.js';
-
-/**
- * The SemVer-compatible parts of a version string that can be bumped by this
- * tool.
- */
-export enum IncrementableVersionParts {
-  major = 'major',
-  minor = 'minor',
-  patch = 'patch',
-}
+import { debug, wrapError, isObject, runCommand } from './utils/misc-utils.js';
+import type { SemVer } from './utils/semver.js';
 
 /**
  * Describes how to update the version for a package, either by bumping a part
@@ -43,7 +33,6 @@ export type ReleaseSpecification = {
 };
 
 const SKIP_PACKAGE_DIRECTIVE = null;
-const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
 
 /**
  * Generates a skeleton for a release specification, which describes how a
@@ -148,341 +137,6 @@ export async function waitForUserToEditReleaseSpecification(
 }
 
 /**
- * Finds all workspace packages that have the given package under a particular
- * "dependencies" section.
- *
- * @param project - The project containing workspace packages.
- * @param packageName - The name of the package to find dependents for.
- * @param type - The section in which to look for the package.
- * @returns An array of package names.
- */
-export function findWorkspaceDependentNamesOfType(
-  project: Project,
-  packageName: string,
-  type: 'dependencies' | 'peerDependencies',
-): string[] {
-  return Object.keys(project.workspacePackages).filter(
-    (possibleDependentName) => {
-      const possibleDependent =
-        project.workspacePackages[possibleDependentName];
-      return hasProperty(
-        possibleDependent.validatedManifest[type],
-        packageName,
-      );
-    },
-  );
-}
-
-/**
- * Finds all workspace packages that list the package in a particular
- * "dependencies" section but are missing from the release spec.
- *
- * @param project - The project containing workspace packages.
- * @param packageName - The name of the package to find dependents for.
- * @param unvalidatedReleaseSpecificationPackages - The packages in the release
- * specification.
- * @param type - The type of dependents to find for.
- * @returns An array of package names.
- */
-export function findMissingWorkspaceDependentNamesOfType(
-  project: Project,
-  packageName: string,
-  unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
-  type: 'dependencies' | 'peerDependencies',
-): string[] {
-  const dependentNames = findWorkspaceDependentNamesOfType(
-    project,
-    packageName,
-    type,
-  );
-
-  return dependentNames.filter((dependentName) => {
-    return !unvalidatedReleaseSpecificationPackages[dependentName];
-  });
-}
-
-/**
- * Finds all workspace packages that are direct or peer dependencies of the
- * given package and have changes since their latest release.
- *
- * @param project - The project containing workspace packages.
- * @param changedPackage - The package to find dependencies for.
- * @param unvalidatedReleaseSpecificationPackages - The packages in the release
- * specification.
- * @returns An array of package names.
- */
-function findMissingUnreleasedDependencies(
-  project: Project,
-  changedPackage: Package,
-  unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
-): string[] {
-  return Object.keys({
-    ...changedPackage.validatedManifest.dependencies,
-    ...changedPackage.validatedManifest.peerDependencies,
-  }).filter((dependency) => {
-    return (
-      project.workspacePackages[dependency]?.hasChangesSinceLatestRelease &&
-      !unvalidatedReleaseSpecificationPackages[dependency]
-    );
-  });
-}
-
-/**
- * Finds the direct or peer dependents of a major-bumped package that are
- * candidates for inclusion in the release.
- *
- * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
- * @param packageName - The name of the package to validate.
- * @param versionSpecifierOrDirective - The version specifier or directive for
- * the package.
- * @param unvalidatedReleaseSpecificationPackages - The packages in the release
- * specification.
- * @param type - The type of dependents to search for.
- * @returns An array of direct dependents for the package.
- */
-export function findCandidateDependentsOfTypeForMajorBump(
-  project: Project,
-  packageName: string,
-  versionSpecifierOrDirective: string | null,
-  unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
-  type: 'dependencies' | 'peerDependencies',
-): string[] {
-  const changedPackage = project.workspacePackages[packageName];
-
-  if (
-    versionSpecifierOrDirective === 'major' ||
-    (isValidSemver(versionSpecifierOrDirective) &&
-      diff(
-        changedPackage.validatedManifest.version,
-        versionSpecifierOrDirective,
-      ) === 'major')
-  ) {
-    return findMissingWorkspaceDependentNamesOfType(
-      project,
-      packageName,
-      unvalidatedReleaseSpecificationPackages,
-      type,
-    );
-  }
-
-  return [];
-}
-
-/**
- * For a package being included in the release, finds all direct peer or
- * dependencies that have changes since their last release but have not been
- * added to the release yet.
- *
- * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
- * @param changedPackage - The package to validate.
- * @param versionSpecifierOrDirective - The version specifier or directive for the package.
- * @param unvalidatedReleaseSpecificationPackages - The packages in the release specification.
- * @returns An array of validation errors, if any.
- */
-export function findCandidateDependencies(
-  project: Project,
-  changedPackage: Package,
-  versionSpecifierOrDirective: string | null,
-  unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
-): string[] {
-  if (
-    changedPackage &&
-    versionSpecifierOrDirective &&
-    (hasProperty(IncrementableVersionParts, versionSpecifierOrDirective) ||
-      isValidSemver(versionSpecifierOrDirective))
-  ) {
-    return findMissingUnreleasedDependencies(
-      project,
-      changedPackage,
-      unvalidatedReleaseSpecificationPackages,
-    );
-  }
-
-  return [];
-}
-
-/**
- * Validates all package entries in the release specification.
- *
- * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
- * @param unvalidatedReleaseSpecificationPackages - The packages in the release specification.
- * @param indexOfFirstUsableLine - The index of the first non-comment, non-whitespace line
- * in the release spec.
- * @returns An array of validation errors, if any.
- */
-export function validateAllPackageEntries(
-  project: Project,
-  unvalidatedReleaseSpecificationPackages: Record<string, string | null>,
-  indexOfFirstUsableLine: number,
-): { message: string | string[]; lineNumber?: number }[] {
-  const errors: { message: string | string[]; lineNumber?: number }[] = [];
-
-  Object.entries(unvalidatedReleaseSpecificationPackages).forEach(
-    ([changedPackageName, versionSpecifierOrDirective], index) => {
-      const lineNumber = indexOfFirstUsableLine + index + 2;
-      const changedPackage = project.workspacePackages[changedPackageName];
-
-      if (changedPackage === undefined) {
-        errors.push({
-          message: `${JSON.stringify(changedPackageName)} is not a package in the project`,
-          lineNumber,
-        });
-      }
-
-      if (
-        versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
-        versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE &&
-        !hasProperty(IncrementableVersionParts, versionSpecifierOrDirective) &&
-        !isValidSemver(versionSpecifierOrDirective)
-      ) {
-        errors.push({
-          message: [
-            `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-            `(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")`,
-          ],
-          lineNumber,
-        });
-      }
-
-      if (isValidSemver(versionSpecifierOrDirective)) {
-        const comparison = new SemVer(versionSpecifierOrDirective).compare(
-          changedPackage.validatedManifest.version,
-        );
-
-        if (comparison === 0) {
-          errors.push({
-            message: [
-              `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-              `("${changedPackageName}" is already at version "${versionSpecifierOrDirective}")`,
-            ],
-            lineNumber,
-          });
-        } else if (comparison < 0) {
-          errors.push({
-            message: [
-              `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-              `("${changedPackageName}" is at a greater version "${String(
-                project.workspacePackages[changedPackageName].validatedManifest
-                  .version,
-              )}")`,
-            ],
-            lineNumber,
-          });
-        }
-      }
-
-      const missingDirectDependentNames =
-        findCandidateDependentsOfTypeForMajorBump(
-          project,
-          changedPackageName,
-          versionSpecifierOrDirective,
-          unvalidatedReleaseSpecificationPackages,
-          'dependencies',
-        );
-
-      if (missingDirectDependentNames.length > 0) {
-        errors.push({
-          message: [
-            `The following direct dependents of package '${changedPackageName}', which is being released with a major version bump, are missing from the release spec.`,
-            missingDirectDependentNames
-              .map((dependent) => `  - ${dependent}`)
-              .join('\n'),
-            `  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.`,
-            `  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:`,
-            YAML.stringify({
-              packages: missingDirectDependentNames.reduce(
-                (object, dependent) => ({
-                  ...object,
-                  [dependent]: INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE,
-                }),
-                {},
-              ),
-            })
-              .trim()
-              .split('\n')
-              .map((line) => `    ${line}`)
-              .join('\n'),
-          ].join('\n\n'),
-        });
-      }
-
-      const missingPeerDependentNames =
-        findCandidateDependentsOfTypeForMajorBump(
-          project,
-          changedPackageName,
-          versionSpecifierOrDirective,
-          unvalidatedReleaseSpecificationPackages,
-          'peerDependencies',
-        );
-
-      if (missingPeerDependentNames.length > 0) {
-        errors.push({
-          message: [
-            `The following dependents of package '${changedPackageName}', which is being released with a major version bump, are missing from the release spec.`,
-            missingPeerDependentNames
-              .map((dependent) => `  - ${dependent}`)
-              .join('\n'),
-            `  Consider including them in the release spec so that they are compatible with the new '${changedPackageName}' version.`,
-            `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
-            YAML.stringify({
-              packages: missingPeerDependentNames.reduce(
-                (object, dependent) => ({
-                  ...object,
-                  [dependent]: INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE,
-                }),
-                {},
-              ),
-            })
-              .trim()
-              .split('\n')
-              .map((line) => `    ${line}`)
-              .join('\n'),
-          ].join('\n\n'),
-        });
-      }
-
-      const missingDependencies = findCandidateDependencies(
-        project,
-        changedPackage,
-        versionSpecifierOrDirective,
-        unvalidatedReleaseSpecificationPackages,
-      );
-
-      if (missingDependencies.length > 0) {
-        errors.push({
-          message: [
-            `The following packages, which are dependencies or peer dependencies of the package '${changedPackageName}' being released, are missing from the release spec.`,
-            missingDependencies
-              .map((dependency) => `  - ${dependency}`)
-              .join('\n'),
-            `  These packages may have changes that '${changedPackageName}' relies upon. Consider including them in the release spec.`,
-            `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
-            YAML.stringify({
-              packages: missingDependencies.reduce(
-                (object, dependency) => ({
-                  ...object,
-                  [dependency]: INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE,
-                }),
-                {},
-              ),
-            })
-              .trim()
-              .split('\n')
-              .map((line) => `    ${line}`)
-              .join('\n'),
-          ].join('\n\n'),
-        });
-      }
-    },
-  );
-
-  return errors;
-}
-
-/**
  * Looks over the release spec that the user has edited to ensure that:
  *
  * 1. the names of all packages match those within the project; and
@@ -504,7 +158,7 @@ export async function validateReleaseSpecification(
     .findIndex((line) => !/^#|[ ]+/u.test(line));
 
   let unvalidatedReleaseSpecification: {
-    packages: Record<string, string | null>;
+    packages: ReleaseChoices;
   };
 
   const afterwordForAllErrorMessages = [
@@ -515,7 +169,7 @@ export async function validateReleaseSpecification(
   try {
     unvalidatedReleaseSpecification = YAML.parse(
       releaseSpecificationContents,
-    ) as { packages: Record<string, string | null> };
+    ) as { packages: ReleaseChoices };
   } catch (error) {
     throw wrapError(
       [
@@ -539,11 +193,16 @@ export async function validateReleaseSpecification(
     throw new Error(message);
   }
 
-  const errors = validateAllPackageEntries(
+  const errors = checkReleaseChoices(
     project,
     unvalidatedReleaseSpecification.packages,
-    indexOfFirstUsableLine,
-  );
+  ).errors.map(({ message, entryIndex }) => ({
+    message,
+    lineNumber:
+      entryIndex === undefined
+        ? undefined
+        : indexOfFirstUsableLine + entryIndex + 2,
+  }));
 
   if (errors.length > 0) {
     const message = [
@@ -577,40 +236,8 @@ export async function validateReleaseSpecification(
     throw new Error(message);
   }
 
-  const packages = Object.keys(unvalidatedReleaseSpecification.packages).reduce<
-    ReleaseSpecification['packages']
-  >((obj, packageName) => {
-    const versionSpecifierOrDirective =
-      unvalidatedReleaseSpecification.packages[packageName];
-
-    if (
-      versionSpecifierOrDirective !== SKIP_PACKAGE_DIRECTIVE &&
-      versionSpecifierOrDirective !== INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE
-    ) {
-      if (
-        Object.values(IncrementableVersionParts).includes(
-          // Typecast: It doesn't matter what type versionSpecifierOrDirective
-          // is as we are checking for inclusion.
-          versionSpecifierOrDirective as IncrementableVersionParts,
-        )
-      ) {
-        return {
-          ...obj,
-          // Typecast: We know what this is as we've checked it above.
-          [packageName]:
-            versionSpecifierOrDirective as IncrementableVersionParts,
-        };
-      }
-
-      return {
-        ...obj,
-        // Typecast: We know that this will safely parse.
-        [packageName]: semver.parse(versionSpecifierOrDirective) as SemVer,
-      };
-    }
-
-    return obj;
-  }, {});
-
-  return { packages, path: releaseSpecificationPath };
+  return {
+    packages: normalizeReleaseChoices(unvalidatedReleaseSpecification.packages),
+    path: releaseSpecificationPath,
+  };
 }
