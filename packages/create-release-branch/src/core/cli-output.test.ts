@@ -17,12 +17,15 @@ vi.mock('ora', () => ({ default: vi.fn(() => spinner) }));
 const colors = new Chalk({ level: 1 });
 
 /**
- * Builds a mock stream that reports being a terminal.
+ * Builds a mock stream that reports being a terminal with a width.
  *
  * @returns The mock stream.
  */
-function buildTerminalStream(): MockWritable & { isTTY: boolean } {
-  return Object.assign(new MockWritable(), { isTTY: true });
+function buildTerminalStream(): MockWritable & {
+  isTTY: boolean;
+  columns: number;
+} {
+  return Object.assign(new MockWritable(), { isTTY: true, columns: 80 });
 }
 
 /**
@@ -279,7 +282,7 @@ describe('cli-output', () => {
 
     it('step shows a spinner and marks success', async () => {
       const stdout = new MockWritable();
-      const stderr = new MockWritable();
+      const stderr = buildTerminalStream();
       const output = createCliOutput({
         stdout,
         stderr,
@@ -302,7 +305,7 @@ describe('cli-output', () => {
 
     it('step marks failure and rethrows', async () => {
       const stdout = new MockWritable();
-      const stderr = new MockWritable();
+      const stderr = buildTerminalStream();
       const output = createCliOutput({
         stdout,
         stderr,
@@ -318,5 +321,34 @@ describe('cli-output', () => {
       expect(spinner.fail).toHaveBeenCalledTimes(1);
       expect(spinner.succeed).not.toHaveBeenCalled();
     });
+
+    it.each([
+      {
+        description: '0 columns',
+        buildStderr: (): MockWritable =>
+          Object.assign(new MockWritable(), { columns: 0 }),
+      },
+      {
+        description: 'no columns',
+        buildStderr: (): MockWritable => new MockWritable(),
+      },
+    ])(
+      'step does not show a spinner when stderr reports $description',
+      async ({ buildStderr }) => {
+        const stdout = new MockWritable();
+        const stderr = buildStderr();
+        const output = createCliOutput({
+          stdout,
+          stderr,
+          styled: { stdout: true, stderr: true },
+        });
+
+        const result = await output.step('Doing something', async () => 42);
+
+        expect(result).toBe(42);
+        expect(ora).not.toHaveBeenCalled();
+        expect(stderr.data()).toStrictEqual([]);
+      },
+    );
   });
 });

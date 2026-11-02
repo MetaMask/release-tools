@@ -73,8 +73,8 @@ function isColorTerminal(
  *
  * When standard out is styled, success messages are colored. When standard
  * error is styled, warnings and errors are colored and end with a newline,
- * and each step shows a spinner on standard error. Otherwise, the text is
- * written as given and steps write nothing.
+ * and, if standard error reports a width, each step shows a spinner on it.
+ * Otherwise, the text is written as given and steps write nothing.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
@@ -93,7 +93,7 @@ export function createCliOutput({
   },
 }: {
   stdout: WriteStreamLike & { isTTY?: boolean };
-  stderr: NodeJS.WritableStream & { isTTY?: boolean };
+  stderr: NodeJS.WritableStream & { isTTY?: boolean; columns?: number };
   styled?: { stdout: boolean; stderr: boolean };
 }): CliOutput {
   const stdoutColors = new Chalk({ level: styled.stdout ? 1 : 0 });
@@ -117,7 +117,8 @@ export function createCliOutput({
       stderr.write(colorize(toStderr(text), stderrColors.red));
     },
     async step(label, run) {
-      if (!styled.stderr) {
+      // ora needs the width of the terminal to draw the spinner.
+      if (!styled.stderr || !stderr.columns) {
         return await run();
       }
 
