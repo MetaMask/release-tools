@@ -75,9 +75,9 @@ export async function readCommandLineArguments(
     })
     .option('changesets', {
       describe:
-        'Use the Changesets workflow when .changeset/config.json exists. Pass --no-changesets to force the legacy workflow.',
+        'Use the Changesets workflow. The project must have a .changeset/config.json file.',
       type: 'boolean',
-      default: true,
+      default: false,
     })
     .help()
     .strict()

@@ -72,13 +72,17 @@ export async function determineInitialParameters({
           project.rootPackage.validatedManifest.name.replace('/', '__'),
         )
       : path.resolve(cwd, args.tempDirectory);
-  const releaseMode: ReleaseMode =
-    args.changesets &&
-    (await fileExists(
+  const releaseMode: ReleaseMode = args.changesets ? 'changesets' : 'legacy';
+  if (
+    releaseMode === 'changesets' &&
+    !(await fileExists(
       path.join(projectDirectoryPath, '.changeset', 'config.json'),
     ))
-      ? 'changesets'
-      : 'legacy';
+  ) {
+    throw new Error(
+      `--changesets requires a Changesets configuration, but ${path.join(projectDirectoryPath, '.changeset', 'config.json')} does not exist.`,
+    );
+  }
 
   return {
     project,

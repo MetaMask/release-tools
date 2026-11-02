@@ -9,7 +9,7 @@ import {
 } from '../tests/unit/changesets-fixture.js';
 
 const INTERACTIVE_CHANGESETS_ERROR =
-  'The interactive UI (--interactive) is not supported in Changesets mode yet. Run without --interactive to edit the release spec in your editor, or pass --no-changesets to use the legacy workflow.';
+  'The interactive UI (--interactive) is not supported in Changesets mode yet. Run without --interactive to edit the release spec in your editor, or without --changesets to use the legacy workflow.';
 
 type ChangesetsPackageNickname = 'a' | 'b' | 'c' | 'd' | 'l';
 
@@ -1328,6 +1328,7 @@ __metadata:
     it('releases the selected Changesets, merges legacy entries, restores residual Changesets, and commits the release', async () => {
       await withChangesetsMonorepo(async (environment) => {
         await environment.runTool({
+          args: ['--changesets'],
           releaseSpecification: {
             packages: {
               a: 'minor',
@@ -1498,13 +1499,12 @@ __metadata:
       });
     });
 
-    it('follows the legacy workflow if --no-changesets is given', async () => {
+    it('follows the legacy workflow if --changesets is not given', async () => {
       await withChangesetsMonorepo(async (environment) => {
         const changesetDirectoryBefore =
           await listChangesetDirectory(environment);
 
         await environment.runTool({
-          args: ['--no-changesets'],
           releaseSpecification: {
             packages: {
               a: 'minor',
@@ -1583,7 +1583,7 @@ __metadata:
 
         await expect(
           environment.runTool({
-            args: ['--interactive'],
+            args: ['--changesets', '--interactive'],
             releaseSpecification: { packages: {} },
           }),
         ).rejects.toThrow(INTERACTIVE_CHANGESETS_ERROR);

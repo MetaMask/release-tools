@@ -43,7 +43,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -87,7 +87,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -121,7 +121,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -155,7 +155,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -189,7 +189,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -221,7 +221,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -253,7 +253,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -285,7 +285,7 @@ describe('initial-parameters', () => {
           interactive: false,
           port: 3000,
           formatter: 'prettier',
-          changesets: true,
+          changesets: false,
         });
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
         EDITOR: undefined,
@@ -303,7 +303,7 @@ describe('initial-parameters', () => {
       expect(initialParameters.releaseType).toBe('ordinary');
     });
 
-    it('returns releaseMode "changesets" when .changeset/config.json exists', async () => {
+    it('returns releaseMode "changesets" when --changesets is given and .changeset/config.json exists', async () => {
       await withSandbox(async (sandbox) => {
         const project = buildMockProject();
         const stderr = createNoopWriteStream();
@@ -324,7 +324,7 @@ describe('initial-parameters', () => {
       });
     });
 
-    it('returns releaseMode "legacy" when .changeset/config.json does not exist', async () => {
+    it('throws when --changesets is given and .changeset/config.json does not exist', async () => {
       await withSandbox(async (sandbox) => {
         const project = buildMockProject();
         const stderr = createNoopWriteStream();
@@ -334,17 +334,19 @@ describe('initial-parameters', () => {
         });
         vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
 
-        const initialParameters = await determineInitialParameters({
-          argv: ['arg1', 'arg2'],
-          cwd: '/path/to/somewhere',
-          stderr,
-        });
-
-        expect(initialParameters.releaseMode).toBe('legacy');
+        await expect(
+          determineInitialParameters({
+            argv: ['arg1', 'arg2'],
+            cwd: '/path/to/somewhere',
+            stderr,
+          }),
+        ).rejects.toThrow(
+          `--changesets requires a Changesets configuration, but ${path.join(sandbox.directoryPath, '.changeset', 'config.json')} does not exist.`,
+        );
       });
     });
 
-    it('returns releaseMode "legacy" when --no-changesets is given even if .changeset/config.json exists', async () => {
+    it('returns releaseMode "legacy" when --changesets is not given, even if .changeset/config.json exists', async () => {
       await withSandbox(async (sandbox) => {
         const project = buildMockProject();
         const stderr = createNoopWriteStream();

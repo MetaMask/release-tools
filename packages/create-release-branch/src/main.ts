@@ -49,7 +49,7 @@ export async function main({
     if (releaseMode === 'changesets') {
       if (interactive) {
         throw new Error(
-          'The interactive UI (--interactive) is not supported in Changesets mode yet. Run without --interactive to edit the release spec in your editor, or pass --no-changesets to use the legacy workflow.',
+          'The interactive UI (--interactive) is not supported in Changesets mode yet. Run without --interactive to edit the release spec in your editor, or without --changesets to use the legacy workflow.',
         );
       }
 

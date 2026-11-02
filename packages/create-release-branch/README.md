@@ -25,15 +25,15 @@ For more on how to use this tool, please see the [documentation](./docs).
 
 ### Changesets mode
 
-If your monorepo has a `.changeset/config.json` file, the tool uses [Changesets](https://github.com/changesets/changesets) to prepare the release. Pending Changesets decide which packages can be released and how much their versions are bumped. The changelog plugin set in `.changeset/config.json` writes the new changelog entries.
-
-The changelog plugin must write [Keep a Changelog](https://keepachangelog.com/) entries, for example `@metamask/changesets-changelog`. The default plugin that `changeset init` sets, `@changesets/cli/changelog`, is not supported. Changesets pre mode (`.changeset/pre.json`) is not supported either.
-
-To use the legacy workflow in such a monorepo, run:
+To use [Changesets](https://github.com/changesets/changesets) to prepare the release, run:
 
 ```sh
-create-release-branch --no-changesets
+create-release-branch --changesets
 ```
+
+Your monorepo must have a `.changeset/config.json` file. Pending Changesets decide which packages can be released and how much their versions are bumped. The changelog plugin set in `.changeset/config.json` writes the new changelog entries. Without `--changesets`, the tool uses the legacy workflow, even if the monorepo has a `.changeset/config.json` file.
+
+The changelog plugin must write [Keep a Changelog](https://keepachangelog.com/) entries, for example `@metamask/changesets-changelog`. The default plugin that `changeset init` sets, `@changesets/cli/changelog`, is not supported. Changesets pre mode (`.changeset/pre.json`) is not supported either.
 
 The release spec (`RELEASE_SPEC.yml`) has the same format as in the legacy workflow. The tool lists these packages, in this order:
 
@@ -65,7 +65,7 @@ Changesets with only `none` releases bump nothing. They are not listed in the re
 
 The tool checks the whole release spec before it changes any version, changelog, or Changeset. It checks the release spec in two passes: first the rules of the legacy workflow, then the Changesets release plan. Each pass reports all of its errors together, so you can get new errors after you fix the first ones. For example, a package that is released because of a dependency must be listed or set to `intentionally-skip`, and a listed package must have something to release.
 
-The `--interactive` option is not supported in Changesets mode yet. Run the tool without it, or use `--no-changesets`.
+The `--interactive` option is not supported in Changesets mode yet. Run the tool without it, or without `--changesets`.
 
 #### If the release fails
 
