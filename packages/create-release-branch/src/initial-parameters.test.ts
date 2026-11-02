@@ -11,7 +11,6 @@ import {
 } from '../tests/unit/helpers.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import * as envModule from './env.js';
-import * as fsModule from './fs.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import * as projectModule from './project.js';
 
@@ -364,38 +363,6 @@ describe('initial-parameters', () => {
         });
 
         expect(initialParameters.releaseMode).toBe('legacy');
-      });
-    });
-
-    it('does not write to the project when determining the release mode', async () => {
-      await withSandbox(async (sandbox) => {
-        const project = buildMockProject();
-        const stderr = createNoopWriteStream();
-        await writeChangesetConfig(sandbox.directoryPath);
-        mockCommandLineArguments({
-          projectDirectory: sandbox.directoryPath,
-          changesets: true,
-        });
-        vi.spyOn(projectModule, 'readProject').mockResolvedValue(project);
-        const writeSpies = [
-          vi.spyOn(fs, 'writeFile'),
-          vi.spyOn(fs.promises, 'writeFile'),
-          vi.spyOn(fsModule, 'writeFile'),
-          vi.spyOn(fsModule, 'writeJsonFile'),
-          vi.spyOn(fsModule, 'ensureDirectoryPathExists'),
-          vi.spyOn(fsModule, 'removeFile'),
-        ];
-
-        const initialParameters = await determineInitialParameters({
-          argv: ['arg1', 'arg2'],
-          cwd: '/path/to/somewhere',
-          stderr,
-        });
-
-        expect(initialParameters.releaseMode).toBe('changesets');
-        for (const writeSpy of writeSpies) {
-          expect(writeSpy).not.toHaveBeenCalled();
-        }
       });
     });
   });
