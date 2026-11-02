@@ -195,37 +195,15 @@ packages:
       );
     });
 
-    it('uses the instructions of the changesets mode', async () => {
-      const template = await generateReleaseSpecificationTemplateForMonorepo({
-        modeName: 'changesets',
-        candidates: [{ name: 'a', currentVersion: '1.0.0', kind: 'changes' }],
-        isEditorAvailable: false,
-      });
-
-      expect(template).toContain(
-        '# By default, all packages released by pending Changesets are listed here,',
-      );
-      expect(template).toContain(
-        `
-# When you're finished, save this file and then run create-release-branch again.
-# The tool will update the versions of the packages you've listed and will apply
-# the Changesets to their changelogs.
-
-packages:
-  a: null
-`.trim(),
-      );
-    });
-
-    it('throws the changesets message if the changesets mode has no packages', async () => {
+    it('throws for a mode that has no release spec template', async () => {
       await expect(
         generateReleaseSpecificationTemplateForMonorepo({
           modeName: 'changesets',
-          candidates: [],
+          candidates: [{ name: 'a', currentVersion: '1.0.0', kind: 'changes' }],
           isEditorAvailable: true,
         }),
       ).rejects.toThrow(
-        'Could not generate release specification: There are no packages to release.',
+        'Could not generate release specification: There is no release spec template for the "changesets" mode.',
       );
     });
   });

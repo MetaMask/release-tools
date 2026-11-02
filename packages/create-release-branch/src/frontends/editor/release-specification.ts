@@ -35,7 +35,7 @@ type TemplateText = {
   noCandidatesMessage: string;
 };
 
-const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
+const TEMPLATE_TEXT_BY_MODE: { legacy: TemplateText } = {
   legacy: {
     instructions: `
 # This file (called the "release spec") allows you to specify which packages you
@@ -73,43 +73,6 @@ const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
     noCandidatesMessage:
       'Could not generate release specification: There are no packages that have changed since their latest release.',
   },
-  changesets: {
-    instructions: `
-# This file (called the "release spec") allows you to specify which packages you
-# want to include in this release along with the new versions they should
-# receive.
-#
-# By default, all packages released by pending Changesets are listed here,
-# prefilled with the version bump from the Changesets release plan. This
-# includes packages that are only released because one of their dependencies is
-# released. Packages that no Changeset releases but whose changelog has entries
-# in its "Unreleased" section are listed too, with no version.
-#
-# You can choose not to publish a package by removing it from this list or by
-# setting its version specifier to null. If a package is listed because one of
-# its dependencies is released and you do not want to release it, set its
-# version specifier to "intentionally-skip" instead.
-#
-# You can change the version specifier of any package. A version specifier (the
-# value that goes after each package in the list below) can be one of the
-# following:
-#
-# - "major" (if you want to bump the major part of the package's version)
-# - "minor" (if you want to bump the minor part of the package's version)
-# - "patch" (if you want to bump the patch part of the package's version)
-# - an exact version with major, minor, and patch parts (e.g. "1.2.3")
-#`.trim(),
-    afterEditingWithEditor: `
-# When you're finished, save this file and close it. The tool will update the
-# versions of the packages you've listed and will apply the Changesets to their
-# changelogs.`.trim(),
-    afterEditingWithoutEditor: `
-# When you're finished, save this file and then run create-release-branch again.
-# The tool will update the versions of the packages you've listed and will apply
-# the Changesets to their changelogs.`.trim(),
-    noCandidatesMessage:
-      'Could not generate release specification: There are no packages to release.',
-  },
 };
 
 /**
@@ -123,6 +86,7 @@ const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
  * @param args.isEditorAvailable - Whether or not an executable can be found on
  * the user's computer to edit the release spec once it is generated.
  * @returns The release specification template.
+ * @throws If the mode has no release spec template.
  */
 export async function generateReleaseSpecificationTemplateForMonorepo({
   modeName,
@@ -133,6 +97,12 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
   candidates: Candidate[];
   isEditorAvailable: boolean;
 }): Promise<string> {
+  if (modeName !== 'legacy') {
+    throw new Error(
+      `Could not generate release specification: There is no release spec template for the "${modeName}" mode.`,
+    );
+  }
+
   const templateText = TEMPLATE_TEXT_BY_MODE[modeName];
   const afterEditingInstructions = isEditorAvailable
     ? templateText.afterEditingWithEditor
