@@ -298,7 +298,7 @@ describe('release-steps', () => {
   });
 
   describe('finishRelease', () => {
-    it('runs the Yarn steps then commits, each in a step', async () => {
+    it('runs each Yarn command in a step, then commits outside any step', async () => {
       const project = buildMockProject();
       const calls: string[] = [];
       vi.spyOn(yarnCommandsModule, 'fixConstraints').mockImplementation(
@@ -339,9 +339,7 @@ describe('release-steps', () => {
         'start Deduplicating dependencies',
         'deduplicateDependencies /path/to/project',
         'end Deduplicating dependencies',
-        'start Committing the release',
         'commitAllChanges /path/to/project Update Release 2.0.0',
-        'end Committing the release',
       ]);
     });
   });

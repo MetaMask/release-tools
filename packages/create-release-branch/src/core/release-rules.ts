@@ -138,7 +138,7 @@ function findMissingUnreleasedDependencies(
  * candidates for inclusion in the release.
  *
  * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
+ * and where they can be found).
  * @param packageName - The name of the package to validate.
  * @param versionSpecifierOrDirective - The version specifier or directive for
  * the package.
@@ -237,7 +237,7 @@ function buildIntentionallySkipExample(packageNames: string[]): string {
  * released with them.
  *
  * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
+ * and where they can be found).
  * @param choices - The release choices.
  * @param options - The options.
  * @param options.packagesWithChanges - The names of the packages that have

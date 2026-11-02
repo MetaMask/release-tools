@@ -8,7 +8,8 @@ import type { WriteStreamLike } from '../utils/fs.js';
  * The single place through which the tool writes user-facing messages.
  *
  * Each method writes the text exactly as given, so callers include any
- * trailing newline themselves.
+ * trailing newline themselves. The one exception: when standard error is
+ * styled, warnings and errors always end with a newline.
  *
  * @property info - Writes an informational message to standard out.
  * @property success - Writes a message about a completed action to standard
@@ -40,6 +41,16 @@ function colorize(text: string, color: ChalkInstance): string {
 }
 
 /**
+ * Adds a newline to the end of the text if it does not already end with one.
+ *
+ * @param text - The text.
+ * @returns The text, ending with a newline.
+ */
+function endWithNewline(text: string): string {
+  return text.endsWith('\n') ? text : `${text}\n`;
+}
+
+/**
  * Determines whether a stream is a terminal that shows colors.
  *
  * @param stream - The stream.
@@ -61,9 +72,9 @@ function isColorTerminal(
  * Creates a `CliOutput` that writes to the given streams.
  *
  * When standard out is styled, success messages are colored. When standard
- * error is styled, warnings and errors are colored, and each step shows a
- * spinner on standard error. Otherwise, the text is written as given and
- * steps write nothing.
+ * error is styled, warnings and errors are colored and end with a newline,
+ * and each step shows a spinner on standard error. Otherwise, the text is
+ * written as given and steps write nothing.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
@@ -87,6 +98,10 @@ export function createCliOutput({
 }): CliOutput {
   const stdoutColors = new Chalk({ level: styled.stdout ? 1 : 0 });
   const stderrColors = new Chalk({ level: styled.stderr ? 1 : 0 });
+  // A running spinner clears the current line on its next frame, which would
+  // erase a message that does not end with a newline.
+  const toStderr = (text: string): string =>
+    styled.stderr ? endWithNewline(text) : text;
 
   return {
     info(text) {
@@ -96,22 +111,24 @@ export function createCliOutput({
       stdout.write(colorize(text, stdoutColors.green));
     },
     warn(text) {
-      stderr.write(colorize(text, stderrColors.yellow));
+      stderr.write(colorize(toStderr(text), stderrColors.yellow));
     },
     error(text) {
-      stderr.write(colorize(text, stderrColors.red));
+      stderr.write(colorize(toStderr(text), stderrColors.red));
     },
     async step(label, run) {
       if (!styled.stderr) {
         return await run();
       }
 
-      // Leave stdin alone so that a prompt during the step (such as a GPG
-      // pinentry for the release commit) still receives keystrokes.
+      // Leave stdin alone so that a prompt during the step still receives
+      // keystrokes. Standard error is already known to be a color terminal
+      // here, so ora's own check (which is off in CI) is skipped.
       const spinner = ora({
         text: label,
         stream: stderr,
         discardStdin: false,
+        isEnabled: true,
       });
       spinner.start();
       try {

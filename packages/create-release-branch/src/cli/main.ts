@@ -9,8 +9,9 @@ import { determineInitialParameters } from './initial-parameters.js';
 
 /**
  * The main function for this tool. Designed to not access `process.argv`,
- * `process.env`, `process.cwd()`, `process.stdout`, or `process.stderr`
- * directly so as to be more easily testable.
+ * `process.cwd()`, `process.stdout`, or `process.stderr` directly so as to be
+ * more easily testable. The output still reads `NO_COLOR` and the color
+ * support that chalk detects for the process streams.
  *
  * @param args - The arguments.
  * @param args.argv - The name of this executable and its arguments (as obtained

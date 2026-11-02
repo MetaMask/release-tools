@@ -218,8 +218,40 @@ describe('cli-output', () => {
         colors.green('Some success'),
       ]);
       expect(stderr.data()).toStrictEqual([
-        colors.yellow('Some warning'),
-        colors.red('Some error'),
+        `${colors.yellow('Some warning')}\n`,
+        `${colors.red('Some error')}\n`,
+      ]);
+    });
+
+    it('ends warn and error with a newline only when stderr is styled', () => {
+      const plainStderr = new MockWritable();
+      const styledStderr = new MockWritable();
+      const plainOutput = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: plainStderr,
+        styled: { stdout: false, stderr: false },
+      });
+      const styledOutput = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: styledStderr,
+        styled: { stdout: false, stderr: true },
+      });
+
+      for (const output of [plainOutput, styledOutput]) {
+        output.warn('Some warning');
+        output.error('Some error');
+        output.warn('Some other warning\n');
+      }
+
+      expect(plainStderr.data()).toStrictEqual([
+        'Some warning',
+        'Some error',
+        'Some other warning\n',
+      ]);
+      expect(styledStderr.data()).toStrictEqual([
+        `${colors.yellow('Some warning')}\n`,
+        `${colors.red('Some error')}\n`,
+        `${colors.yellow('Some other warning')}\n`,
       ]);
     });
 
@@ -261,6 +293,7 @@ describe('cli-output', () => {
         text: 'Doing something',
         stream: stderr,
         discardStdin: false,
+        isEnabled: true,
       });
       expect(spinner.start).toHaveBeenCalledTimes(1);
       expect(spinner.succeed).toHaveBeenCalledTimes(1);

@@ -12,7 +12,7 @@ import type { ReleaseType } from './types.js';
  * of the project.
  *
  * @param project - Information about the whole project (e.g., names of
- * packages and where they can found).
+ * packages and where they can be found).
  * @param releaseType - The type of release ("ordinary" or "backport"), which
  * affects how the version is bumped.
  * @returns The version of the new release.
@@ -33,7 +33,7 @@ export function determineReleaseVersion(
  * not exist.
  *
  * @param project - Information about the whole project (e.g., names of
- * packages and where they can found).
+ * packages and where they can be found).
  * @param version - The version of the new release.
  * @returns A promise that resolves to an object with a boolean indicating
  * whether it's the first run (that is, whether the branch was created).

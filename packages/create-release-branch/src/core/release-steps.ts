@@ -182,12 +182,10 @@ export async function finishRelease({
     'Deduplicating dependencies',
     async () => await deduplicateDependencies(project.directoryPath),
   );
-  await output.step(
-    'Committing the release',
-    async () =>
-      await commitAllChanges(
-        project.directoryPath,
-        `Update Release ${newReleaseVersion}`,
-      ),
+  // Not run in a step: a spinner would draw over a GPG pinentry in the
+  // terminal.
+  await commitAllChanges(
+    project.directoryPath,
+    `Update Release ${newReleaseVersion}`,
   );
 }
