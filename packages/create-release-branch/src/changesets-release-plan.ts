@@ -8,8 +8,14 @@ import { filterChangesets } from '@metamask/changesets-utils';
 import type { ReleaseType } from 'semver';
 
 import type { LoadedChangesetsPlan } from './changesets-plan.js';
-import type { ChangesetsCandidate } from './changesets-release-specification.js';
-import { getPropagationReason } from './changesets-release-specification.js';
+import type {
+  BumpingRelease,
+  ChangesetsCandidate,
+} from './changesets-release-specification.js';
+import {
+  getPropagationReason,
+  isBumpingRelease,
+} from './changesets-release-specification.js';
 import type { Project } from './project.js';
 import { calculateNewPackageVersion } from './release-plan.js';
 import {
@@ -155,11 +161,9 @@ function selectChangesets(
  */
 function getBumpingReleasesByName(
   releases: ComprehensiveRelease[],
-): Map<string, ComprehensiveRelease> {
+): Map<string, BumpingRelease> {
   return new Map(
-    releases
-      .filter(({ type }) => type !== 'none')
-      .map((release) => [release.name, release]),
+    releases.filter(isBumpingRelease).map((release) => [release.name, release]),
   );
 }
 

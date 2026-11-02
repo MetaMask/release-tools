@@ -36,7 +36,7 @@ export type ChangesetsCandidate = {
   reason?: string;
 };
 
-type BumpingRelease = ComprehensiveRelease & {
+export type BumpingRelease = ComprehensiveRelease & {
   type: 'major' | 'minor' | 'patch';
 };
 
@@ -63,7 +63,7 @@ function compareNames(left: string, right: string): number {
  * @param release - The release.
  * @returns Whether the release type is not `none`.
  */
-function isBumpingRelease(
+export function isBumpingRelease(
   release: ComprehensiveRelease,
 ): release is BumpingRelease {
   return release.type !== 'none';
@@ -77,10 +77,7 @@ function isBumpingRelease(
  * @param release - The release of the dependency.
  * @returns The semver range. Other ranges are returned unchanged.
  */
-function resolveWorkspaceRange(
-  range: string,
-  release: Pick<ComprehensiveRelease, 'oldVersion'>,
-): string {
+function resolveWorkspaceRange(range: string, release: BumpingRelease): string {
   if (!range.startsWith('workspace:')) {
     return range;
   }
@@ -109,10 +106,7 @@ function resolveWorkspaceRange(
 export function getPropagationReason(
   packageName: string,
   packages: Packages,
-  releasesByName: ReadonlyMap<
-    string,
-    Pick<ComprehensiveRelease, 'type' | 'oldVersion' | 'newVersion'>
-  >,
+  releasesByName: ReadonlyMap<string, BumpingRelease>,
 ): string | undefined {
   const manifest = packages.packages.find(
     ({ packageJson }) => packageJson.name === packageName,
