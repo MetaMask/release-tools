@@ -10,10 +10,6 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node", "react", "react-dom", "vite/client"]
   },
-  "references": [
-    { "path": "../apply-release-plan" },
-    { "path": "../auto-changelog" },
-    { "path": "../changesets-utils" }
-  ],
+  "references": [{ "path": "../auto-changelog" }],
   "include": ["./src", "./tests"]
 }
