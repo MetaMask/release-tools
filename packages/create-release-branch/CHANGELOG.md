@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump `@metamask/auto-changelog` from `^7.0.0` to `^7.0.1` ([#129](https://github.com/MetaMask/release-tools/pull/129))
 
+### Fixed
+
+- Fix the "Initialize Release" commit failing with "nothing to commit" when the changelogs are already up to date ([#142](https://github.com/MetaMask/release-tools/pull/142))
+
 ## [4.2.3]
 
 ### Changed

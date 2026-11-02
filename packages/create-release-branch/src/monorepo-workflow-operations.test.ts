@@ -502,6 +502,7 @@ describe('monorepo-workflow-operations', () => {
             1,
             projectDirectoryPath,
             `Initialize Release ${releaseVersion}`,
+            { allowEmpty: true },
           );
           expect(commitAllChangesSpy).toHaveBeenNthCalledWith(
             2,
@@ -621,6 +622,7 @@ describe('monorepo-workflow-operations', () => {
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
             'Initialize Release 2.0.0',
+            { allowEmpty: true },
           );
 
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
@@ -718,6 +720,7 @@ describe('monorepo-workflow-operations', () => {
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
             'Initialize Release 2.0.0',
+            { allowEmpty: true },
           );
           expect(commitAllChangesSpy).not.toHaveBeenCalledWith(
             projectDirectoryPath,
@@ -1160,6 +1163,7 @@ describe('monorepo-workflow-operations', () => {
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
             'Initialize Release 2.0.0',
+            { allowEmpty: true },
           );
 
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
@@ -1431,6 +1435,7 @@ describe('monorepo-workflow-operations', () => {
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
             'Initialize Release 2.0.0',
+            { allowEmpty: true },
           );
 
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
@@ -1974,6 +1979,7 @@ describe('monorepo-workflow-operations', () => {
           expect(commitAllChangesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
             'Initialize Release 2.0.0',
+            { allowEmpty: true },
           );
 
           expect(commitAllChangesSpy).toHaveBeenCalledWith(

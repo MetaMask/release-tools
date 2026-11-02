@@ -33,6 +33,22 @@ describe('repo', () => {
         { cwd: '/path/to/project' },
       );
     });
+
+    it('passes `--allow-empty` when `allowEmpty` is true', async () => {
+      const getStdoutFromCommandSpy = vi.spyOn(
+        miscUtils,
+        'getStdoutFromCommand',
+      );
+      await commitAllChanges('/path/to/project', 'Release 1.0.0', {
+        allowEmpty: true,
+      });
+
+      expect(getStdoutFromCommandSpy).toHaveBeenCalledWith(
+        'git',
+        ['commit', '-m', 'Release 1.0.0', '--allow-empty'],
+        { cwd: '/path/to/project' },
+      );
+    });
   });
 
   describe('getTagNames', () => {
