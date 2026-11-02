@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Bump `@metamask/auto-changelog` from `^7.0.0` to `^7.0.1` ([#129](https://github.com/MetaMask/release-tools/pull/129))
+- Bump `@metamask/auto-changelog` from `^7.0.0` to `^7.1.0` ([#129](https://github.com/MetaMask/release-tools/pull/129), [#143](https://github.com/MetaMask/release-tools/pull/143))
 
 ### Fixed
 
