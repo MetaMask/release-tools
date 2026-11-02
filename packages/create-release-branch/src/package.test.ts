@@ -21,7 +21,6 @@ import * as fsModule from './fs.js';
 import * as packageManifestModule from './package-manifest.js';
 import {
   getFormatter,
-  migrateUnreleasedChangelogChangesToRelease,
   readMonorepoRootPackage,
   readMonorepoWorkspacePackage,
   updatePackage,
@@ -664,32 +663,6 @@ describe('package', () => {
             [1.0.0]: https://repo.url/releases/tag/package@1.0.0
           `),
         );
-      });
-
-      it('keeps the emptied Unreleased section by default when migrating the changelog only', async () => {
-        await withSandbox(async (sandbox) => {
-          const changelogPath = path.join(
-            sandbox.directoryPath,
-            'CHANGELOG.md',
-          );
-          await fs.promises.writeFile(changelogPath, unreleasedChangelog);
-
-          await migrateUnreleasedChangelogChangesToRelease({
-            project: buildMockProject({ repositoryUrl: 'https://repo.url' }),
-            package: buildMockPackage({
-              directoryPath: sandbox.directoryPath,
-              validatedManifest: buildMockManifest(),
-              changelogPath,
-            }),
-            version: '2.0.0',
-            formatter: 'prettier',
-            stderr: createNoopWriteStream(),
-          });
-
-          expect(await fs.promises.readFile(changelogPath, 'utf8')).toContain(
-            '## [Unreleased]\n',
-          );
-        });
       });
 
       it('keeps the emptied Unreleased section by default', async () => {
