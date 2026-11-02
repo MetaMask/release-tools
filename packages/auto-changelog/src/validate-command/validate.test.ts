@@ -473,27 +473,6 @@ describe('validate', () => {
       [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
     `;
 
-    it('sets exitCode=1 when combined with checkDeps', async () => {
-      await writeChangelog(changesetsChangelog);
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
-        // Do nothing
-      });
-
-      await validate({
-        ...defaultOptions(),
-        changesets: true,
-        checkDeps: true,
-      });
-
-      expect(process.exitCode).toBe(1);
-      expect(errorSpy).toHaveBeenCalledWith(
-        '--changesets cannot be combined with --checkDeps.',
-      );
-      expect(getDependencyChangesMock).not.toHaveBeenCalled();
-      errorSpy.mockRestore();
-      process.exitCode = 0;
-    });
-
     it('removes an empty Unreleased section when fix=true', async () => {
       await writeChangelog(changelogWithEmptyUnreleased);
       process.exitCode = 0;

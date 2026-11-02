@@ -775,6 +775,10 @@ async function main(): Promise<void> {
     return changelog;
   };
 
+  if (command === 'validate' && argv.changesets && argv.checkDeps) {
+    return error('--changesets cannot be combined with --checkDeps.');
+  }
+
   if (all) {
     return await runCommandOnAllPackages({ argv, command, formatter });
   }

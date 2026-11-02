@@ -122,10 +122,6 @@ export async function validate(options: ValidateOptions): Promise<void> {
     changesets,
   } = options;
 
-  if (changesets && checkDeps) {
-    return error('--changesets cannot be combined with --checkDeps.');
-  }
-
   const changelogContent = await readFile(changelogPath);
 
   let dependencyCheckResult: DependencyCheckResult | undefined;
