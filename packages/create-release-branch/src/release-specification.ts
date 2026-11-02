@@ -726,3 +726,21 @@ export async function validateReleaseSpecification(
 
   return { packages, path: releaseSpecificationPath };
 }
+
+/**
+ * Reads the raw package entries of a release spec, including the packages
+ * listed with no version specifier and the packages listed with
+ * "intentionally-skip".
+ *
+ * @param releaseSpecificationPath - The path to the release spec file. The
+ * file must already have passed `validateReleaseSpecification`.
+ * @returns The `packages` map of the release spec.
+ */
+export async function readReleaseSpecificationEntries(
+  releaseSpecificationPath: string,
+): Promise<Record<string, string | null>> {
+  const releaseSpecification = YAML.parse(
+    await readFile(releaseSpecificationPath),
+  ) as { packages: Record<string, string | null> };
+  return releaseSpecification.packages;
+}

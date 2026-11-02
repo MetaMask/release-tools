@@ -13,6 +13,7 @@ import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
   validateReleaseSpecification,
+  readReleaseSpecificationEntries,
 } from './release-specification.js';
 
 vi.mock('./misc-utils', async () => {
@@ -2214,6 +2215,37 @@ ${releaseSpecificationPath}
           { a: 'minor' },
         ),
       ).toStrictEqual(['b']);
+    });
+  });
+
+  describe('readReleaseSpecificationEntries', () => {
+    it('returns the raw packages map, including skipped and intentionally skipped packages', async () => {
+      await withSandbox(async (sandbox) => {
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'release-spec',
+        );
+        await fs.promises.writeFile(
+          releaseSpecificationPath,
+          YAML.stringify({
+            packages: {
+              a: 'major',
+              b: null,
+              c: 'intentionally-skip',
+            },
+          }),
+        );
+
+        const entries = await readReleaseSpecificationEntries(
+          releaseSpecificationPath,
+        );
+
+        expect(entries).toStrictEqual({
+          a: 'major',
+          b: null,
+          c: 'intentionally-skip',
+        });
+      });
     });
   });
 });
