@@ -44,7 +44,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@changesets/assemble-release-plan": "7.0.0",
+    "@changesets/assemble-release-plan": "^7.0.0",
     "@changesets/config": "^4.0.1",
     "@changesets/get-release-plan": "5.0.2",
     "@changesets/types": "^7.0.0",
