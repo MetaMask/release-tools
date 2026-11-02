@@ -91,6 +91,9 @@ export async function followMonorepoWorkflow({
     await commitAllChanges(
       project.directoryPath,
       `Initialize Release ${newReleaseVersion}`,
+      // Changelogs may already be up to date, in which case there is nothing
+      // to commit.
+      { allowEmpty: true },
     );
   }
 
