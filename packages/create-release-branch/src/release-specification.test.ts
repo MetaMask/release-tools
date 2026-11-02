@@ -5,12 +5,20 @@ import { describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
 import { withSandbox } from '../tests/helpers.js';
-import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
+import {
+  buildMockProject,
+  buildMockPackage,
+  createNoopCliOutput,
+} from '../tests/unit/helpers.js';
+import { checkChoices } from './core/release-steps.js';
+import type { VersionSpecifiers } from './core/types.js';
 import { listLegacyCandidates } from './modes/legacy/candidates.js';
+import { createLegacyMode } from './modes/legacy/legacy-mode.js';
+import type { Project } from './project/project.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
-  validateReleaseSpecification,
+  validateReleaseSpecification as validateReleaseSpecificationWithCheck,
 } from './release-specification.js';
 import * as miscUtils from './utils/misc-utils.js';
 
@@ -20,6 +28,31 @@ vi.mock('./utils/misc-utils', async () => {
     runCommand: vi.fn(),
   };
 });
+
+/**
+ * Validates the release spec the way the editor workflow does in the legacy
+ * mode.
+ *
+ * @param project - Information about the whole project.
+ * @param releaseSpecificationPath - The path to the release spec file.
+ * @returns The version specifier for each package to release, and the path.
+ */
+async function validateReleaseSpecification(
+  project: Project,
+  releaseSpecificationPath: string,
+): Promise<{ packages: VersionSpecifiers; path: string }> {
+  const mode = createLegacyMode({
+    project,
+    defaultBranch: 'main',
+    formatter: 'prettier',
+    output: createNoopCliOutput(),
+  });
+  const { data } = await validateReleaseSpecificationWithCheck(
+    releaseSpecificationPath,
+    async (choices) => await checkChoices({ project, mode, choices }),
+  );
+  return { packages: data, path: releaseSpecificationPath };
+}
 
 describe('release-specification', () => {
   describe('generateReleaseSpecificationTemplateForMonorepo', () => {

@@ -1,29 +1,14 @@
 import YAML from 'yaml';
 
 import type { Candidate } from './core/candidates.js';
-import {
-  checkReleaseChoices,
-  normalizeReleaseChoices,
-  SKIP_PACKAGE_DIRECTIVE,
+import { SKIP_PACKAGE_DIRECTIVE } from './core/release-rules.js';
+import type {
+  ReleaseChoiceError,
+  ReleaseChoices,
 } from './core/release-rules.js';
-import type { ReleaseChoices } from './core/release-rules.js';
-import type { VersionSpecifiers } from './core/types.js';
 import { Editor } from './editor.js';
-import { Project } from './project/project.js';
 import { readFile } from './utils/fs.js';
 import { debug, wrapError, isObject, runCommand } from './utils/misc-utils.js';
-
-/**
- * User-provided instructions for how to update this project in order to prepare
- * it for a new release.
- *
- * @property packages - A mapping of package names to version specifiers.
- * @property path - The path to the original release specification file.
- */
-export type ReleaseSpecification = {
-  packages: VersionSpecifiers;
-  path: string;
-};
 
 /**
  * Generates a skeleton for a release specification, which describes how a
@@ -123,21 +108,24 @@ export async function waitForUserToEditReleaseSpecification(
 }
 
 /**
- * Looks over the release spec that the user has edited to ensure that:
+ * Reads the release spec that the user has edited and checks the release
+ * choices in it, for example:
  *
  * 1. the names of all packages match those within the project; and
  * 2. the version specifiers for each package are valid.
  *
- * @param project - Information about the whole project (e.g., names of packages
- * and where they can found).
  * @param releaseSpecificationPath - The path to the release spec file.
- * @returns The validated release spec.
+ * @param check - Checks the release choices. It returns the plan only when
+ * there are no errors.
+ * @returns The plan that `check` returns.
  * @throws If there are any issues with the file.
  */
-export async function validateReleaseSpecification(
-  project: Project,
+export async function validateReleaseSpecification<Plan>(
   releaseSpecificationPath: string,
-): Promise<ReleaseSpecification> {
+  check: (
+    choices: ReleaseChoices,
+  ) => Promise<{ errors: ReleaseChoiceError[]; plan?: Plan }>,
+): Promise<Plan> {
   const releaseSpecificationContents = await readFile(releaseSpecificationPath);
   const indexOfFirstUsableLine = releaseSpecificationContents
     .split('\n')
@@ -179,10 +167,10 @@ export async function validateReleaseSpecification(
     throw new Error(message);
   }
 
-  const errors = checkReleaseChoices(
-    project,
+  const { errors: choiceErrors, plan } = await check(
     unvalidatedReleaseSpecification.packages,
-  ).errors.map(({ message, entryIndex }) => ({
+  );
+  const errors = choiceErrors.map(({ message, entryIndex }) => ({
     message,
     lineNumber:
       entryIndex === undefined
@@ -190,7 +178,7 @@ export async function validateReleaseSpecification(
         : indexOfFirstUsableLine + entryIndex + 2,
   }));
 
-  if (errors.length > 0) {
+  if (plan === undefined) {
     const message = [
       'Your release spec could not be processed due to the following issues:',
       errors
@@ -222,8 +210,5 @@ export async function validateReleaseSpecification(
     throw new Error(message);
   }
 
-  return {
-    packages: normalizeReleaseChoices(unvalidatedReleaseSpecification.packages),
-    path: releaseSpecificationPath,
-  };
+  return plan;
 }

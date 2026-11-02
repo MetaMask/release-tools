@@ -10,7 +10,7 @@ import { createCliOutput } from './core/cli-output.js';
 import type { CliOutput } from './core/cli-output.js';
 import * as workflowOperations from './core/release-branch.js';
 import * as repoModule from './core/repo.js';
-import type { Formatter } from './core/types.js';
+import type { Formatter, VersionSpecifiers } from './core/types.js';
 import * as yarnCommands from './core/yarn-commands.js';
 import * as editorModule from './editor.js';
 import type { Editor } from './editor.js';
@@ -19,7 +19,6 @@ import type { ReleasePlan } from './modes/legacy/release-plan.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
 import type { Project } from './project/project.js';
 import * as releaseSpecificationModule from './release-specification.js';
-import type { ReleaseSpecification } from './release-specification.js';
 
 vi.mock('./editor');
 vi.mock('./modes/legacy/release-plan');
@@ -96,6 +95,11 @@ function getDependencySpies(): {
     ),
   };
 }
+
+type ReleaseSpecification = {
+  packages: VersionSpecifiers;
+  path: string;
+};
 
 /**
  * Builds a release specification object for use in tests. All properties have
@@ -260,14 +264,22 @@ async function setupFollowMonorepoWorkflow({
       .thenResolve();
   }
 
+  const validateReleaseSpecificationStub = vi
+    .when(validateReleaseSpecificationSpy)
+    .calledWith(
+      releaseSpecificationPath,
+      expect.any(Function) as Parameters<
+        typeof releaseSpecificationModule.validateReleaseSpecification
+      >[1],
+    );
+
   if (errorUponValidatingReleaseSpec) {
-    vi.when(validateReleaseSpecificationSpy)
-      .calledWith(project, releaseSpecificationPath)
-      .thenReject(errorUponValidatingReleaseSpec);
+    validateReleaseSpecificationStub.thenReject(errorUponValidatingReleaseSpec);
   } else {
-    vi.when(validateReleaseSpecificationSpy)
-      .calledWith(project, releaseSpecificationPath)
-      .thenResolve(releaseSpecification);
+    validateReleaseSpecificationStub.thenResolve({
+      releases: [],
+      data: releaseSpecification.packages,
+    });
   }
 
   if (errorUponPlanningRelease) {
@@ -973,6 +985,48 @@ describe('monorepo-workflow-operations', () => {
           expect(
             waitForUserToEditReleaseSpecificationSpy,
           ).not.toHaveBeenCalled();
+        });
+      });
+
+      it('checks the release choices in the release spec with the shared rules', async () => {
+        await withSandbox(async (sandbox) => {
+          const { project, output, formatter } =
+            await setupFollowMonorepoWorkflow({
+              sandbox,
+              doesReleaseSpecFileExist: true,
+            });
+          const checkResults: unknown[] = [];
+          vi.mocked(
+            releaseSpecificationModule.validateReleaseSpecification,
+          ).mockImplementation(async (_releaseSpecificationPath, check) => {
+            checkResults.push(await check({ foo: 'major' }));
+            throw new Error('Invalid release spec');
+          });
+
+          await expect(
+            followMonorepoWorkflow({
+              project,
+              tempDirectoryPath: sandbox.directoryPath,
+              firstRemovingExistingReleaseSpecification: false,
+              releaseType: 'ordinary',
+              defaultBranch: 'main',
+              formatter,
+              output,
+            }),
+          ).rejects.toThrow('Invalid release spec');
+
+          expect(checkResults).toStrictEqual([
+            {
+              errors: [
+                {
+                  message: '"foo" is not a package in the project',
+                  packageName: 'foo',
+                  entryIndex: 0,
+                },
+              ],
+              dependencyFindings: {},
+            },
+          ]);
         });
       });
 

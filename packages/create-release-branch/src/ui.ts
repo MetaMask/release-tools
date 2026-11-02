@@ -3,32 +3,19 @@ import openBrowser from 'open';
 import { join } from 'path';
 
 import type { CliOutput } from './core/cli-output.js';
-import { createReleaseBranch } from './core/release-branch.js';
-import {
-  checkReleaseChoices,
-  normalizeReleaseChoices,
-} from './core/release-rules.js';
+import type { Mode } from './core/mode.js';
 import type { ReleaseChoices } from './core/release-rules.js';
-import { commitAllChanges } from './core/repo.js';
-import type { Formatter } from './core/types.js';
 import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './core/yarn-commands.js';
+  applyRelease,
+  checkChoices,
+  finishRelease,
+  startRelease,
+} from './core/release-steps.js';
+import type { Formatter } from './core/types.js';
 import { getCurrentDirectoryPath } from './dirname.js';
 import { listLegacyCandidates } from './modes/legacy/candidates.js';
-import {
-  executeReleasePlan,
-  planRelease,
-} from './modes/legacy/release-plan.js';
-import { Package } from './project/package.js';
+import { createLegacyMode } from './modes/legacy/legacy-mode.js';
 import type { Project } from './project/project.js';
-import {
-  restoreChangelogsForSkippedPackages,
-  updateChangelogsForChangedPackages,
-} from './project/project.js';
-import { readFile } from './utils/fs.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 
@@ -60,23 +47,16 @@ export async function startUI({
   formatter,
   output,
 }: UIOptions): Promise<void> {
-  const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
+  const mode = createLegacyMode({ project, defaultBranch, formatter, output });
+  const { newReleaseVersion } = await startRelease({
     project,
     releaseType,
+    mode,
   });
-
-  if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, output });
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-    );
-  }
 
   const app = createApp({
     project,
-    defaultBranch,
-    formatter,
+    mode,
     output,
     version: newReleaseVersion,
     closeServer: () => {
@@ -120,8 +100,7 @@ export async function startUI({
  *
  * @param options - The options for creating the app.
  * @param options.project - The project object.
- * @param options.defaultBranch - The default branch name.
- * @param options.formatter - The formatter to use for formatting the changelog.
+ * @param options.mode - The release mode.
  * @param options.output - Where to write user-facing messages.
  * @param options.version - The release version.
  * @param options.closeServer - The function to close the server.
@@ -129,15 +108,13 @@ export async function startUI({
  */
 function createApp({
   project,
-  defaultBranch,
-  formatter,
+  mode,
   output,
   version,
   closeServer,
 }: {
   project: Project;
-  defaultBranch: string;
-  formatter: Formatter;
+  mode: Mode<unknown>;
   output: CliOutput;
   version: string;
   closeServer: () => void;
@@ -170,11 +147,7 @@ function createApp({
     try {
       const packageName = req.query.package as string;
 
-      const selectedPackage = Object.values(project.workspacePackages).find(
-        (pkg) => pkg.validatedManifest.name === packageName,
-      ) as Package;
-
-      const changelogContent = await readFile(selectedPackage.changelogPath);
+      const changelogContent = await mode.getReleaseNotes(packageName);
 
       res.send(changelogContent);
     } catch (error) {
@@ -189,10 +162,11 @@ function createApp({
       try {
         const releasedPackages = req.body as ReleaseChoices;
 
-        const { dependencyFindings } = checkReleaseChoices(
+        const { dependencyFindings } = await checkChoices({
           project,
-          releasedPackages,
-        );
+          mode,
+          choices: releasedPackages,
+        });
 
         if (Object.keys(dependencyFindings).length > 0) {
           res.json({
@@ -216,45 +190,26 @@ function createApp({
       try {
         const releasedPackages = req.body as ReleaseChoices;
 
-        const errors = checkReleaseChoices(
+        const { errors, plan } = await checkChoices({
           project,
-          releasedPackages,
-        ).errors.map(({ message, entryIndex }) =>
-          entryIndex === undefined
-            ? { message }
-            : { message, lineNumber: entryIndex + 2 },
-        );
+          mode,
+          choices: releasedPackages,
+        });
 
-        if (errors.length > 0) {
+        if (plan === undefined) {
           res.json({
             status: 'error',
-            errors,
+            errors: errors.map(({ message, entryIndex }) =>
+              entryIndex === undefined
+                ? { message }
+                : { message, lineNumber: entryIndex + 2 },
+            ),
           });
           return;
         }
 
-        const releaseSpecificationPackages =
-          normalizeReleaseChoices(releasedPackages);
-
-        await restoreChangelogsForSkippedPackages({
-          project,
-          releaseSpecificationPackages,
-          defaultBranch,
-        });
-
-        const releasePlan = await planRelease({
-          project,
-          releaseSpecificationPackages,
-          newReleaseVersion: version,
-        });
-        await executeReleasePlan(project, releasePlan, formatter, output);
-        await fixConstraints(project.directoryPath);
-        await updateYarnLockfile(project.directoryPath);
-        await deduplicateDependencies(project.directoryPath);
-        await commitAllChanges(
-          project.directoryPath,
-          `Update Release ${version}`,
-        );
+        await applyRelease({ mode, plan, newReleaseVersion: version });
+        await finishRelease({ project, newReleaseVersion: version });
 
         res.json({ status: 'success' });
 

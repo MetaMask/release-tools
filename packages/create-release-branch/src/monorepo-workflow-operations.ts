@@ -1,25 +1,16 @@
 import path from 'path';
 
 import type { CliOutput } from './core/cli-output.js';
-import { createReleaseBranch } from './core/release-branch.js';
-import { commitAllChanges } from './core/repo.js';
+import {
+  applyRelease,
+  checkChoices,
+  finishRelease,
+  startRelease,
+} from './core/release-steps.js';
 import type { Formatter, ReleaseType } from './core/types.js';
-import {
-  deduplicateDependencies,
-  fixConstraints,
-  updateYarnLockfile,
-} from './core/yarn-commands.js';
 import { determineEditor } from './editor.js';
-import { listLegacyCandidates } from './modes/legacy/candidates.js';
-import {
-  planRelease,
-  executeReleasePlan,
-} from './modes/legacy/release-plan.js';
-import {
-  Project,
-  updateChangelogsForChangedPackages,
-  restoreChangelogsForSkippedPackages,
-} from './project/project.js';
+import { createLegacyMode } from './modes/legacy/legacy-mode.js';
+import type { Project } from './project/project.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
@@ -82,21 +73,12 @@ export async function followMonorepoWorkflow({
   formatter: Formatter;
   output: CliOutput;
 }): Promise<void> {
-  const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
+  const mode = createLegacyMode({ project, defaultBranch, formatter, output });
+  const { newReleaseVersion } = await startRelease({
     project,
     releaseType,
+    mode,
   });
-
-  if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, output });
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-      // Changelogs may already be up to date, in which case there is nothing
-      // to commit.
-      { allowEmpty: true },
-    );
-  }
 
   const releaseSpecificationPath = path.join(
     tempDirectoryPath,
@@ -115,7 +97,7 @@ export async function followMonorepoWorkflow({
 
     const releaseSpecificationTemplate =
       await generateReleaseSpecificationTemplateForMonorepo({
-        candidates: listLegacyCandidates(project),
+        candidates: await mode.listCandidates(),
         isEditorAvailable: editor !== null,
       });
     await ensureDirectoryPathExists(tempDirectoryPath);
@@ -142,29 +124,12 @@ export async function followMonorepoWorkflow({
     }
   }
 
-  const { packages } = await validateReleaseSpecification(
-    project,
+  const plan = await validateReleaseSpecification(
     releaseSpecificationPath,
+    async (choices) => await checkChoices({ project, mode, choices }),
   );
 
-  await restoreChangelogsForSkippedPackages({
-    project,
-    releaseSpecificationPackages: packages,
-    defaultBranch,
-  });
-
-  const releasePlan = await planRelease({
-    project,
-    releaseSpecificationPackages: packages,
-    newReleaseVersion,
-  });
-  await executeReleasePlan(project, releasePlan, formatter, output);
+  await applyRelease({ mode, plan, newReleaseVersion });
   await removeFile(releaseSpecificationPath);
-  await fixConstraints(project.directoryPath);
-  await updateYarnLockfile(project.directoryPath);
-  await deduplicateDependencies(project.directoryPath);
-  await commitAllChanges(
-    project.directoryPath,
-    `Update Release ${newReleaseVersion}`,
-  );
+  await finishRelease({ project, newReleaseVersion });
 }

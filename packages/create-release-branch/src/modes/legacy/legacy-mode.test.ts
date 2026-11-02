@@ -1,0 +1,186 @@
+import { SemVer } from 'semver';
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  buildMockPackage,
+  buildMockProject,
+  createNoopCliOutput,
+} from '../../../tests/unit/helpers.js';
+import { IncrementableVersionParts } from '../../core/release-rules.js';
+import * as projectModule from '../../project/project.js';
+import * as fsModule from '../../utils/fs.js';
+import { createLegacyMode } from './legacy-mode.js';
+import * as releasePlanModule from './release-plan.js';
+import type { ReleasePlan } from './release-plan.js';
+
+vi.mock('../../project/project');
+vi.mock('../../utils/fs');
+vi.mock('./release-plan', async (importActual) => ({
+  ...(await importActual<typeof releasePlanModule>()),
+  planRelease: vi.fn(),
+  executeReleasePlan: vi.fn(),
+}));
+
+describe('legacy mode', () => {
+  describe('createLegacyMode', () => {
+    it('updates the changelogs of changed packages when preparing', async () => {
+      const project = buildMockProject();
+      const output = createNoopCliOutput();
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+        output,
+      });
+
+      await mode.prepare();
+
+      expect(mode.allowEmptyInitializeCommit).toBe(true);
+      expect(
+        projectModule.updateChangelogsForChangedPackages,
+      ).toHaveBeenCalledWith({ project, formatter: 'prettier', output });
+    });
+
+    it('lists the legacy candidates for the given choices', async () => {
+      const project = buildMockProject({
+        workspacePackages: {
+          a: buildMockPackage('a', '1.0.0', {
+            hasChangesSinceLatestRelease: true,
+          }),
+          b: buildMockPackage('b', '1.0.0', {
+            validatedManifest: { dependencies: { a: '1.0.0' } },
+          }),
+        },
+      });
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+        output: createNoopCliOutput(),
+      });
+
+      expect(await mode.listCandidates({ a: 'major' })).toStrictEqual([
+        { name: 'a', currentVersion: '1.0.0', kind: 'changes' },
+        { name: 'b', currentVersion: '1.0.0', kind: 'dependency' },
+      ]);
+    });
+
+    it('plan returns the released versions without the root', async () => {
+      const project = buildMockProject({
+        rootPackage: buildMockPackage('root', '1.0.0'),
+        workspacePackages: {
+          a: buildMockPackage('a', '1.0.0'),
+          b: buildMockPackage('b', '1.0.0'),
+          c: buildMockPackage('c', '1.0.0'),
+          d: buildMockPackage('d', '1.0.0'),
+        },
+      });
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+        output: createNoopCliOutput(),
+      });
+
+      const result = await mode.plan({
+        a: 'major',
+        b: '1.2.3',
+        c: 'intentionally-skip',
+        d: null,
+      });
+
+      expect(result).toStrictEqual({
+        plan: {
+          releases: [
+            { name: 'a', newVersion: '2.0.0' },
+            { name: 'b', newVersion: '1.2.3' },
+          ],
+          data: {
+            a: IncrementableVersionParts.major,
+            b: new SemVer('1.2.3'),
+          },
+        },
+      });
+    });
+
+    it('apply restores skipped changelogs before executing the plan', async () => {
+      const project = buildMockProject();
+      const output = createNoopCliOutput();
+      const releasePlan: ReleasePlan = { newVersion: '2.0.0', packages: [] };
+      const releaseSpecificationPackages = {
+        a: IncrementableVersionParts.major,
+      };
+      const calls: string[] = [];
+      vi.mocked(
+        projectModule.restoreChangelogsForSkippedPackages,
+      ).mockImplementation(async () => {
+        calls.push('restoreChangelogsForSkippedPackages');
+      });
+      vi.mocked(releasePlanModule.planRelease).mockImplementation(async () => {
+        calls.push('planRelease');
+        return releasePlan;
+      });
+      vi.mocked(releasePlanModule.executeReleasePlan).mockImplementation(
+        async () => {
+          calls.push('executeReleasePlan');
+        },
+      );
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'oxfmt',
+        output,
+      });
+
+      await mode.apply(
+        { releases: [], data: releaseSpecificationPackages },
+        '2.0.0',
+      );
+
+      expect(calls).toStrictEqual([
+        'restoreChangelogsForSkippedPackages',
+        'planRelease',
+        'executeReleasePlan',
+      ]);
+      expect(
+        projectModule.restoreChangelogsForSkippedPackages,
+      ).toHaveBeenCalledWith({
+        project,
+        releaseSpecificationPackages,
+        defaultBranch: 'main',
+      });
+      expect(releasePlanModule.planRelease).toHaveBeenCalledWith({
+        project,
+        releaseSpecificationPackages,
+        newReleaseVersion: '2.0.0',
+      });
+      expect(releasePlanModule.executeReleasePlan).toHaveBeenCalledWith(
+        project,
+        releasePlan,
+        'oxfmt',
+        output,
+      );
+    });
+
+    it('getReleaseNotes returns the changelog', async () => {
+      const project = buildMockProject({
+        workspacePackages: {
+          a: buildMockPackage('a', {
+            changelogPath: '/path/to/packages/a/CHANGELOG.md',
+          }),
+        },
+      });
+      vi.when(vi.mocked(fsModule.readFile))
+        .calledWith('/path/to/packages/a/CHANGELOG.md')
+        .thenResolve('# Changelog');
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+        output: createNoopCliOutput(),
+      });
+
+      expect(await mode.getReleaseNotes('a')).toBe('# Changelog');
+    });
+  });
+});
