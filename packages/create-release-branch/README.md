@@ -33,6 +33,8 @@ create-release-branch --changesets
 
 Your monorepo must have a `.changeset/config.json` file. Pending Changesets decide which packages can be released and how much their versions are bumped. The changelog plugin set in `.changeset/config.json` writes the new changelog entries. Without `--changesets`, the tool uses the legacy workflow, even if the monorepo has a `.changeset/config.json` file.
 
+Commit your Changesets before you run the tool. If the `.changeset` directory has uncommitted changes, the tool stops before it applies the release.
+
 The changelog plugin must write [Keep a Changelog](https://keepachangelog.com/) entries, for example `@metamask/changesets-changelog`. The default plugin that `changeset init` sets, `@changesets/cli/changelog`, is not supported. Changesets pre mode (`.changeset/pre.json`) is not supported either.
 
 The release spec (`RELEASE_SPEC.yml`) has the same format as in the legacy workflow. The tool lists these packages, in this order:
@@ -54,7 +56,7 @@ You can edit the release spec in these ways:
 
 - To leave a package out of the release, remove its line or set it to `null`. Its Changesets stay in `.changeset` for a later release. A Changeset that also releases other packages is kept with only the releases that were left out.
 - To leave out a package that is listed only because a dependency is released, set it to `intentionally-skip`.
-- To change the version of a package, replace the bump type with another bump type or with an exact version (for example, `2.1.0`). The tool uses the value you give, but a package in a `fixed` or `linked` group can still get a higher version from the other packages of its group. The tool lists every value that differs from the Changesets release plan on standard error, so you can check them before you continue.
+- To change the version of a package, replace the bump type with another bump type or with an exact version (for example, `2.1.0`). The tool uses the value you give, but a package in a `fixed` or `linked` group can still get a higher version from the other packages of its group. The tool lists every value that differs from the Changesets release plan on standard error, so you can check them before you push the release branch.
 - To release a package from the third group, replace `null` with a bump type or an exact version. Its `Unreleased` entries move to the new release.
 
 If you leave out a package (with `null` or by removing its line) that has pending changes and is a dependency or peer dependency of a released package, the tool reports an error, as in the legacy workflow. Release the dependency too, or set it to `intentionally-skip`.
@@ -69,7 +71,7 @@ The `--interactive` option is not supported in Changesets mode yet. Run the tool
 
 #### If the release fails
 
-If the tool fails while it applies the release, it restores the Changesets that the release consumed but only partly released, and keeps the release spec. To try again:
+If the tool fails while it applies the release, it keeps the release spec and shows the steps to recover. It does not undo the changes that it already made. To try again:
 
 1. Discard the uncommitted changes on the release branch. You can run this command from anywhere in the repository:
 
@@ -77,11 +79,11 @@ If the tool fails while it applies the release, it restores the Changesets that 
    git restore :/ && git clean -fd -e RELEASE_SPEC.yml :/
    ```
 
-   This also deletes the changelogs that the failed release created. The `-e RELEASE_SPEC.yml` option keeps the release spec if you keep it inside the repository (with `--temp-directory`).
+   This brings back the Changesets that the failed release consumed, and deletes the changelogs that it created. The `-e RELEASE_SPEC.yml` option keeps the release spec if you keep it inside the repository (with `--temp-directory`).
 
 2. Run the tool again. It continues from the release spec that it kept.
 
-The tool restores Changesets from the copy that it read before it applied the release. It does not protect uncommitted changes: the command above discards them, and also deletes every untracked file that Git does not ignore. Commit your Changesets before you run the tool.
+The command above discards all uncommitted changes, and also deletes every untracked file that Git does not ignore. Commit your work before you run the tool.
 
 ## Contributing
 
