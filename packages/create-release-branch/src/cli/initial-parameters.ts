@@ -1,10 +1,10 @@
 import os from 'os';
 import path from 'path';
 
+import type { CliOutput } from '../core/cli-output.js';
+import type { Formatter, ReleaseType } from '../core/types.js';
+import { readProject, Project } from '../project/project.js';
 import { readCommandLineArguments } from './command-line-arguments.js';
-import type { CliOutput } from './core/cli-output.js';
-import type { Formatter, ReleaseType } from './core/types.js';
-import { readProject, Project } from './project/project.js';
 
 type InitialParameters = {
   project: Project;

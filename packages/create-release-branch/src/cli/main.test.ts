@@ -2,18 +2,18 @@ import fs from 'fs';
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildMockProject } from '../tests/unit/helpers.js';
-import type { CliOutput } from './core/cli-output.js';
-import type { Mode } from './core/mode.js';
-import * as editorFrontEndModule from './frontends/editor/editor-front-end.js';
-import * as uiFrontEndModule from './frontends/ui/server.js';
+import { buildMockProject } from '../../tests/unit/helpers.js';
+import type { CliOutput } from '../core/cli-output.js';
+import type { Mode } from '../core/mode.js';
+import * as editorFrontEndModule from '../frontends/editor/editor-front-end.js';
+import * as uiFrontEndModule from '../frontends/ui/server.js';
 import * as initialParametersModule from './initial-parameters.js';
 import { main } from './main.js';
 
 vi.mock('./initial-parameters');
-vi.mock('./frontends/editor/editor-front-end');
-vi.mock('./frontends/ui/server');
-vi.mock('./dirname', () => ({
+vi.mock('../frontends/editor/editor-front-end');
+vi.mock('../frontends/ui/server');
+vi.mock('../dirname', () => ({
   getCurrentDirectoryPath: vi.fn().mockReturnValue('/path/to/somewhere'),
 }));
 vi.mock('open', () => ({
@@ -122,10 +122,10 @@ describe('main', () => {
       port: 3000,
       formatter: 'prettier',
     });
-    const createEditorFrontEndSpy = vi.spyOn(
-      editorFrontEndModule,
-      'createEditorFrontEnd',
-    );
+    const runSpy = vi.fn();
+    vi.spyOn(editorFrontEndModule, 'createEditorFrontEnd').mockReturnValue({
+      run: runSpy,
+    });
 
     await main({
       argv: [],
@@ -134,6 +134,6 @@ describe('main', () => {
       stderr,
     });
 
-    expect(createEditorFrontEndSpy).not.toHaveBeenCalled();
+    expect(runSpy).not.toHaveBeenCalled();
   });
 });

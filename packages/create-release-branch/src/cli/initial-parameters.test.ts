@@ -6,15 +6,15 @@ import {
   buildMockProject,
   buildMockPackage,
   createNoopCliOutput,
-} from '../tests/unit/helpers.js';
+} from '../../tests/unit/helpers.js';
+import * as projectModule from '../project/project.js';
+import * as envModule from '../utils/env.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import { determineInitialParameters } from './initial-parameters.js';
-import * as projectModule from './project/project.js';
-import * as envModule from './utils/env.js';
 
 vi.mock('./command-line-arguments');
-vi.mock('./utils/env');
-vi.mock('./project/project');
+vi.mock('../utils/env');
+vi.mock('../project/project');
 
 describe('initial-parameters', () => {
   describe('determineInitialParameters', () => {

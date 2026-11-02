@@ -456,8 +456,10 @@ describe('server', () => {
       const context = buildContext(mode, {
         output: createCliOutput({ stdout, stderr: new MockWritable() }),
       });
-      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
-        version: '2.0.0',
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
         firstRun: false,
       });
       vi.mocked(openBrowser).mockResolvedValue(new ChildProcess());
@@ -492,8 +494,10 @@ describe('server', () => {
       const context = buildContext(mode, {
         output: createCliOutput({ stdout: new MockWritable(), stderr }),
       });
-      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
-        version: '2.0.0',
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
         firstRun: false,
       });
       vi.mocked(openBrowser).mockRejectedValue(new Error('no browser'));
@@ -522,8 +526,10 @@ describe('server', () => {
       const context = buildContext(buildMockMode(), {
         output: createCliOutput({ stdout: new MockWritable(), stderr }),
       });
-      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
-        version: '2.0.0',
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
         firstRun: false,
       });
 

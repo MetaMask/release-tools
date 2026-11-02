@@ -1,6 +1,9 @@
 import type { Project } from '../project/project.js';
 import type { Mode, ModePlan } from './mode.js';
-import { createReleaseBranch } from './release-branch.js';
+import {
+  determineReleaseVersion,
+  ensureReleaseBranch,
+} from './release-branch.js';
 import { checkReleaseChoices } from './release-rules.js';
 import type {
   DependencyFinding,
@@ -35,10 +38,8 @@ export async function startRelease<Data>({
   releaseType: ReleaseType;
   mode: Mode<Data>;
 }): Promise<{ newReleaseVersion: string }> {
-  const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
-    project,
-    releaseType,
-  });
+  const newReleaseVersion = determineReleaseVersion(project, releaseType);
+  const { firstRun } = await ensureReleaseBranch(project, newReleaseVersion);
 
   if (firstRun) {
     await mode.prepare();

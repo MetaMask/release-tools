@@ -27,19 +27,16 @@ describe('release-steps', () => {
       const project = buildMockProject();
       const prepare = vi.fn();
       const mode = buildMockMode({ prepare });
-      const createReleaseBranchSpy = vi.spyOn(
+      const determineReleaseVersionSpy = vi
+        .spyOn(releaseBranchModule, 'determineReleaseVersion')
+        .mockReturnValue('2.0.0');
+      const ensureReleaseBranchSpy = vi.spyOn(
         releaseBranchModule,
-        'createReleaseBranch',
+        'ensureReleaseBranch',
       );
       const commitAllChangesSpy = vi.spyOn(repoModule, 'commitAllChanges');
-      createReleaseBranchSpy.mockResolvedValueOnce({
-        version: '2.0.0',
-        firstRun: true,
-      });
-      createReleaseBranchSpy.mockResolvedValueOnce({
-        version: '2.0.0',
-        firstRun: false,
-      });
+      ensureReleaseBranchSpy.mockResolvedValueOnce({ firstRun: true });
+      ensureReleaseBranchSpy.mockResolvedValueOnce({ firstRun: false });
 
       const firstResult = await startRelease({
         project,
@@ -54,10 +51,11 @@ describe('release-steps', () => {
 
       expect(firstResult).toStrictEqual({ newReleaseVersion: '2.0.0' });
       expect(secondResult).toStrictEqual({ newReleaseVersion: '2.0.0' });
-      expect(createReleaseBranchSpy).toHaveBeenCalledWith({
+      expect(determineReleaseVersionSpy).toHaveBeenCalledWith(
         project,
-        releaseType: 'ordinary',
-      });
+        'ordinary',
+      );
+      expect(ensureReleaseBranchSpy).toHaveBeenCalledWith(project, '2.0.0');
       expect(prepare).toHaveBeenCalledTimes(1);
       expect(commitAllChangesSpy).toHaveBeenCalledTimes(1);
       expect(commitAllChangesSpy).toHaveBeenCalledWith(
@@ -75,8 +73,10 @@ describe('release-steps', () => {
           calls.push('prepare');
         }),
       });
-      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
-        version: '2.0.0',
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
         firstRun: true,
       });
       vi.spyOn(repoModule, 'commitAllChanges').mockImplementation(

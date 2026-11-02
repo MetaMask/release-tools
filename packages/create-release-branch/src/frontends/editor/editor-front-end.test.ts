@@ -99,7 +99,10 @@ async function fileExists(entryPath: string): Promise<boolean> {
  */
 function getDependencySpies(): {
   determineEditorSpy: Mock<typeof editorModule.determineEditor>;
-  createReleaseBranchSpy: Mock<typeof releaseBranchModule.createReleaseBranch>;
+  determineReleaseVersionSpy: Mock<
+    typeof releaseBranchModule.determineReleaseVersion
+  >;
+  ensureReleaseBranchSpy: Mock<typeof releaseBranchModule.ensureReleaseBranch>;
   generateReleaseSpecificationTemplateForMonorepoSpy: Mock<
     typeof releaseSpecificationModule.generateReleaseSpecificationTemplateForMonorepo
   >;
@@ -118,9 +121,13 @@ function getDependencySpies(): {
 } {
   return {
     determineEditorSpy: vi.spyOn(editorModule, 'determineEditor'),
-    createReleaseBranchSpy: vi.spyOn(
+    determineReleaseVersionSpy: vi.spyOn(
       releaseBranchModule,
-      'createReleaseBranch',
+      'determineReleaseVersion',
+    ),
+    ensureReleaseBranchSpy: vi.spyOn(
+      releaseBranchModule,
+      'ensureReleaseBranch',
     ),
     generateReleaseSpecificationTemplateForMonorepoSpy: vi.spyOn(
       releaseSpecificationModule,
@@ -275,7 +282,8 @@ async function setupFollowMonorepoWorkflow({
 > {
   const {
     determineEditorSpy,
-    createReleaseBranchSpy,
+    determineReleaseVersionSpy,
+    ensureReleaseBranchSpy,
     generateReleaseSpecificationTemplateForMonorepoSpy,
     waitForUserToEditReleaseSpecificationSpy,
     validateReleaseSpecificationSpy,
@@ -383,7 +391,8 @@ async function setupFollowMonorepoWorkflow({
     planReleaseSpy,
     executeReleasePlanSpy,
     commitAllChangesSpy,
-    createReleaseBranchSpy,
+    determineReleaseVersionSpy,
+    ensureReleaseBranchSpy,
     releasePlan,
     releaseVersion,
     releaseSpecificationPath,
@@ -396,14 +405,19 @@ async function setupFollowMonorepoWorkflow({
 describe('editor-front-end', () => {
   describe('createEditorFrontEnd', () => {
     describe('when firstRemovingExistingReleaseSpecification is false, the release spec file does not already exist, and an editor is available', () => {
-      it('should call createReleaseBranch with the correct arguments if given releaseType: "ordinary"', async () => {
+      it('should determine the release version and ensure its branch if given releaseType: "ordinary"', async () => {
         await withSandbox(async (sandbox) => {
-          const { project, output, createReleaseBranchSpy, formatter } =
-            await setupFollowMonorepoWorkflow({
-              sandbox,
-              doesReleaseSpecFileExist: false,
-              isEditorAvailable: true,
-            });
+          const {
+            project,
+            output,
+            determineReleaseVersionSpy,
+            ensureReleaseBranchSpy,
+            formatter,
+          } = await setupFollowMonorepoWorkflow({
+            sandbox,
+            doesReleaseSpecFileExist: false,
+            isEditorAvailable: true,
+          });
 
           await followMonorepoWorkflow({
             project,
@@ -415,21 +429,27 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(createReleaseBranchSpy).toHaveBeenCalledWith({
+          expect(determineReleaseVersionSpy).toHaveBeenCalledWith(
             project,
-            releaseType: 'ordinary',
-          });
+            'ordinary',
+          );
+          expect(ensureReleaseBranchSpy).toHaveBeenCalledWith(project, '2.0.0');
         });
       });
 
-      it('should call createReleaseBranch with the correct arguments if given releaseType: "backport"', async () => {
+      it('should determine the release version and ensure its branch if given releaseType: "backport"', async () => {
         await withSandbox(async (sandbox) => {
-          const { project, output, createReleaseBranchSpy, formatter } =
-            await setupFollowMonorepoWorkflow({
-              sandbox,
-              doesReleaseSpecFileExist: false,
-              isEditorAvailable: true,
-            });
+          const {
+            project,
+            output,
+            determineReleaseVersionSpy,
+            ensureReleaseBranchSpy,
+            formatter,
+          } = await setupFollowMonorepoWorkflow({
+            sandbox,
+            doesReleaseSpecFileExist: false,
+            isEditorAvailable: true,
+          });
 
           await followMonorepoWorkflow({
             project,
@@ -441,10 +461,11 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(createReleaseBranchSpy).toHaveBeenCalledWith({
+          expect(determineReleaseVersionSpy).toHaveBeenCalledWith(
             project,
-            releaseType: 'backport',
-          });
+            'backport',
+          );
+          expect(ensureReleaseBranchSpy).toHaveBeenCalledWith(project, '1.1.0');
         });
       });
 
@@ -518,7 +539,8 @@ describe('editor-front-end', () => {
           const {
             project,
             output,
-            createReleaseBranchSpy,
+            determineReleaseVersionSpy,
+            ensureReleaseBranchSpy,
             commitAllChangesSpy,
             projectDirectoryPath,
             fixConstraintsSpy,
@@ -532,10 +554,8 @@ describe('editor-front-end', () => {
             isEditorAvailable: true,
           });
 
-          createReleaseBranchSpy.mockResolvedValueOnce({
-            version: releaseVersion,
-            firstRun: true,
-          });
+          determineReleaseVersionSpy.mockReturnValue(releaseVersion);
+          ensureReleaseBranchSpy.mockResolvedValueOnce({ firstRun: true });
 
           await followMonorepoWorkflow({
             project,
@@ -547,11 +567,11 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(createReleaseBranchSpy).toHaveBeenCalledTimes(1);
-          expect(createReleaseBranchSpy).toHaveBeenLastCalledWith({
+          expect(ensureReleaseBranchSpy).toHaveBeenCalledTimes(1);
+          expect(ensureReleaseBranchSpy).toHaveBeenLastCalledWith(
             project,
-            releaseType: 'ordinary',
-          });
+            releaseVersion,
+          );
 
           expect(commitAllChangesSpy).toHaveBeenCalledTimes(2);
           expect(commitAllChangesSpy).toHaveBeenNthCalledWith(
@@ -581,8 +601,7 @@ describe('editor-front-end', () => {
 
           // Second call of followMonorepoWorkflow
 
-          createReleaseBranchSpy.mockResolvedValueOnce({
-            version: releaseVersion,
+          ensureReleaseBranchSpy.mockResolvedValueOnce({
             firstRun: false, // It's no longer the first run
           });
 
@@ -596,11 +615,11 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(createReleaseBranchSpy).toHaveBeenCalledTimes(2);
-          expect(createReleaseBranchSpy).toHaveBeenLastCalledWith({
+          expect(ensureReleaseBranchSpy).toHaveBeenCalledTimes(2);
+          expect(ensureReleaseBranchSpy).toHaveBeenLastCalledWith(
             project,
-            releaseType: 'ordinary',
-          });
+            releaseVersion,
+          );
 
           expect(commitAllChangesSpy).toHaveBeenCalledTimes(3);
           expect(commitAllChangesSpy).toHaveBeenNthCalledWith(
