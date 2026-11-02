@@ -53,7 +53,7 @@ const KIND_ORDER: ChangesetsCandidate['kind'][] = [
  * @param right - The second string.
  * @returns A negative number, zero, or a positive number.
  */
-function compareNames(left: string, right: string): number {
+export function compareNames(left: string, right: string): number {
   return Number(left > right) - Number(left < right);
 }
 

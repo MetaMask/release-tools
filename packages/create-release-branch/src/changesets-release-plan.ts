@@ -13,6 +13,7 @@ import type {
   ChangesetsCandidate,
 } from './changesets-release-specification.js';
 import {
+  compareNames,
   getPropagationReason,
   isBumpingRelease,
 } from './changesets-release-specification.js';
@@ -88,17 +89,6 @@ const BUMP_TYPE_ORDER: ComprehensiveRelease['type'][] = [
  * contains a slash never matches a Changeset file.
  */
 const SYNTHETIC_CHANGESET_ID_PREFIX = 'create-release-branch/override/';
-
-/**
- * Compares two strings by code unit, independently of the locale.
- *
- * @param left - The first string.
- * @param right - The second string.
- * @returns A negative number, zero, or a positive number.
- */
-function compareNames(left: string, right: string): number {
-  return Number(left > right) - Number(left < right);
-}
 
 /**
  * Determines the bump type that a version specifier gives a package.
