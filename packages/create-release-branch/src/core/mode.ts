@@ -4,7 +4,7 @@ import type { ReleaseChoiceError, ReleaseChoices } from './release-rules.js';
 /**
  * The name of a release mode.
  */
-export type ModeName = 'legacy' | 'changesets';
+export type ModeName = 'legacy';
 
 /**
  * The release that a mode plans from the release choices.

@@ -2,6 +2,8 @@ import os from 'os';
 import path from 'path';
 
 import type { CliOutput } from '../core/cli-output.js';
+import type { FrontEndName } from '../core/front-end.js';
+import type { ModeName } from '../core/mode.js';
 import type { Formatter, ReleaseType } from '../core/types.js';
 import { readProject, Project } from '../project/project.js';
 import { readCommandLineArguments } from './command-line-arguments.js';
@@ -12,7 +14,8 @@ type InitialParameters = {
   reset: boolean;
   releaseType: ReleaseType;
   defaultBranch: string;
-  interactive: boolean;
+  modeName: ModeName;
+  frontEndName: FrontEndName;
   port: number;
   formatter: Formatter;
 };
@@ -55,7 +58,8 @@ export async function determineInitialParameters({
     reset: args.reset,
     defaultBranch: args.defaultBranch,
     releaseType: args.backport ? 'backport' : 'ordinary',
-    interactive: args.interactive,
+    modeName: 'legacy',
+    frontEndName: args.interactive ? 'ui' : 'editor',
     port: args.port,
     formatter: args.formatter as Formatter,
   };

@@ -2,10 +2,8 @@ import type { WriteStream } from 'fs';
 
 import { createCliOutput } from '../core/cli-output.js';
 import { runRelease } from '../core/run-release.js';
-import { createEditorFrontEnd } from '../frontends/editor/editor-front-end.js';
-import { createUIFrontEnd } from '../frontends/ui/server.js';
-import { createLegacyMode } from '../modes/legacy/legacy-mode.js';
 import { determineInitialParameters } from './initial-parameters.js';
+import { selectFrontEnd, selectMode } from './select.js';
 
 /**
  * The main function for this tool. Designed to not access `process.argv`,
@@ -38,20 +36,23 @@ export async function main({
     reset,
     releaseType,
     defaultBranch,
-    interactive,
+    modeName,
+    frontEndName,
     port,
     formatter,
   } = await determineInitialParameters({ argv, cwd, output });
 
-  const mode = createLegacyMode({
+  const mode = selectMode(modeName, {
     project,
     defaultBranch,
     formatter,
     output,
   });
-  const frontEnd = interactive
-    ? createUIFrontEnd({ port })
-    : createEditorFrontEnd({ tempDirectoryPath, reset });
+  const frontEnd = selectFrontEnd(frontEndName, {
+    tempDirectoryPath,
+    reset,
+    port,
+  });
 
   await runRelease({ project, mode, releaseType, output }, frontEnd);
 }

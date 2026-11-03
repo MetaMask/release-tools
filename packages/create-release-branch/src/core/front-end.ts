@@ -20,6 +20,11 @@ export type ReleaseContext = {
 };
 
 /**
+ * The name of a front end.
+ */
+export type FrontEndName = 'editor' | 'ui';
+
+/**
  * Collects the release choices from the maintainer and shows the errors in
  * them. It drives the release steps of the core.
  *
