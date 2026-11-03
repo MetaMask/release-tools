@@ -11,11 +11,14 @@ import { isValidSemver, semver, SemVer } from '../utils/semver.js';
  * The SemVer-compatible parts of a version string that can be bumped by this
  * tool.
  */
-export enum IncrementableVersionParts {
-  major = 'major',
-  minor = 'minor',
-  patch = 'patch',
-}
+export const IncrementableVersionParts = {
+  major: 'major',
+  minor: 'minor',
+  patch: 'patch',
+} as const;
+
+export type IncrementableVersionPart =
+  (typeof IncrementableVersionParts)[keyof typeof IncrementableVersionParts];
 
 const SKIP_PACKAGE_DIRECTIVE = null;
 const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
@@ -427,14 +430,14 @@ export function normalizeReleaseChoices(
           Object.values(IncrementableVersionParts).includes(
             // Typecast: It doesn't matter what type versionSpecifierOrDirective
             // is as we are checking for inclusion.
-            versionSpecifierOrDirective as IncrementableVersionParts,
+            versionSpecifierOrDirective as IncrementableVersionPart,
           )
         ) {
           return {
             ...obj,
             // Typecast: We know what this is as we've checked it above.
             [packageName]:
-              versionSpecifierOrDirective as IncrementableVersionParts,
+              versionSpecifierOrDirective as IncrementableVersionPart,
           };
         }
 

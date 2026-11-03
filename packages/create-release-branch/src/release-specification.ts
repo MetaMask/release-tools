@@ -5,7 +5,7 @@ import {
   normalizeReleaseChoices,
 } from './core/release-rules.js';
 import type {
-  IncrementableVersionParts,
+  IncrementableVersionPart,
   ReleaseChoices,
 } from './core/release-rules.js';
 import { Editor } from './editor.js';
@@ -18,7 +18,7 @@ import type { SemVer } from './utils/semver.js';
  * Describes how to update the version for a package, either by bumping a part
  * of the version or by setting that version exactly.
  */
-type VersionSpecifier = IncrementableVersionParts | SemVer;
+type VersionSpecifier = IncrementableVersionPart | SemVer;
 
 /**
  * User-provided instructions for how to update this project in order to prepare
