@@ -42,10 +42,12 @@ export async function startRelease<Data>({
 
   if (firstRun) {
     await mode.prepare();
+    // `prepare` may change nothing, and the release branch still needs this
+    // commit.
     await commitAllChanges(
       project.directoryPath,
       `Initialize Release ${newReleaseVersion}`,
-      { allowEmpty: mode.allowEmptyInitializeCommit },
+      { allowEmpty: true },
     );
   }
 

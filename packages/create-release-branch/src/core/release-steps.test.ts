@@ -29,7 +29,6 @@ vi.mock('./yarn-commands');
 function buildMockMode(overrides: Partial<Mode<string>> = {}): Mode<string> {
   return {
     name: 'legacy',
-    allowEmptyInitializeCommit: false,
     prepare: vi.fn(),
     listCandidates: vi.fn().mockResolvedValue([]),
     plan: vi.fn(),
@@ -81,24 +80,6 @@ describe('release-steps', () => {
       expect(commitAllChangesSpy).toHaveBeenCalledWith(
         project.directoryPath,
         'Initialize Release 2.0.0',
-        { allowEmpty: false },
-      );
-    });
-
-    it('allows an empty Initialize commit when the mode asks', async () => {
-      const project = buildMockProject();
-      const mode = buildMockMode({ allowEmptyInitializeCommit: true });
-      vi.spyOn(releaseBranchModule, 'createReleaseBranch').mockResolvedValue({
-        version: '1.1.0',
-        firstRun: true,
-      });
-      const commitAllChangesSpy = vi.spyOn(repoModule, 'commitAllChanges');
-
-      await startRelease({ project, releaseType: 'backport', mode });
-
-      expect(commitAllChangesSpy).toHaveBeenCalledWith(
-        project.directoryPath,
-        'Initialize Release 1.1.0',
         { allowEmpty: true },
       );
     });

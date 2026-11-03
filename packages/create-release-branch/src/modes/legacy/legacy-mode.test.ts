@@ -35,7 +35,6 @@ describe('legacy mode', () => {
 
       await mode.prepare();
 
-      expect(mode.allowEmptyInitializeCommit).toBe(true);
       expect(
         projectModule.updateChangelogsForChangedPackages,
       ).toHaveBeenCalledWith({ project, formatter: 'prettier', output });

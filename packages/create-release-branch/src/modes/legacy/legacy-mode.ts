@@ -45,9 +45,6 @@ export function createLegacyMode({
 }): Mode<VersionSpecifiers> {
   return {
     name: 'legacy',
-    // Changelogs may already be up to date, in which case there is nothing to
-    // commit.
-    allowEmptyInitializeCommit: true,
 
     async prepare() {
       await updateChangelogsForChangedPackages({ project, formatter, output });

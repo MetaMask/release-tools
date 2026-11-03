@@ -31,8 +31,6 @@ export type ModePlanResult<Data> =
  * choices, and writes it to the project.
  *
  * @property name - The name of the mode.
- * @property allowEmptyInitializeCommit - Whether the "Initialize Release"
- * commit is created even if `prepare` changes nothing.
  * @property prepare - Changes the project on the first run, before the
  * "Initialize Release" commit.
  * @property listCandidates - Lists the packages that can be released, including
@@ -44,7 +42,6 @@ export type ModePlanResult<Data> =
  */
 export type Mode<Data> = {
   name: ModeName;
-  allowEmptyInitializeCommit: boolean;
   prepare(): Promise<void>;
   listCandidates(choices?: ReleaseChoices): Promise<Candidate[]>;
   plan(choices: ReleaseChoices): Promise<ModePlanResult<Data>>;
