@@ -173,7 +173,6 @@ packages:
           ['arg1', 'arg2', releaseSpecificationPath],
           {
             stdio: 'inherit',
-            shell: true,
           },
         )
         .thenResolve();
@@ -184,6 +183,25 @@ packages:
           editor,
         ),
       ).toBeUndefined();
+    });
+
+    it('runs the editor without a shell', async () => {
+      const releaseSpecificationPath = '/path/to/release spec $(touch x)';
+      const editor = { path: '/path/to/editor', args: ['--wait'] };
+      const runCommandSpy = vi
+        .spyOn(miscUtils, 'runCommand')
+        .mockResolvedValue();
+
+      await waitForUserToEditReleaseSpecification(
+        releaseSpecificationPath,
+        editor,
+      );
+
+      expect(runCommandSpy).toHaveBeenCalledWith(
+        '/path/to/editor',
+        ['--wait', releaseSpecificationPath],
+        { stdio: 'inherit' },
+      );
     });
 
     it('prints a message to standard out, but then removes it, if the editor command succeeds', async () => {
@@ -217,7 +235,6 @@ packages:
           ['arg1', 'arg2', releaseSpecificationPath],
           {
             stdio: 'inherit',
-            shell: true,
           },
         )
         .thenReject(new Error('oops'));
@@ -251,7 +268,6 @@ packages:
           ['arg1', 'arg2', releaseSpecificationPath],
           {
             stdio: 'inherit',
-            shell: true,
           },
         )
         .thenReject(error);
