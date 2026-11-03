@@ -146,7 +146,6 @@ export async function waitForUserToEditReleaseSpecification(
     [...editor.args, releaseSpecificationPath],
     {
       stdio: 'inherit',
-      shell: true,
     },
   );
 
