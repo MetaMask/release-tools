@@ -145,11 +145,18 @@ type ValidateChangelogOptions = {
    */
   dependencyCheckResult?: DependencyCheckResult;
   /**
-   * Whether the changelog is managed by Changesets. When true, an empty
-   * Unreleased section must be omitted, and dependency checks are not
-   * supported.
+   * Whether the Unreleased section and its link reference definition are
+   * required. Set this to `false` for changelogs managed with Changesets,
+   * which do not use an Unreleased section. Cannot be `false` together with
+   * `dependencyCheckResult`. Defaults to `true`.
    */
-  changesets?: boolean;
+  requireUnreleasedSection?: boolean;
+  /**
+   * Whether an empty Unreleased section and its link reference definition must
+   * be omitted. This is meant for changelogs managed with Changesets, and
+   * requires `requireUnreleasedSection` to be `false`. Defaults to `false`.
+   */
+  removeEmptyUnreleasedSection?: boolean;
 };
 
 /**
@@ -189,9 +196,14 @@ function normalizeLineEndings(value: string): string {
  * entries corresponding to each dependency bump. If `versionChanged` is true,
  * entries are checked in the `currentVersion` release section; otherwise the
  * Unreleased section.
- * @param options.changesets - Whether the changelog is managed by Changesets.
- * When true, an empty Unreleased section must be omitted, and
- * `dependencyCheckResult` must not be given.
+ * @param options.requireUnreleasedSection - Whether the Unreleased section and
+ * its link reference definition are required. Set this to `false` for
+ * changelogs managed with Changesets. When `false`, `dependencyCheckResult`
+ * must not be given. Defaults to `true`.
+ * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
+ * section and its link reference definition must be omitted. This is meant
+ * for changelogs managed with Changesets, and requires
+ * `requireUnreleasedSection` to be `false`. Defaults to `false`.
  * @throws `InvalidChangelogError` - Will throw if the changelog is invalid
  * @throws `MissingCurrentVersionError` - Will throw if `isReleaseCandidate` is
  * `true` and the changelog is missing the release header for the current
@@ -205,7 +217,10 @@ function normalizeLineEndings(value: string): string {
  * request link.
  * @throws `MissingDependencyEntriesError` if dependency changes are provided
  * but the changelog is missing entries for them.
- * @throws `Error` if both `changesets` and `dependencyCheckResult` are given.
+ * @throws `Error` if `removeEmptyUnreleasedSection` is `true` and
+ * `requireUnreleasedSection` is not `false`.
+ * @throws `Error` if `requireUnreleasedSection` is `false` and
+ * `dependencyCheckResult` is given.
  */
 export async function validateChangelog({
   changelogContent,
@@ -217,10 +232,19 @@ export async function validateChangelog({
   packageRename,
   ensureValidPrLinksPresent,
   dependencyCheckResult,
-  changesets,
+  requireUnreleasedSection = true,
+  removeEmptyUnreleasedSection = false,
 }: ValidateChangelogOptions): Promise<void> {
-  if (changesets && dependencyCheckResult) {
-    throw new Error('Dependency checks are not supported in Changesets mode');
+  if (removeEmptyUnreleasedSection && requireUnreleasedSection) {
+    throw new Error(
+      'The removeEmptyUnreleasedSection option requires requireUnreleasedSection to be false: a changelog without an Unreleased section is otherwise invalid.',
+    );
+  }
+
+  if (!requireUnreleasedSection && dependencyCheckResult) {
+    throw new Error(
+      'Dependency checks cannot be combined with requireUnreleasedSection set to false: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
+    );
   }
 
   const normalizedChangelogContent = normalizeLineEndings(changelogContent);
@@ -233,7 +257,8 @@ export async function validateChangelog({
     ...(ensureValidPrLinksPresent !== undefined && {
       shouldExtractPrLinks: ensureValidPrLinksPresent,
     }),
-    ...(changesets !== undefined && { changesets }),
+    requireUnreleasedSection,
+    removeEmptyUnreleasedSection,
   });
 
   validateReleaseCandidateState(changelog, isReleaseCandidate, currentVersion);

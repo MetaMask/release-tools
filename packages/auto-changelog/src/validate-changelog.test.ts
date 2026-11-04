@@ -1414,11 +1414,11 @@ describe('validateChangelog', () => {
     });
   });
 
-  describe('when changesets is true', () => {
+  describe('when requireUnreleasedSection is false', () => {
     const repoUrl =
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
 
-    const changesetsChangelog = outdent`
+    const changelogWithoutUnreleased = outdent`
       # Changelog
       All notable changes to this project will be documented in this file.
 
@@ -1440,10 +1440,11 @@ describe('validateChangelog', () => {
     it('should not throw for a changelog without an Unreleased section', async () => {
       await expect(
         validateChangelog({
-          changelogContent: changesetsChangelog,
+          changelogContent: changelogWithoutUnreleased,
           repoUrl,
           isReleaseCandidate: false,
-          changesets: true,
+          requireUnreleasedSection: false,
+          removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
     });
@@ -1451,11 +1452,12 @@ describe('validateChangelog', () => {
     it('should not throw for a release candidate without an Unreleased section', async () => {
       await expect(
         validateChangelog({
-          changelogContent: changesetsChangelog,
+          changelogContent: changelogWithoutUnreleased,
           currentVersion: '1.0.0',
           repoUrl,
           isReleaseCandidate: true,
-          changesets: true,
+          requireUnreleasedSection: false,
+          removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
     });
@@ -1463,10 +1465,11 @@ describe('validateChangelog', () => {
     it('should not throw for a CRLF changelog without an Unreleased section', async () => {
       await expect(
         validateChangelog({
-          changelogContent: changesetsChangelog.replace(/\n/gu, '\r\n'),
+          changelogContent: changelogWithoutUnreleased.replace(/\n/gu, '\r\n'),
           repoUrl,
           isReleaseCandidate: false,
-          changesets: true,
+          requireUnreleasedSection: false,
+          removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
     });
@@ -1498,13 +1501,14 @@ describe('validateChangelog', () => {
         changelogContent: changelogWithEmptyUnreleased,
         repoUrl,
         isReleaseCandidate: false,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       await expect(result).rejects.toThrow(ChangelogFormattingError);
       await expect(result).rejects.toHaveProperty(
         'data.validChangelog',
-        changesetsChangelog,
+        changelogWithoutUnreleased,
       );
     });
 
@@ -1539,7 +1543,8 @@ describe('validateChangelog', () => {
           currentVersion: '1.0.0',
           repoUrl,
           isReleaseCandidate: true,
-          changesets: true,
+          requireUnreleasedSection: false,
+          removeEmptyUnreleasedSection: true,
         }),
       ).rejects.toThrow(UnreleasedChangesError);
     });
@@ -1547,10 +1552,10 @@ describe('validateChangelog', () => {
     it('should throw when dependencyCheckResult is given', async () => {
       await expect(
         validateChangelog({
-          changelogContent: changesetsChangelog,
+          changelogContent: changelogWithoutUnreleased,
           repoUrl,
           isReleaseCandidate: false,
-          changesets: true,
+          requireUnreleasedSection: false,
           dependencyCheckResult: {
             prNumbers: [],
             versionChanged: false,
@@ -1558,18 +1563,39 @@ describe('validateChangelog', () => {
           },
         }),
       ).rejects.toThrow(
-        'Dependency checks are not supported in Changesets mode',
+        'Dependency checks cannot be combined with requireUnreleasedSection set to false: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
       );
     });
 
-    it('should still require an Unreleased section in default mode', async () => {
+    it('should throw a formatting error for a changelog without an Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
+      const result = validateChangelog({
+        changelogContent: changelogWithoutUnreleased,
+        repoUrl,
+        isReleaseCandidate: false,
+        requireUnreleasedSection: false,
+      });
+
+      await expect(result).rejects.toThrow(ChangelogFormattingError);
+      await expect(result).rejects.toHaveProperty(
+        'data.validChangelog',
+        expect.stringContaining('## [Unreleased]'),
+      );
+    });
+  });
+
+  describe('when removeEmptyUnreleasedSection is true', () => {
+    it('should throw when requireUnreleasedSection is not false', async () => {
       await expect(
         validateChangelog({
-          changelogContent: changesetsChangelog,
-          repoUrl,
+          changelogContent: emptyChangelog,
+          repoUrl:
+            'https://github.com/ExampleUsernameOrOrganization/ExampleRepository',
           isReleaseCandidate: false,
+          removeEmptyUnreleasedSection: true,
         }),
-      ).rejects.toThrow('Failed to find Unreleased header');
+      ).rejects.toThrow(
+        'The removeEmptyUnreleasedSection option requires requireUnreleasedSection to be false: a changelog without an Unreleased section is otherwise invalid.',
+      );
     });
   });
 });

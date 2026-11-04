@@ -68,11 +68,17 @@ export type ValidateOptions = {
    */
   currentPr?: string;
   /**
-   * Whether the changelog is managed with Changesets. In this mode, the
-   * Unreleased section is optional, and an empty one is removed when fixing.
-   * Cannot be combined with `checkDeps`.
+   * Whether the Unreleased section is required. Set this to `false` for
+   * changelogs managed with Changesets. Cannot be `false` together with
+   * `checkDeps`. Defaults to `true`.
    */
-  changesets?: boolean;
+  requireUnreleasedSection?: boolean;
+  /**
+   * Whether an empty Unreleased section must be omitted, so that fixing
+   * removes it. This is meant for changelogs managed with Changesets, and
+   * requires `requireUnreleasedSection` to be `false`. Defaults to `false`.
+   */
+  removeEmptyUnreleasedSection?: boolean;
 };
 
 /**
@@ -97,7 +103,10 @@ export type ValidateOptions = {
  * @param options.remote - Remote name for auto-detection.
  * @param options.baseBranch - Base branch for auto-detection.
  * @param options.currentPr - PR number to use when fixing missing entries.
- * @param options.changesets - Whether the changelog is managed with Changesets.
+ * @param options.requireUnreleasedSection - Whether the Unreleased section is
+ * required.
+ * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
+ * section must be omitted.
  * @returns A promise that resolves to nothing once the changelog is validated, or
  * rejects with an error if the changelog is invalid.
  */
@@ -119,7 +128,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
     remote,
     baseBranch,
     currentPr,
-    changesets,
+    requireUnreleasedSection,
+    removeEmptyUnreleasedSection,
   } = options;
 
   const changelogContent = await readFile(changelogPath);
@@ -155,7 +165,12 @@ export async function validate(options: ValidateOptions): Promise<void> {
       ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent,
       ...(dependencyCheckResult !== undefined && { dependencyCheckResult }),
-      ...(changesets !== undefined && { changesets }),
+      ...(requireUnreleasedSection !== undefined && {
+        requireUnreleasedSection,
+      }),
+      ...(removeEmptyUnreleasedSection !== undefined && {
+        removeEmptyUnreleasedSection,
+      }),
     });
   } catch (caughtError) {
     if (caughtError instanceof ChangelogFormattingError) {

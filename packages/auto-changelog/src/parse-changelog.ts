@@ -91,8 +91,9 @@ function extractRepoName(repoUrl: string): string {
 }
 
 /**
- * Finds the lines that hold the release sections of a changelog managed by
- * Changesets, where the "Unreleased" section is optional.
+ * Finds the lines that hold the release sections of a changelog where the
+ * "Unreleased" section is optional, such as a changelog managed with
+ * Changesets.
  *
  * The content starts after the "Unreleased" header, or at the first release
  * header. It ends at the "Unreleased" link reference definition, or at the
@@ -103,7 +104,7 @@ function extractRepoName(repoUrl: string): string {
  * content line.
  * @throws If a release header is found outside the content.
  */
-function getChangesetsContentBounds(changelogLines: string[]): {
+function getOptionalUnreleasedContentBounds(changelogLines: string[]): {
   start: number;
   end: number;
 } {
@@ -161,9 +162,14 @@ function getChangesetsContentBounds(changelogLines: string[]): {
  * An optional, which is required only in case of package renamed.
  * @param options.shouldExtractPrLinks - When true, look for and parse pull
  * request links at the end of change entries.
- * @param options.changesets - Whether the changelog is managed by Changesets.
- * In this mode, the "Unreleased" section and its link reference definition
- * are optional.
+ * @param options.requireUnreleasedSection - Whether the "Unreleased" section
+ * and its link reference definition are required. Set this to `false` for
+ * changelogs managed with Changesets, which do not use an "Unreleased"
+ * section. When `false`, a release header outside the changelog content is an
+ * error.
+ * @param options.removeEmptyUnreleasedSection - Whether the returned changelog
+ * omits an empty "Unreleased" section and its link reference definition when
+ * stringified. This is meant for changelogs managed with Changesets.
  * @returns A changelog instance that reflects the changelog text provided.
  */
 export function parseChangelog({
@@ -173,7 +179,8 @@ export function parseChangelog({
   formatter,
   packageRename,
   shouldExtractPrLinks = false,
-  changesets = false,
+  requireUnreleasedSection = true,
+  removeEmptyUnreleasedSection = false,
 }: {
   changelogContent: string;
   repoUrl: string;
@@ -181,7 +188,8 @@ export function parseChangelog({
   formatter?: Formatter;
   packageRename?: PackageRename;
   shouldExtractPrLinks?: boolean;
-  changesets?: boolean;
+  requireUnreleasedSection?: boolean;
+  removeEmptyUnreleasedSection?: boolean;
 }): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
   const changelog = new Changelog({
@@ -189,15 +197,12 @@ export function parseChangelog({
     tagPrefix,
     ...(formatter !== undefined && { formatter }),
     ...(packageRename !== undefined && { packageRename }),
-    changesets,
+    removeEmptyUnreleasedSection,
   });
   const repoName = extractRepoName(repoUrl);
 
   let contentfulChangelogLines: string[];
-  if (changesets) {
-    const { start, end } = getChangesetsContentBounds(changelogLines);
-    contentfulChangelogLines = changelogLines.slice(start, end);
-  } else {
+  if (requireUnreleasedSection) {
     const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
     if (unreleasedHeaderIndex === -1) {
       throw new Error(`Failed to find ${unreleased} header`);
@@ -215,6 +220,9 @@ export function parseChangelog({
       unreleasedHeaderIndex + 1,
       unreleasedLinkReferenceDefinition,
     );
+  } else {
+    const { start, end } = getOptionalUnreleasedContentBounds(changelogLines);
+    contentfulChangelogLines = changelogLines.slice(start, end);
   }
 
   let mostRecentRelease: string;

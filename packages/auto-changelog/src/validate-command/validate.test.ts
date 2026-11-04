@@ -441,8 +441,8 @@ describe('validate', () => {
     });
   });
 
-  describe('changesets mode', () => {
-    const changesetsChangelog = outdent`
+  describe('when requireUnreleasedSection is false and removeEmptyUnreleasedSection is true', () => {
+    const changelogWithoutUnreleased = outdent`
       # Changelog
       All notable changes to this project will be documented in this file.
 
@@ -479,11 +479,12 @@ describe('validate', () => {
 
       await validate({
         ...defaultOptions(),
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
         fix: true,
       });
 
-      expect(await readChangelog()).toBe(changesetsChangelog);
+      expect(await readChangelog()).toBe(changelogWithoutUnreleased);
       expect(process.exitCode).toBe(0);
     });
 
@@ -511,7 +512,8 @@ describe('validate', () => {
 
       await validate({
         ...defaultOptions(),
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
         fix: true,
       });
 
@@ -520,12 +522,13 @@ describe('validate', () => {
     });
 
     it('passes for a changelog without an Unreleased section', async () => {
-      await writeChangelog(changesetsChangelog);
+      await writeChangelog(changelogWithoutUnreleased);
       process.exitCode = 0;
 
       const result = await validate({
         ...defaultOptions(),
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(result).toBeUndefined();

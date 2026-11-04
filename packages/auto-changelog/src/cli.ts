@@ -291,7 +291,8 @@ type CliArguments = {
   remote: string;
   baseBranch?: string;
   currentPr?: string;
-  changesets: boolean;
+  requireUnreleasedSection: boolean;
+  removeEmptyUnreleasedSection: boolean;
   _: (string | number)[];
   $0: string;
 };
@@ -353,7 +354,8 @@ async function runCommand({
     remote,
     baseBranch,
     currentPr,
-    changesets,
+    requireUnreleasedSection,
+    removeEmptyUnreleasedSection,
   } = argv;
   let { currentVersion } = argv;
   let { tagPrefix } = argv;
@@ -505,7 +507,8 @@ async function runCommand({
       remote,
       ...(baseBranch !== undefined && { baseBranch }),
       ...(currentPr !== undefined && { currentPr }),
-      changesets,
+      requireUnreleasedSection,
+      removeEmptyUnreleasedSection,
     });
   } else if (command === 'init') {
     await init({
@@ -690,10 +693,16 @@ async function main(): Promise<void> {
               'Verify that each changelog entry has one or more links to associated pull requests within the repository',
             type: 'boolean',
           })
-          .option('changesets', {
+          .option('requireUnreleasedSection', {
+            default: true,
+            description:
+              'Require an Unreleased section. Use --no-requireUnreleasedSection for changelogs managed with Changesets, which do not use an Unreleased section.',
+            type: 'boolean',
+          })
+          .option('removeEmptyUnreleasedSection', {
             default: false,
             description:
-              'Validate a changelog managed with Changesets: the Unreleased section is optional, and an empty one is removed by --fix.',
+              'Expect an empty Unreleased section to be omitted, so that --fix removes it. Meant for changelogs managed with Changesets. Requires --no-requireUnreleasedSection.',
             type: 'boolean',
           })
           // Dependency bump checking options
@@ -775,8 +784,18 @@ async function main(): Promise<void> {
     return changelog;
   };
 
-  if (command === 'validate' && argv.changesets && argv.checkDeps) {
-    return error('--changesets cannot be combined with --checkDeps.');
+  if (command === 'validate') {
+    if (argv.removeEmptyUnreleasedSection && argv.requireUnreleasedSection) {
+      return error(
+        '--removeEmptyUnreleasedSection requires --no-requireUnreleasedSection.',
+      );
+    }
+
+    if (!argv.requireUnreleasedSection && argv.checkDeps) {
+      return error(
+        '--checkDeps cannot be combined with --no-requireUnreleasedSection: it adds dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
+      );
+    }
   }
 
   if (all) {

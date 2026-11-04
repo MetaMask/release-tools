@@ -515,7 +515,7 @@ export default class Changelog {
 
   readonly #packageRename: PackageRename | undefined;
 
-  readonly #changesets: boolean;
+  readonly #removeEmptyUnreleasedSection: boolean;
 
   /**
    * Construct an empty changelog.
@@ -526,22 +526,22 @@ export default class Changelog {
    * @param options.formatter - A function that formats the changelog string.
    * @param options.packageRename - The package rename properties.
    * An optional, which is required only in case of package renamed.
-   * @param options.changesets - Whether the changelog is managed by Changesets.
-   * In this mode, the "Unreleased" section and its link reference definition
-   * are omitted when there are no unreleased changes.
+   * @param options.removeEmptyUnreleasedSection - Whether to omit the
+   * "Unreleased" section and its link reference definition when there are no
+   * unreleased changes. This is meant for changelogs managed with Changesets.
    */
   constructor({
     repoUrl,
     tagPrefix = 'v',
     formatter = (changelog): string => changelog,
     packageRename,
-    changesets = false,
+    removeEmptyUnreleasedSection = false,
   }: {
     repoUrl: string;
     tagPrefix?: string;
     formatter?: Formatter;
     packageRename?: PackageRename;
-    changesets?: boolean;
+    removeEmptyUnreleasedSection?: boolean;
   }) {
     this.#releases = [];
     this.#changes = { [unreleased]: {} };
@@ -549,7 +549,7 @@ export default class Changelog {
     this.#tagPrefix = tagPrefix;
     this.#formatter = formatter;
     this.#packageRename = packageRename;
-    this.#changesets = changesets;
+    this.#removeEmptyUnreleasedSection = removeEmptyUnreleasedSection;
   }
 
   /**
@@ -823,7 +823,8 @@ export default class Changelog {
    */
   async toString(useShortPrLink = false): Promise<string> {
     const includeUnreleased =
-      !this.#changesets || Object.keys(this.#changes[unreleased]).length > 0;
+      !this.#removeEmptyUnreleasedSection ||
+      Object.keys(this.#changes[unreleased]).length > 0;
     const header = `${changelogTitle}
 ${changelogDescription}
 `;

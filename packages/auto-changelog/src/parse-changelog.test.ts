@@ -1705,8 +1705,8 @@ describe('parseChangelog', () => {
     });
   });
 
-  describe('changesets mode', () => {
-    const CHANGESETS_HEADER = outdent`# Changelog
+  describe('when requireUnreleasedSection is false', () => {
+    const CHANGELOG_HEADER = outdent`# Changelog
       All notable changes to this project will be documented in this file.
 
       The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -1715,7 +1715,7 @@ describe('parseChangelog', () => {
 
     it('parses a changelog without Unreleased and with two releases', async () => {
       const changelogContent = outdent`
-        ${CHANGESETS_HEADER}
+        ${CHANGELOG_HEADER}
         ## [1.0.0]
         ### Changed
         - Something
@@ -1731,7 +1731,8 @@ describe('parseChangelog', () => {
       const changelog = parseChangelog({
         changelogContent,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(changelog.getReleases()).toStrictEqual([
@@ -1744,7 +1745,7 @@ describe('parseChangelog', () => {
 
     it('parses a changelog without Unreleased whose first release has a date and status', async () => {
       const changelogContent = outdent`
-        ${CHANGESETS_HEADER}
+        ${CHANGELOG_HEADER}
         ## [1.0.0] - 2026-01-01 [DEPRECATED]
         ### Added
         - Initial release
@@ -1755,7 +1756,8 @@ describe('parseChangelog', () => {
       const changelog = parseChangelog({
         changelogContent,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(changelog.getReleases()).toStrictEqual([
@@ -1766,26 +1768,27 @@ describe('parseChangelog', () => {
 
     it('parses a changelog with only a title and description', async () => {
       const changelog = parseChangelog({
-        changelogContent: CHANGESETS_HEADER,
+        changelogContent: CHANGELOG_HEADER,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(changelog.getReleases()).toStrictEqual([]);
       expect(changelog.getUnreleasedChanges()).toStrictEqual({});
-      expect(await changelog.toString()).toBe(CHANGESETS_HEADER);
+      expect(await changelog.toString()).toBe(CHANGELOG_HEADER);
     });
 
     it('parses a release block without link reference definitions', () => {
       const changelog = parseChangelog({
         changelogContent: outdent`
-          ${CHANGESETS_HEADER}
+          ${CHANGELOG_HEADER}
           ## [1.0.0]
           ### Added
           - Initial release
         `,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
       });
 
       expect(changelog.getReleases()).toStrictEqual([{ version: '1.0.0' }]);
@@ -1796,7 +1799,7 @@ describe('parseChangelog', () => {
 
     it('parses a non-empty Unreleased section like the default mode', async () => {
       const changelogContent = outdent`
-        ${CHANGESETS_HEADER}
+        ${CHANGELOG_HEADER}
         ## [Unreleased]
         ### Added
         - New feature
@@ -1812,7 +1815,8 @@ describe('parseChangelog', () => {
       const changelog = parseChangelog({
         changelogContent,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
       const defaultChangelog = parseChangelog({ changelogContent, repoUrl });
 
@@ -1831,7 +1835,7 @@ describe('parseChangelog', () => {
     it('drops an empty Unreleased section when stringified', async () => {
       const changelog = parseChangelog({
         changelogContent: outdent`
-          ${CHANGESETS_HEADER}
+          ${CHANGELOG_HEADER}
           ## [Unreleased]
 
           ## [1.0.0]
@@ -1842,12 +1846,13 @@ describe('parseChangelog', () => {
           [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
         `,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(changelog.getUnreleasedChanges()).toStrictEqual({});
       expect(await changelog.toString()).toBe(outdent`
-        ${CHANGESETS_HEADER}
+        ${CHANGELOG_HEADER}
         ## [1.0.0]
         ### Added
         - Initial release
@@ -1856,11 +1861,33 @@ describe('parseChangelog', () => {
       `);
     });
 
+    it('keeps an empty Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
+      const changelogContent = outdent`
+        ${CHANGELOG_HEADER}
+        ## [Unreleased]
+
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        requireUnreleasedSection: false,
+      });
+
+      expect(await changelog.toString()).toBe(changelogContent);
+    });
+
     it('throws when a release header follows the Unreleased link reference definition', () => {
       expect(() =>
         parseChangelog({
           changelogContent: outdent`
-            ${CHANGESETS_HEADER}
+            ${CHANGELOG_HEADER}
             ## [Unreleased]
 
             [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
@@ -1870,7 +1897,7 @@ describe('parseChangelog', () => {
             - Initial release
           `,
           repoUrl,
-          changesets: true,
+          requireUnreleasedSection: false,
         }),
       ).toThrow(
         "Release header found outside the changelog content: '## [1.0.0]'",
@@ -1881,7 +1908,7 @@ describe('parseChangelog', () => {
       expect(() =>
         parseChangelog({
           changelogContent: outdent`
-            ${CHANGESETS_HEADER}
+            ${CHANGELOG_HEADER}
             ## [1.0.0]
             ### Added
             - Initial release
@@ -1893,7 +1920,7 @@ describe('parseChangelog', () => {
             - Something
           `,
           repoUrl,
-          changesets: true,
+          requireUnreleasedSection: false,
         }),
       ).toThrow(
         "Release header found outside the changelog content: '## [0.9.0]'",
@@ -1903,7 +1930,7 @@ describe('parseChangelog', () => {
     it('merges legacy Unreleased changes into a release inserted by Changesets', async () => {
       const changelog = parseChangelog({
         changelogContent: outdent`
-          ${CHANGESETS_HEADER}
+          ${CHANGELOG_HEADER}
           ## [Unreleased]
           ### Added
           - Legacy feature
@@ -1926,13 +1953,14 @@ describe('parseChangelog', () => {
           [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
         `,
         repoUrl,
-        changesets: true,
+        requireUnreleasedSection: false,
+        removeEmptyUnreleasedSection: true,
       });
 
       changelog.migrateUnreleasedChangesToRelease('1.1.0');
 
       expect(await changelog.toString()).toBe(outdent`
-        ${CHANGESETS_HEADER}
+        ${CHANGELOG_HEADER}
         ## [1.1.0]
         ### Added
         - Legacy feature
@@ -1957,7 +1985,7 @@ describe('parseChangelog', () => {
       expect(() =>
         parseChangelog({
           changelogContent: outdent`
-            ${CHANGESETS_HEADER}
+            ${CHANGELOG_HEADER}
             ## 1.2.0
             ### Added
             - Something
@@ -1969,7 +1997,7 @@ describe('parseChangelog', () => {
             [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
           `,
           repoUrl,
-          changesets: true,
+          requireUnreleasedSection: false,
         }),
       ).toThrow(
         "Release header found outside the changelog content: '## 1.2.0'",
@@ -1980,7 +2008,7 @@ describe('parseChangelog', () => {
       expect(() =>
         parseChangelog({
           changelogContent: outdent`
-            ${CHANGESETS_HEADER}
+            ${CHANGELOG_HEADER}
             ## [unreleased]
             ### Added
             - Something
@@ -1988,25 +2016,9 @@ describe('parseChangelog', () => {
             [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
           `,
           repoUrl,
-          changesets: true,
+          requireUnreleasedSection: false,
         }),
       ).toThrow("Invalid SemVer version in release header: '## [unreleased]'");
-    });
-
-    it('still throws in default mode when Unreleased is missing', () => {
-      expect(() =>
-        parseChangelog({
-          changelogContent: outdent`
-            ${CHANGESETS_HEADER}
-            ## [1.0.0]
-            ### Added
-            - Initial release
-
-            [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
-          `,
-          repoUrl,
-        }),
-      ).toThrow('Failed to find Unreleased header');
     });
   });
 });

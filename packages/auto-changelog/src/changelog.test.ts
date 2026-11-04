@@ -325,12 +325,15 @@ describe('Changelog', () => {
     });
   });
 
-  describe('changesets mode', () => {
+  describe('when removeEmptyUnreleasedSection is true', () => {
     const repoUrl =
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
 
     it('omits an empty Unreleased section and its link reference', async () => {
-      const changelog = new Changelog({ repoUrl, changesets: true });
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
       changelog.addRelease({ version: '1.0.0' });
       changelog.addChange({
         version: '1.0.0',
@@ -361,7 +364,10 @@ describe('Changelog', () => {
     });
 
     it('keeps a non-empty Unreleased section with its link reference', async () => {
-      const changelog = new Changelog({ repoUrl, changesets: true });
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
       changelog.addRelease({ version: '1.0.0' });
       changelog.addChange({
         version: '1.0.0',
@@ -384,7 +390,7 @@ describe('Changelog', () => {
     it('writes only the title and description when there are no releases and no unreleased changes', async () => {
       const changelog = new Changelog({
         repoUrl: 'fake://metamask.io',
-        changesets: true,
+        removeEmptyUnreleasedSection: true,
       });
 
       expect(await changelog.toString()).toBe(`# Changelog
@@ -403,7 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
           versionBeforeRename: '0.0.2',
           tagPrefixBeforeRename: 'test@',
         },
-        changesets: true,
+        removeEmptyUnreleasedSection: true,
       });
       changelog.addRelease({ version: '0.0.1' });
       changelog.addRelease({ version: '0.0.2' });
@@ -417,13 +423,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         [0.0.2]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/compare/test@0.0.1...test@0.0.2
         [0.0.1]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/releases/tag/test@0.0.1
       `);
-    });
-
-    it('default mode still writes an empty Unreleased section', async () => {
-      const changelog = new Changelog({ repoUrl });
-      changelog.addRelease({ version: '1.0.0' });
-
-      expect(await changelog.toString()).toContain('## [Unreleased]');
     });
   });
 });
