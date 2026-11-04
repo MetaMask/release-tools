@@ -441,7 +441,7 @@ describe('validate', () => {
     });
   });
 
-  describe('when requireUnreleasedSection is false and removeEmptyUnreleasedSection is true', () => {
+  describe('when allowMissingUnreleasedSection and removeEmptyUnreleasedSection are true', () => {
     const changelogWithoutUnreleased = outdent`
       # Changelog
       All notable changes to this project will be documented in this file.
@@ -479,7 +479,7 @@ describe('validate', () => {
 
       await validate({
         ...defaultOptions(),
-        requireUnreleasedSection: false,
+        allowMissingUnreleasedSection: true,
         removeEmptyUnreleasedSection: true,
         fix: true,
       });
@@ -512,7 +512,7 @@ describe('validate', () => {
 
       await validate({
         ...defaultOptions(),
-        requireUnreleasedSection: false,
+        allowMissingUnreleasedSection: true,
         removeEmptyUnreleasedSection: true,
         fix: true,
       });
@@ -527,7 +527,7 @@ describe('validate', () => {
 
       const result = await validate({
         ...defaultOptions(),
-        requireUnreleasedSection: false,
+        allowMissingUnreleasedSection: true,
         removeEmptyUnreleasedSection: true,
       });
 

@@ -68,15 +68,15 @@ export type ValidateOptions = {
    */
   currentPr?: string;
   /**
-   * Whether the Unreleased section is required. Set this to `false` for
-   * changelogs managed with Changesets. Cannot be `false` together with
-   * `checkDeps`. Defaults to `true`.
+   * Whether the Unreleased section may be missing. Set this to `true` for
+   * changelogs managed with Changesets. Cannot be combined with `checkDeps`.
+   * Defaults to `false`.
    */
-  requireUnreleasedSection?: boolean;
+  allowMissingUnreleasedSection?: boolean;
   /**
    * Whether an empty Unreleased section must be omitted, so that fixing
    * removes it. This is meant for changelogs managed with Changesets, and
-   * requires `requireUnreleasedSection` to be `false`. Defaults to `false`.
+   * requires `allowMissingUnreleasedSection`. Defaults to `false`.
    */
   removeEmptyUnreleasedSection?: boolean;
 };
@@ -103,8 +103,8 @@ export type ValidateOptions = {
  * @param options.remote - Remote name for auto-detection.
  * @param options.baseBranch - Base branch for auto-detection.
  * @param options.currentPr - PR number to use when fixing missing entries.
- * @param options.requireUnreleasedSection - Whether the Unreleased section is
- * required.
+ * @param options.allowMissingUnreleasedSection - Whether the Unreleased
+ * section may be missing.
  * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
  * section must be omitted.
  * @returns A promise that resolves to nothing once the changelog is validated, or
@@ -128,7 +128,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
     remote,
     baseBranch,
     currentPr,
-    requireUnreleasedSection,
+    allowMissingUnreleasedSection,
     removeEmptyUnreleasedSection,
   } = options;
 
@@ -165,8 +165,8 @@ export async function validate(options: ValidateOptions): Promise<void> {
       ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent,
       ...(dependencyCheckResult !== undefined && { dependencyCheckResult }),
-      ...(requireUnreleasedSection !== undefined && {
-        requireUnreleasedSection,
+      ...(allowMissingUnreleasedSection !== undefined && {
+        allowMissingUnreleasedSection,
       }),
       ...(removeEmptyUnreleasedSection !== undefined && {
         removeEmptyUnreleasedSection,

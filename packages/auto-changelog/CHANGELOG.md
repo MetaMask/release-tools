@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `--requireUnreleasedSection` and `--removeEmptyUnreleasedSection` options to the `validate` command for changelogs managed with Changesets ([#134](https://github.com/MetaMask/release-tools/pull/134))
-  - With `--no-requireUnreleasedSection`, the `Unreleased` section is optional. This cannot be combined with `--checkDeps`.
-  - With `--removeEmptyUnreleasedSection`, `--fix` removes an empty `Unreleased` section. This requires `--no-requireUnreleasedSection`.
-- Add `requireUnreleasedSection` and `removeEmptyUnreleasedSection` options to `parseChangelog` and `validateChangelog`, and a `removeEmptyUnreleasedSection` option to the `Changelog` constructor, so changelogs managed with Changesets no longer need an `Unreleased` section ([#134](https://github.com/MetaMask/release-tools/pull/134))
+- Add `--allowMissingUnreleasedSection` and `--removeEmptyUnreleasedSection` options to the `validate` command for changelogs managed with Changesets ([#134](https://github.com/MetaMask/release-tools/pull/134))
+  - With `--allowMissingUnreleasedSection`, the `Unreleased` section is optional. This cannot be combined with `--checkDeps`.
+  - With `--removeEmptyUnreleasedSection`, `--fix` removes an empty `Unreleased` section. This requires `--allowMissingUnreleasedSection`.
+- Add `allowMissingUnreleasedSection` and `removeEmptyUnreleasedSection` options to `parseChangelog` and `validateChangelog`, and a `removeEmptyUnreleasedSection` option to the `Changelog` constructor, so changelogs managed with Changesets no longer need an `Unreleased` section ([#134](https://github.com/MetaMask/release-tools/pull/134))
 
 ## [7.1.0]
 

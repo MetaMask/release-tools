@@ -1414,7 +1414,7 @@ describe('validateChangelog', () => {
     });
   });
 
-  describe('when requireUnreleasedSection is false', () => {
+  describe('when allowMissingUnreleasedSection is true', () => {
     const repoUrl =
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
 
@@ -1443,7 +1443,7 @@ describe('validateChangelog', () => {
           changelogContent: changelogWithoutUnreleased,
           repoUrl,
           isReleaseCandidate: false,
-          requireUnreleasedSection: false,
+          allowMissingUnreleasedSection: true,
           removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
@@ -1456,7 +1456,7 @@ describe('validateChangelog', () => {
           currentVersion: '1.0.0',
           repoUrl,
           isReleaseCandidate: true,
-          requireUnreleasedSection: false,
+          allowMissingUnreleasedSection: true,
           removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
@@ -1468,7 +1468,7 @@ describe('validateChangelog', () => {
           changelogContent: changelogWithoutUnreleased.replace(/\n/gu, '\r\n'),
           repoUrl,
           isReleaseCandidate: false,
-          requireUnreleasedSection: false,
+          allowMissingUnreleasedSection: true,
           removeEmptyUnreleasedSection: true,
         }),
       ).resolves.not.toThrow();
@@ -1501,7 +1501,7 @@ describe('validateChangelog', () => {
         changelogContent: changelogWithEmptyUnreleased,
         repoUrl,
         isReleaseCandidate: false,
-        requireUnreleasedSection: false,
+        allowMissingUnreleasedSection: true,
         removeEmptyUnreleasedSection: true,
       });
 
@@ -1543,7 +1543,7 @@ describe('validateChangelog', () => {
           currentVersion: '1.0.0',
           repoUrl,
           isReleaseCandidate: true,
-          requireUnreleasedSection: false,
+          allowMissingUnreleasedSection: true,
           removeEmptyUnreleasedSection: true,
         }),
       ).rejects.toThrow(UnreleasedChangesError);
@@ -1555,7 +1555,7 @@ describe('validateChangelog', () => {
           changelogContent: changelogWithoutUnreleased,
           repoUrl,
           isReleaseCandidate: false,
-          requireUnreleasedSection: false,
+          allowMissingUnreleasedSection: true,
           dependencyCheckResult: {
             prNumbers: [],
             versionChanged: false,
@@ -1563,7 +1563,7 @@ describe('validateChangelog', () => {
           },
         }),
       ).rejects.toThrow(
-        'Dependency checks cannot be combined with requireUnreleasedSection set to false: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
+        'Dependency checks cannot be combined with allowMissingUnreleasedSection: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
       );
     });
 
@@ -1572,7 +1572,7 @@ describe('validateChangelog', () => {
         changelogContent: changelogWithoutUnreleased,
         repoUrl,
         isReleaseCandidate: false,
-        requireUnreleasedSection: false,
+        allowMissingUnreleasedSection: true,
       });
 
       await expect(result).rejects.toThrow(ChangelogFormattingError);
@@ -1584,7 +1584,7 @@ describe('validateChangelog', () => {
   });
 
   describe('when removeEmptyUnreleasedSection is true', () => {
-    it('should throw when requireUnreleasedSection is not false', async () => {
+    it('should throw when allowMissingUnreleasedSection is not true', async () => {
       await expect(
         validateChangelog({
           changelogContent: emptyChangelog,
@@ -1594,7 +1594,7 @@ describe('validateChangelog', () => {
           removeEmptyUnreleasedSection: true,
         }),
       ).rejects.toThrow(
-        'The removeEmptyUnreleasedSection option requires requireUnreleasedSection to be false: a changelog without an Unreleased section is otherwise invalid.',
+        'The removeEmptyUnreleasedSection option requires allowMissingUnreleasedSection: a changelog without an Unreleased section is otherwise invalid.',
       );
     });
   });

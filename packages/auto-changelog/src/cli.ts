@@ -291,7 +291,7 @@ type CliArguments = {
   remote: string;
   baseBranch?: string;
   currentPr?: string;
-  requireUnreleasedSection: boolean;
+  allowMissingUnreleasedSection: boolean;
   removeEmptyUnreleasedSection: boolean;
   _: (string | number)[];
   $0: string;
@@ -354,7 +354,7 @@ async function runCommand({
     remote,
     baseBranch,
     currentPr,
-    requireUnreleasedSection,
+    allowMissingUnreleasedSection,
     removeEmptyUnreleasedSection,
   } = argv;
   let { currentVersion } = argv;
@@ -507,7 +507,7 @@ async function runCommand({
       remote,
       ...(baseBranch !== undefined && { baseBranch }),
       ...(currentPr !== undefined && { currentPr }),
-      requireUnreleasedSection,
+      allowMissingUnreleasedSection,
       removeEmptyUnreleasedSection,
     });
   } else if (command === 'init') {
@@ -693,16 +693,16 @@ async function main(): Promise<void> {
               'Verify that each changelog entry has one or more links to associated pull requests within the repository',
             type: 'boolean',
           })
-          .option('requireUnreleasedSection', {
-            default: true,
+          .option('allowMissingUnreleasedSection', {
+            default: false,
             description:
-              'Require an Unreleased section. Use --no-requireUnreleasedSection for changelogs managed with Changesets, which do not use an Unreleased section.',
+              'Allow the Unreleased section to be missing. Meant for changelogs managed with Changesets, which do not use an Unreleased section.',
             type: 'boolean',
           })
           .option('removeEmptyUnreleasedSection', {
             default: false,
             description:
-              'Expect an empty Unreleased section to be omitted, so that --fix removes it. Meant for changelogs managed with Changesets. Requires --no-requireUnreleasedSection.',
+              'Expect an empty Unreleased section to be omitted, so that --fix removes it. Meant for changelogs managed with Changesets. Requires --allowMissingUnreleasedSection.',
             type: 'boolean',
           })
           // Dependency bump checking options
@@ -785,15 +785,18 @@ async function main(): Promise<void> {
   };
 
   if (command === 'validate') {
-    if (argv.removeEmptyUnreleasedSection && argv.requireUnreleasedSection) {
+    if (
+      argv.removeEmptyUnreleasedSection &&
+      !argv.allowMissingUnreleasedSection
+    ) {
       return error(
-        '--removeEmptyUnreleasedSection requires --no-requireUnreleasedSection.',
+        '--removeEmptyUnreleasedSection requires --allowMissingUnreleasedSection.',
       );
     }
 
-    if (!argv.requireUnreleasedSection && argv.checkDeps) {
+    if (argv.allowMissingUnreleasedSection && argv.checkDeps) {
       return error(
-        '--checkDeps cannot be combined with --no-requireUnreleasedSection: it adds dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
+        '--checkDeps cannot be combined with --allowMissingUnreleasedSection: it adds dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
       );
     }
   }

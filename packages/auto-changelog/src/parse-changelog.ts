@@ -162,11 +162,11 @@ function getOptionalUnreleasedContentBounds(changelogLines: string[]): {
  * An optional, which is required only in case of package renamed.
  * @param options.shouldExtractPrLinks - When true, look for and parse pull
  * request links at the end of change entries.
- * @param options.requireUnreleasedSection - Whether the "Unreleased" section
- * and its link reference definition are required. Set this to `false` for
- * changelogs managed with Changesets, which do not use an "Unreleased"
- * section. When `false`, a release header outside the changelog content is an
- * error.
+ * @param options.allowMissingUnreleasedSection - Whether the "Unreleased"
+ * section and its link reference definition may be missing. Set this to
+ * `true` for changelogs managed with Changesets, which do not use an
+ * "Unreleased" section. When `true`, a release header outside the changelog
+ * content is an error.
  * @param options.removeEmptyUnreleasedSection - Whether the returned changelog
  * omits an empty "Unreleased" section and its link reference definition when
  * stringified. This is meant for changelogs managed with Changesets.
@@ -179,7 +179,7 @@ export function parseChangelog({
   formatter,
   packageRename,
   shouldExtractPrLinks = false,
-  requireUnreleasedSection = true,
+  allowMissingUnreleasedSection = false,
   removeEmptyUnreleasedSection = false,
 }: {
   changelogContent: string;
@@ -188,7 +188,7 @@ export function parseChangelog({
   formatter?: Formatter;
   packageRename?: PackageRename;
   shouldExtractPrLinks?: boolean;
-  requireUnreleasedSection?: boolean;
+  allowMissingUnreleasedSection?: boolean;
   removeEmptyUnreleasedSection?: boolean;
 }): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
@@ -202,7 +202,10 @@ export function parseChangelog({
   const repoName = extractRepoName(repoUrl);
 
   let contentfulChangelogLines: string[];
-  if (requireUnreleasedSection) {
+  if (allowMissingUnreleasedSection) {
+    const { start, end } = getOptionalUnreleasedContentBounds(changelogLines);
+    contentfulChangelogLines = changelogLines.slice(start, end);
+  } else {
     const unreleasedHeaderIndex = changelogLines.indexOf(`## [${unreleased}]`);
     if (unreleasedHeaderIndex === -1) {
       throw new Error(`Failed to find ${unreleased} header`);
@@ -220,9 +223,6 @@ export function parseChangelog({
       unreleasedHeaderIndex + 1,
       unreleasedLinkReferenceDefinition,
     );
-  } else {
-    const { start, end } = getOptionalUnreleasedContentBounds(changelogLines);
-    contentfulChangelogLines = changelogLines.slice(start, end);
   }
 
   let mostRecentRelease: string;
