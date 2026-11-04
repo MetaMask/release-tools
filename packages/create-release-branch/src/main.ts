@@ -1,6 +1,6 @@
 import type { WriteStream } from 'fs';
 
-import { createOutput } from './core/output.js';
+import { createCliOutput } from './core/cli-output.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
 import { startUI } from './ui.js';
@@ -28,7 +28,7 @@ export async function main({
   stdout: Pick<WriteStream, 'write'>;
   stderr: Pick<WriteStream, 'write'>;
 }): Promise<void> {
-  const output = createOutput({ stdout, stderr });
+  const output = createCliOutput({ stdout, stderr });
   const {
     project,
     tempDirectoryPath,

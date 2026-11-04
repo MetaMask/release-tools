@@ -8,7 +8,7 @@ import { withProtectedProcessEnv, withSandbox } from '../../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
-  createNoopOutput,
+  createNoopCliOutput,
 } from '../../tests/unit/helpers.js';
 import * as repoModule from '../core/repo.js';
 import { IncrementableVersionParts } from '../release-specification.js';
@@ -66,7 +66,7 @@ describe('project', () => {
           }),
         };
         const projectTagNames = ['tag1', 'tag2', 'tag3'];
-        const output = createNoopOutput();
+        const output = createNoopCliOutput();
         vi.when(vi.spyOn(repoModule, 'getTagNames'))
           .calledWith(projectDirectoryPath)
           .thenResolve(projectTagNames);
@@ -317,7 +317,7 @@ describe('project', () => {
 
   describe('updateChangelogsForChangedPackages', () => {
     it('should update changelog files of all the packages that has changes since latest release', async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
@@ -357,7 +357,7 @@ describe('project', () => {
     });
 
     it('should not update changelog files of all the packages that has not changed since latest release', async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {

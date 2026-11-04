@@ -1,14 +1,14 @@
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it } from 'vitest';
 
-import { createOutput } from './output.js';
+import { createCliOutput } from './cli-output.js';
 
-describe('output', () => {
-  describe('createOutput', () => {
+describe('cli-output', () => {
+  describe('createCliOutput', () => {
     it('writes info and success to stdout as given', () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
-      const output = createOutput({ stdout, stderr });
+      const output = createCliOutput({ stdout, stderr });
 
       output.info('Some info\n');
       output.success('Some success');
@@ -20,7 +20,7 @@ describe('output', () => {
     it('writes warn and error to stderr as given', () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
-      const output = createOutput({ stdout, stderr });
+      const output = createCliOutput({ stdout, stderr });
 
       output.warn('Some warning');
       output.error('Some error\n');
@@ -32,7 +32,7 @@ describe('output', () => {
     it('step runs the callback, returns its result, and writes nothing', async () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
-      const output = createOutput({ stdout, stderr });
+      const output = createCliOutput({ stdout, stderr });
 
       const result = await output.step('Doing something', async () => 42);
 
@@ -44,7 +44,7 @@ describe('output', () => {
     it('step rethrows the callback error', async () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
-      const output = createOutput({ stdout, stderr });
+      const output = createCliOutput({ stdout, stderr });
 
       await expect(
         output.step('Doing something', async () => {

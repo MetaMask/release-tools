@@ -2,7 +2,7 @@ import os from 'os';
 import path from 'path';
 
 import { readCommandLineArguments } from './command-line-arguments.js';
-import type { Output } from './core/output.js';
+import type { CliOutput } from './core/cli-output.js';
 import { readProject, Project } from './project/project.js';
 
 /**
@@ -49,7 +49,7 @@ export async function determineInitialParameters({
 }: {
   argv: string[];
   cwd: string;
-  output: Output;
+  output: CliOutput;
 }): Promise<InitialParameters> {
   const args = await readCommandLineArguments(argv);
 

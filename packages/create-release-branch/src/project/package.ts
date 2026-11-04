@@ -8,7 +8,7 @@ import { assertExhaustive } from '@metamask/utils';
 import path from 'path';
 import { format } from 'util';
 
-import type { Output } from '../core/output.js';
+import type { CliOutput } from '../core/cli-output.js';
 import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
 import { Formatter } from '../initial-parameters.js';
 import { PackageReleasePlan } from '../release-plan.js';
@@ -163,7 +163,7 @@ export async function readMonorepoWorkspacePackage({
   rootPackageVersion: SemVer;
   projectDirectoryPath: string;
   projectTagNames: string[];
-  output: Output;
+  output: CliOutput;
 }): Promise<Package> {
   const manifestPath = path.join(packageDirectoryPath, MANIFEST_FILE_NAME);
   const changelogPath = path.join(packageDirectoryPath, CHANGELOG_FILE_NAME);
@@ -286,7 +286,7 @@ export async function migrateUnreleasedChangelogChangesToRelease({
   package: Package;
   version: string;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 }): Promise<void> {
   let changelogContent;
 
@@ -337,7 +337,7 @@ export async function updatePackageChangelog({
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 }): Promise<void> {
   let changelogContent;
 
@@ -397,7 +397,7 @@ export async function updatePackage({
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   packageReleasePlan: PackageReleasePlan;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 }): Promise<void> {
   const { package: pkg, newVersion } = packageReleasePlan;
 

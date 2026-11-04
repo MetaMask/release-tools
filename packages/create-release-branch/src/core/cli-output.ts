@@ -13,7 +13,7 @@ import type { WriteStreamLike } from '../utils/fs.js';
  * @property error - Writes an error to standard error.
  * @property step - Runs a long-running action and returns its result.
  */
-export type Output = {
+export type CliOutput = {
   info(text: string): void;
   success(text: string): void;
   warn(text: string): void;
@@ -22,20 +22,20 @@ export type Output = {
 };
 
 /**
- * Creates an `Output` that writes plain text to the given streams.
+ * Creates a `CliOutput` that writes plain text to the given streams.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
  * @param args.stderr - A stream that can be used to write to standard error.
  * @returns The output.
  */
-export function createOutput({
+export function createCliOutput({
   stdout,
   stderr,
 }: {
   stdout: WriteStreamLike;
   stderr: WriteStreamLike;
-}): Output {
+}): CliOutput {
   return {
     info(text) {
       stdout.write(text);

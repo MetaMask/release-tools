@@ -2,7 +2,7 @@ import express from 'express';
 import openBrowser from 'open';
 import { join } from 'path';
 
-import type { Output } from './core/output.js';
+import type { CliOutput } from './core/cli-output.js';
 import { commitAllChanges } from './core/repo.js';
 import {
   deduplicateDependencies,
@@ -37,7 +37,7 @@ type UIOptions = {
   defaultBranch: string;
   port: number;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 };
 
 /**
@@ -137,7 +137,7 @@ function createApp({
   project: Project;
   defaultBranch: string;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
   version: string;
   closeServer: () => void;
 }): express.Application {

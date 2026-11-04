@@ -2,7 +2,7 @@ import { getWorkspaceLocations } from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
 import { resolve } from 'path';
 
-import type { Output } from '../core/output.js';
+import type { CliOutput } from '../core/cli-output.js';
 import { getTagNames, restoreFiles } from '../core/repo.js';
 import { Formatter } from '../initial-parameters.js';
 import { ReleaseSpecification } from '../release-specification.js';
@@ -91,7 +91,7 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
  */
 export async function readProject(
   projectDirectoryPath: string,
-  { output }: { output: Output },
+  { output }: { output: CliOutput },
 ): Promise<Project> {
   const tagNames = await getTagNames(projectDirectoryPath);
   const rootPackage = await readMonorepoRootPackage({
@@ -217,7 +217,7 @@ export async function updateChangelogsForChangedPackages({
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 }): Promise<void> {
   await Promise.all(
     Object.values(project.workspacePackages)

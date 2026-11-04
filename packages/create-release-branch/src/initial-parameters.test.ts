@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildMockProject,
   buildMockPackage,
-  createNoopOutput,
+  createNoopCliOutput,
 } from '../tests/unit/helpers.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import { determineInitialParameters } from './initial-parameters.js';
@@ -28,7 +28,7 @@ describe('initial-parameters', () => {
 
     it('returns an object derived from command-line arguments and environment variables that contains data necessary to run the workflow', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -70,7 +70,7 @@ describe('initial-parameters', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage(),
       });
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -103,7 +103,7 @@ describe('initial-parameters', () => {
 
     it('resolves the given temporary directory relative to the current working directory', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -136,7 +136,7 @@ describe('initial-parameters', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('@foo/bar'),
       });
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -169,7 +169,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including reset: true, derived from a command-line argument of "--reset true"', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -200,7 +200,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including reset: false, derived from a command-line argument of "--reset false"', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -231,7 +231,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including a releaseType of "backport", derived from a command-line argument of "--backport true"', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -262,7 +262,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including a releaseType of "ordinary", derived from a command-line argument of "--backport false"', async () => {
       const project = buildMockProject();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({

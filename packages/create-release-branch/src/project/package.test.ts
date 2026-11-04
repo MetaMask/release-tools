@@ -15,10 +15,10 @@ import {
   buildMockPackage,
   buildMockProject,
   buildMockManifest,
-  createNoopOutput,
+  createNoopCliOutput,
   createNoopWriteStream,
 } from '../../tests/unit/helpers.js';
-import { createOutput } from '../core/output.js';
+import { createCliOutput } from '../core/cli-output.js';
 import * as repoModule from '../core/repo.js';
 import * as fsModule from '../utils/fs.js';
 import * as packageManifestModule from './package-manifest.js';
@@ -187,7 +187,7 @@ describe('package', () => {
 
   describe('readMonorepoWorkspacePackage', () => {
     it('returns information about the file structure of the package located at the given directory', async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest(),
@@ -212,7 +212,7 @@ describe('package', () => {
     it('returns information about the manifest (in both unvalidated and validated forms)', async () => {
       const unvalidatedManifest = {};
       const validatedManifest = buildMockManifest();
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
@@ -236,7 +236,7 @@ describe('package', () => {
     });
 
     it("flags the package as having been changed since its latest release if a tag matching the package name + version exists and changes have been made to the package's directory since the tag", async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest({
@@ -267,7 +267,7 @@ describe('package', () => {
     });
 
     it("does not flag the package as having been changed since its latest release if a tag matching the package name + version exists, but changes have not been made to the package's directory since the tag", async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest({
@@ -298,7 +298,7 @@ describe('package', () => {
     });
 
     it("flags the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, and changes have been made to the package's directory since the tag", async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest({
@@ -325,7 +325,7 @@ describe('package', () => {
     });
 
     it("does not flag the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, but changes have not been made to the package's directory since the tag", async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest({
@@ -351,7 +351,7 @@ describe('package', () => {
     });
 
     it('flags the package as having been changed since its latest release if the project has no tags', async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest({
@@ -375,7 +375,10 @@ describe('package', () => {
 
     it("prints a warning if a tag matching 'v' + the root package version exists instead of the package name + version", async () => {
       const stderr = new MockWritable();
-      const output = createOutput({ stdout: createNoopWriteStream(), stderr });
+      const output = createCliOutput({
+        stdout: createNoopWriteStream(),
+        stderr,
+      });
       vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
@@ -401,7 +404,7 @@ describe('package', () => {
     });
 
     it("throws if the project has tags, but neither a tag matching the package name + version nor 'v' + the root package version exists", async () => {
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
         .calledWith('/path/to/package/package.json')
         .thenResolve({
@@ -451,7 +454,7 @@ describe('package', () => {
           project,
           packageReleasePlan,
           formatter: 'prettier',
-          output: createNoopOutput(),
+          output: createNoopCliOutput(),
         });
 
         const newManifest = JSON.parse(
@@ -499,7 +502,7 @@ describe('package', () => {
           project,
           packageReleasePlan,
           formatter: 'prettier',
-          output: createNoopOutput(),
+          output: createNoopCliOutput(),
         });
 
         const newChangelogContent = await fs.promises.readFile(
@@ -567,7 +570,7 @@ describe('package', () => {
           project,
           packageReleasePlan,
           formatter: 'oxfmt',
-          output: createNoopOutput(),
+          output: createNoopCliOutput(),
         });
 
         const newChangelogContent = await fs.promises.readFile(
@@ -621,7 +624,7 @@ describe('package', () => {
             project,
             packageReleasePlan,
             formatter: 'prettier',
-            output: createNoopOutput(),
+            output: createNoopCliOutput(),
           }),
         ).rejects.toThrow('oops');
       });
@@ -645,7 +648,7 @@ describe('package', () => {
           project,
           packageReleasePlan,
           formatter: 'prettier',
-          output: createNoopOutput(),
+          output: createNoopCliOutput(),
         });
 
         expect(result).toBeUndefined();
@@ -656,7 +659,7 @@ describe('package', () => {
   describe('updatePackageChangelog', () => {
     it('updates the changelog of the package if requested to do so and if the package has one', async () => {
       await withSandbox(async (sandbox) => {
-        const output = createNoopOutput();
+        const output = createNoopCliOutput();
         const project = buildMockProject({
           repositoryUrl: 'https://repo.url',
         });
@@ -698,7 +701,7 @@ describe('package', () => {
 
     it('does not update the changelog if updateChangelog returns nothing', async () => {
       await withSandbox(async (sandbox) => {
-        const output = createNoopOutput();
+        const output = createNoopCliOutput();
         const project = buildMockProject({
           repositoryUrl: 'https://repo.url',
         });
@@ -740,7 +743,7 @@ describe('package', () => {
 
     it('does not throw but merely prints a warning if the package does not have a changelog', async () => {
       await withSandbox(async (sandbox) => {
-        const output = createNoopOutput();
+        const output = createNoopCliOutput();
         const project = buildMockProject({
           repositoryUrl: 'https://repo.url',
         });
@@ -765,7 +768,7 @@ describe('package', () => {
 
     it("throws if reading the package's changelog fails in an unexpected way", async () => {
       await withSandbox(async (sandbox) => {
-        const output = createNoopOutput();
+        const output = createNoopCliOutput();
         const project = buildMockProject({
           repositoryUrl: 'https://repo.url',
         });

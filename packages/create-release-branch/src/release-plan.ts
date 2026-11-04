@@ -1,6 +1,6 @@
 import { SemVer } from 'semver';
 
-import type { Output } from './core/output.js';
+import type { CliOutput } from './core/cli-output.js';
 import { Formatter } from './initial-parameters.js';
 import { Package, updatePackage } from './project/package.js';
 import { Project } from './project/project.js';
@@ -105,7 +105,7 @@ export async function executeReleasePlan(
   project: Project,
   releasePlan: ReleasePlan,
   formatter: Formatter,
-  output: Output,
+  output: CliOutput,
 ): Promise<void> {
   await Promise.all(
     releasePlan.packages.map(async (workspaceReleasePlan) => {

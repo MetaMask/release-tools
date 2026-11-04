@@ -1,6 +1,6 @@
 import path from 'path';
 
-import type { Output } from './core/output.js';
+import type { CliOutput } from './core/cli-output.js';
 import { commitAllChanges } from './core/repo.js';
 import {
   deduplicateDependencies,
@@ -76,7 +76,7 @@ export async function followMonorepoWorkflow({
   releaseType: ReleaseType;
   defaultBranch: string;
   formatter: Formatter;
-  output: Output;
+  output: CliOutput;
 }): Promise<void> {
   const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
     project,

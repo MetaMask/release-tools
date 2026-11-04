@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildMockProject,
   buildMockPackage,
-  createNoopOutput,
+  createNoopCliOutput,
 } from '../tests/unit/helpers.js';
 import * as packageUtils from './project/package.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
@@ -183,7 +183,7 @@ describe('release-plan-utils', () => {
           },
         ],
       };
-      const output = createNoopOutput();
+      const output = createNoopCliOutput();
       const updatePackageSpy = vi.spyOn(packageUtils, 'updatePackage');
 
       await executeReleasePlan(project, releasePlan, 'prettier', output);

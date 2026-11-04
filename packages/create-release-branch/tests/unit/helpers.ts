@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
 
-import { createOutput } from '../../src/core/output.js';
-import type { Output } from '../../src/core/output.js';
+import { createCliOutput } from '../../src/core/cli-output.js';
+import type { CliOutput } from '../../src/core/cli-output.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
@@ -173,8 +173,8 @@ export function createNoopWriteStream(): fs.WriteStream {
  *
  * @returns The output.
  */
-export function createNoopOutput(): Output {
-  return createOutput({
+export function createNoopCliOutput(): CliOutput {
+  return createCliOutput({
     stdout: createNoopWriteStream(),
     stderr: createNoopWriteStream(),
   });

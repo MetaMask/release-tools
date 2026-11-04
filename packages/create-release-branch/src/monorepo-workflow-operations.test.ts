@@ -6,8 +6,8 @@ import type { Mock } from 'vitest';
 
 import { withSandbox, Sandbox, isErrorWithCode } from '../tests/helpers.js';
 import { buildMockProject, Require } from '../tests/unit/helpers.js';
-import { createOutput } from './core/output.js';
-import type { Output } from './core/output.js';
+import { createCliOutput } from './core/cli-output.js';
+import type { CliOutput } from './core/cli-output.js';
 import * as repoModule from './core/repo.js';
 import * as yarnCommands from './core/yarn-commands.js';
 import * as editorModule from './editor.js';
@@ -212,7 +212,7 @@ async function setupFollowMonorepoWorkflow({
     projectDirectoryPath: string;
     formatter: Formatter;
     stdout: MockWritable;
-    output: Output;
+    output: CliOutput;
     releaseSpecification: ReleaseSpecification;
     releasePlan: ReleasePlan;
     releaseVersion: string;
@@ -244,7 +244,7 @@ async function setupFollowMonorepoWorkflow({
   const projectDirectoryPath = '/path/to/project';
   const project = buildMockProject({ directoryPath: projectDirectoryPath });
   const stdout = new MockWritable();
-  const output = createOutput({ stdout, stderr: new MockWritable() });
+  const output = createCliOutput({ stdout, stderr: new MockWritable() });
   determineEditorSpy.mockResolvedValue(isEditorAvailable ? editor : null);
   vi.when(generateReleaseSpecificationTemplateForMonorepoSpy)
     .calledWith({ project, isEditorAvailable })
