@@ -52,18 +52,10 @@ describe('release-rules', () => {
       expect(checkReleaseChoices(project, { a: 'major' })).toStrictEqual({
         errors: [
           {
-            message: `
-The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
-
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-`.trim(),
+            packageName: 'a',
+            problem:
+              'has a major bump, but its direct dependents are not in the release spec: b',
+            hint: 'Add them to the release spec, or set them to intentionally-skip.',
           },
         ],
         dependencyFindings: {
@@ -125,18 +117,133 @@ The following direct dependents of package 'a', which is being released with a m
         checkReleaseChoices(project, { a: 'asdf', b: 'minor' }).errors,
       ).toStrictEqual([
         {
-          message: [
-            '"asdf" is not a valid version specifier for package "a"',
-            '(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")',
-          ],
+          packageName: 'a',
           entryIndex: 0,
+          problem: '"asdf" is not a valid version specifier',
+          hint: 'Use major, minor, patch, or a version like 1.2.3.',
         },
         {
-          message: '"b" is not a package in the project',
+          packageName: 'b',
           entryIndex: 1,
+          problem: 'is not a package in the project',
+          hint: 'Check the name, or remove the line.',
         },
       ]);
     });
+
+    it.each([
+      {
+        rule: 'an unknown package',
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+        choices: { b: 'minor' },
+        error: {
+          packageName: 'b',
+          entryIndex: 0,
+          problem: 'is not a package in the project',
+          hint: 'Check the name, or remove the line.',
+        },
+      },
+      {
+        rule: 'an invalid version specifier',
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+        choices: { a: 'asdf' },
+        error: {
+          packageName: 'a',
+          entryIndex: 0,
+          problem: '"asdf" is not a valid version specifier',
+          hint: 'Use major, minor, patch, or a version like 1.2.3.',
+        },
+      },
+      {
+        rule: 'the current version',
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+        choices: { a: '1.0.0' },
+        error: {
+          packageName: 'a',
+          entryIndex: 0,
+          problem: 'is already at version 1.0.0',
+          hint: 'Use a higher version, or major, minor, or patch.',
+        },
+      },
+      {
+        rule: 'a lower version',
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+        choices: { a: '0.9.0' },
+        error: {
+          packageName: 'a',
+          entryIndex: 0,
+          problem: '"0.9.0" is lower than the current version 1.0.0',
+          hint: 'Use a higher version, or major, minor, or patch.',
+        },
+      },
+      {
+        rule: 'missing direct dependents',
+        workspacePackages: {
+          a: buildMockPackage('a', '1.0.0'),
+          b: buildMockPackage('b', {
+            validatedManifest: { dependencies: { a: '1.0.0' } },
+          }),
+          c: buildMockPackage('c', {
+            validatedManifest: { dependencies: { a: '1.0.0' } },
+          }),
+        },
+        choices: { a: 'major' },
+        error: {
+          packageName: 'a',
+          problem:
+            'has a major bump, but its direct dependents are not in the release spec: b, c',
+          hint: 'Add them to the release spec, or set them to intentionally-skip.',
+        },
+      },
+      {
+        rule: 'missing peer dependents',
+        workspacePackages: {
+          a: buildMockPackage('a', '1.0.0'),
+          b: buildMockPackage('b', {
+            validatedManifest: { peerDependencies: { a: '1.0.0' } },
+          }),
+          c: buildMockPackage('c', {
+            validatedManifest: { peerDependencies: { a: '1.0.0' } },
+          }),
+        },
+        choices: { a: 'major' },
+        error: {
+          packageName: 'a',
+          problem:
+            'has a major bump, but its peer dependents are not in the release spec: b, c',
+          hint: 'Add them so they stay compatible, or set them to intentionally-skip if they can wait.',
+        },
+      },
+      {
+        rule: 'missing changed dependencies',
+        workspacePackages: {
+          a: buildMockPackage('a', {
+            validatedManifest: {
+              dependencies: { b: '1.0.0' },
+              peerDependencies: { c: '1.0.0' },
+            },
+          }),
+          b: buildMockPackage('b', { hasChangesSinceLatestRelease: true }),
+          c: buildMockPackage('c', { hasChangesSinceLatestRelease: true }),
+        },
+        choices: { a: 'minor' },
+        error: {
+          packageName: 'a',
+          problem:
+            'depends on packages with unreleased changes that are not in the release spec: b, c',
+          hint: 'Add them to the release spec, or set them to intentionally-skip if they can wait.',
+        },
+      },
+    ])(
+      'reports $rule with its problem and hint',
+      ({ workspacePackages, choices, error }) => {
+        const project = buildMockProject({ workspacePackages });
+
+        expect(checkReleaseChoices(project, choices).errors).toStrictEqual([
+          error,
+        ]);
+      },
+    );
   });
 
   describe('normalizeReleaseChoices', () => {

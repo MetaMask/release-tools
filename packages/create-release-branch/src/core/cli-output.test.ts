@@ -1,5 +1,6 @@
 import {
   S_BAR,
+  S_BAR_END,
   S_ERROR,
   S_INFO,
   S_STEP_SUBMIT,
@@ -8,7 +9,7 @@ import {
   spinner,
   taskLog,
 } from '@clack/prompts';
-import { stripVTControlCharacters } from 'node:util';
+import { stripVTControlCharacters, styleText } from 'node:util';
 import { MockWritable } from 'stdio-mock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -389,6 +390,43 @@ describe('cli-output', () => {
         ].join(''),
       );
       expect(taskLog).not.toHaveBeenCalled();
+    });
+
+    it('failure writes the title, the lines, and the cancel line to stderr', () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+      const output = createCliOutput({ stdout, stderr });
+
+      output.failure('Something failed', ['Line 1', '', 'Line 2']);
+
+      expect(textOf(stderr)).toBe(
+        [
+          logLine(S_ERROR, 'Something failed'),
+          `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}\n${S_BAR}  Line 2\n`,
+          `${S_BAR_END}  No release was created.\n\n`,
+        ].join(''),
+      );
+      expect(stdout.data()).toStrictEqual([]);
+    });
+
+    it('formats names and dim text for stderr only when stderr is styled', () => {
+      const styled = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: buildTerminalStream(),
+      });
+      const plain = createCliOutput({
+        stdout: buildTerminalStream(),
+        stderr: new MockWritable(),
+      });
+
+      expect(styled.format.name('a')).toBe(
+        styleText('cyan', 'a', { validateStream: false }),
+      );
+      expect(styled.format.dim('a')).toBe(
+        styleText('dim', 'a', { validateStream: false }),
+      );
+      expect(plain.format.name('a')).toBe('a');
+      expect(plain.format.dim('a')).toBe('a');
     });
   });
 });
