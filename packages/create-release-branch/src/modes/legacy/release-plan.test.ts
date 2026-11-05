@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildMockProject,
   buildMockPackage,
-  createNoopCliOutput,
 } from '../../../tests/unit/helpers.js';
 import { IncrementableVersionParts } from '../../core/release-rules.js';
 import * as packageUtils from '../../project/package.js';
@@ -183,23 +182,82 @@ describe('release-plan-utils', () => {
           },
         ],
       };
-      const output = createNoopCliOutput();
       const updatePackageSpy = vi.spyOn(packageUtils, 'updatePackage');
 
-      await executeReleasePlan(project, releasePlan, 'prettier', output);
+      await executeReleasePlan(project, releasePlan, 'prettier');
 
       expect(updatePackageSpy).toHaveBeenNthCalledWith(1, {
         project,
         packageReleasePlan: releasePlan.packages[0],
         formatter: 'prettier',
-        output,
       });
       expect(updatePackageSpy).toHaveBeenNthCalledWith(2, {
         project,
         packageReleasePlan: releasePlan.packages[1],
         formatter: 'prettier',
-        output,
       });
+    });
+
+    it('returns the packages without a changelog as a notice', async () => {
+      const releasePlan = {
+        newVersion: '2.0.0',
+        packages: ['a', 'b', 'c'].map((name) => ({
+          package: buildMockPackage(name),
+          newVersion: '2.0.0',
+        })),
+      };
+      const results = {
+        a: 'no-changelog',
+        b: 'updated',
+        c: 'no-changelog',
+      } as const;
+      vi.spyOn(packageUtils, 'updatePackage').mockImplementation(
+        async ({ packageReleasePlan }) =>
+          results[
+            packageReleasePlan.package.validatedManifest
+              .name as keyof typeof results
+          ],
+      );
+
+      const notices = await executeReleasePlan(
+        buildMockProject(),
+        releasePlan,
+        'prettier',
+      );
+
+      expect(notices).toStrictEqual([
+        {
+          title: '2 packages have no changelog to update:',
+          items: ['a', 'c'],
+        },
+      ]);
+    });
+
+    it('does not list the root package as having no changelog', async () => {
+      const project = buildMockProject({
+        rootPackage: buildMockPackage('monorepo'),
+      });
+      const releasePlan = {
+        newVersion: '2.0.0',
+        packages: [project.rootPackage, buildMockPackage('a')].map((pkg) => ({
+          package: pkg,
+          newVersion: '2.0.0',
+        })),
+      };
+      vi.spyOn(packageUtils, 'updatePackage').mockResolvedValue('no-changelog');
+
+      const notices = await executeReleasePlan(
+        project,
+        releasePlan,
+        'prettier',
+      );
+
+      expect(notices).toStrictEqual([
+        {
+          title: '1 package has no changelog to update:',
+          items: ['a'],
+        },
+      ]);
     });
   });
 });

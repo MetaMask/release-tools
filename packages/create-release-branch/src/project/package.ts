@@ -8,7 +8,6 @@ import { assertExhaustive } from '@metamask/utils';
 import path from 'path';
 import { format } from 'util';
 
-import type { CliOutput } from '../core/cli-output.js';
 import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
 import type { Formatter } from '../core/types.js';
 import { readFile, writeFile, writeJsonFile } from '../utils/fs.js';
@@ -55,6 +54,12 @@ export type PackageReleasePlan = {
   package: Package;
   newVersion: string;
 };
+
+/**
+ * What happened to the changelog of a package: it was updated, the package
+ * has no changelog, or there was nothing to add to it.
+ */
+export type ChangelogUpdateResult = 'updated' | 'no-changelog' | 'no-updates';
 
 /**
  * Generates the possible Git tag name for the root package of a monorepo. The
@@ -159,8 +164,9 @@ export async function readMonorepoRootPackage({
  * monorepo to which this package belongs.
  * @param args.projectDirectoryPath - The path to the project directory.
  * @param args.projectTagNames - The tag names across the whole project.
- * @param args.output - Where to write user-facing messages.
- * @returns Information about the package.
+ * @returns Information about the package, and whether the package has no tag
+ * for its current version, so its changes are found from the tag of the root
+ * package.
  */
 export async function readMonorepoWorkspacePackage({
   packageDirectoryPath,
@@ -168,15 +174,13 @@ export async function readMonorepoWorkspacePackage({
   rootPackageVersion,
   projectDirectoryPath,
   projectTagNames,
-  output,
 }: {
   packageDirectoryPath: string;
   rootPackageName: string;
   rootPackageVersion: SemVer;
   projectDirectoryPath: string;
   projectTagNames: string[];
-  output: CliOutput;
-}): Promise<Package> {
+}): Promise<Package & { usesRootTag: boolean }> {
   const manifestPath = path.join(packageDirectoryPath, MANIFEST_FILE_NAME);
   const changelogPath = path.join(packageDirectoryPath, CHANGELOG_FILE_NAME);
   const { unvalidated: unvalidatedManifest, validated: validatedManifest } =
@@ -215,22 +219,9 @@ export async function readMonorepoWorkspacePackage({
     );
   }
 
-  if (
+  const usesRootTag =
     matchingTagNameForWorkspacePackageLatestRelease === undefined &&
-    matchingTagNameForRootPackageLatestRelease !== undefined
-  ) {
-    output.warn(
-      format(
-        'WARNING: Could not determine changes for workspace package %s version %s based on Git tag %s; using tag for root package %s version %s, %s, instead.\n',
-        validatedManifest.name,
-        validatedManifest.version,
-        `"${expectedTagNameForWorkspacePackageLatestRelease}"`,
-        rootPackageName,
-        rootPackageVersion,
-        `"${expectedTagNameForRootPackageLatestRelease}"`,
-      ),
-    );
-  }
+    matchingTagNameForRootPackageLatestRelease !== undefined;
 
   const hasChangesSinceLatestRelease =
     matchingTagNameForLatestRelease === undefined
@@ -248,6 +239,7 @@ export async function readMonorepoWorkspacePackage({
     unvalidatedManifest,
     changelogPath,
     hasChangesSinceLatestRelease,
+    usesRootTag,
   };
 }
 
@@ -284,32 +276,26 @@ export function getFormatter(
  * @param args.package - A particular package in the project.
  * @param args.version - The release version to migrate unreleased changes to.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.output - Where to write user-facing messages.
- * @returns The result of writing to the changelog.
+ * @returns What happened to the changelog.
  */
 export async function migrateUnreleasedChangelogChangesToRelease({
   project: { repositoryUrl },
   package: pkg,
   version,
   formatter,
-  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   version: string;
   formatter: Formatter;
-  output: CliOutput;
-}): Promise<void> {
+}): Promise<ChangelogUpdateResult> {
   let changelogContent;
 
   try {
     changelogContent = await readFile(pkg.changelogPath);
   } catch (error) {
     if (isErrorWithCode(error) && error.code === 'ENOENT') {
-      output.warn(
-        `${pkg.validatedManifest.name} does not seem to have a changelog. Skipping.\n`,
-      );
-      return;
+      return 'no-changelog';
     }
 
     throw error;
@@ -325,6 +311,7 @@ export async function migrateUnreleasedChangelogChangesToRelease({
   changelog.addRelease({ version });
   changelog.migrateUnreleasedChangesToRelease(version);
   await writeFile(pkg.changelogPath, await changelog.toString());
+  return 'updated';
 }
 
 /**
@@ -337,30 +324,24 @@ export async function migrateUnreleasedChangelogChangesToRelease({
  * @param args.project.repositoryUrl - The URL of the project's repository.
  * @param args.package - A particular package in the project.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.output - Where to write user-facing messages.
- * @returns The result of writing to the changelog.
+ * @returns What happened to the changelog.
  */
 export async function updatePackageChangelog({
   project: { repositoryUrl },
   package: pkg,
   formatter,
-  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   formatter: Formatter;
-  output: CliOutput;
-}): Promise<void> {
+}): Promise<ChangelogUpdateResult> {
   let changelogContent;
 
   try {
     changelogContent = await readFile(pkg.changelogPath);
   } catch (error) {
     if (isErrorWithCode(error) && error.code === 'ENOENT') {
-      output.warn(
-        `${pkg.validatedManifest.name} does not seem to have a changelog. Skipping.\n`,
-      );
-      return;
+      return 'no-changelog';
     }
 
     throw error;
@@ -378,13 +359,12 @@ export async function updatePackageChangelog({
     formatter: getFormatter(formatter),
   });
 
-  if (newChangelogContent) {
-    await writeFile(pkg.changelogPath, newChangelogContent);
-  } else {
-    output.warn(
-      `Changelog for ${pkg.validatedManifest.name} was not updated as there were no updates to make.`,
-    );
+  if (!newChangelogContent) {
+    return 'no-updates';
   }
+
+  await writeFile(pkg.changelogPath, newChangelogContent);
+  return 'updated';
 }
 
 /**
@@ -398,19 +378,17 @@ export async function updatePackageChangelog({
  * @param args.packageReleasePlan - The release plan for a particular package in the
  * project.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.output - Where to write user-facing messages.
+ * @returns What happened to the changelog.
  */
 export async function updatePackage({
   project,
   packageReleasePlan,
   formatter,
-  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   packageReleasePlan: PackageReleasePlan;
   formatter: Formatter;
-  output: CliOutput;
-}): Promise<void> {
+}): Promise<ChangelogUpdateResult> {
   const { package: pkg, newVersion } = packageReleasePlan;
 
   await writeJsonFile(pkg.manifestPath, {
@@ -418,11 +396,10 @@ export async function updatePackage({
     version: newVersion,
   });
 
-  await migrateUnreleasedChangelogChangesToRelease({
+  return await migrateUnreleasedChangelogChangesToRelease({
     project,
     package: pkg,
     formatter,
-    output,
     version: newVersion,
   });
 }

@@ -8,7 +8,6 @@ import { withSandbox } from '../../../tests/helpers.js';
 import {
   buildMockProject,
   buildMockPackage,
-  createNoopCliOutput,
 } from '../../../tests/unit/helpers.js';
 import { checkChoices } from '../../core/release-steps.js';
 import type { VersionSpecifiers } from '../../core/types.js';
@@ -46,7 +45,6 @@ async function validateReleaseSpecification(
     project,
     defaultBranch: 'main',
     formatter: 'prettier',
-    output: createNoopCliOutput(),
   });
   const { data } = await validateReleaseSpecificationWithCheck(
     releaseSpecificationPath,
