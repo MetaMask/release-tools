@@ -170,7 +170,11 @@ export async function runCommandWithOutput(
   options: Options,
   onLine: (line: string) => void,
 ): Promise<void> {
-  const subprocess = execa(command, args, { ...options, all: true });
+  const subprocess = execa(command, args, {
+    ...options,
+    all: true,
+    buffer: false,
+  });
   assert(subprocess.all, 'Expected `all` to be set by the `all` option.');
   createInterface({ input: subprocess.all }).on('line', onLine);
   await subprocess;

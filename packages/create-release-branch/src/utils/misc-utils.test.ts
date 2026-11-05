@@ -205,6 +205,7 @@ describe('misc-utils', () => {
 
       expect(execaModule.execa).toHaveBeenCalledWith(process.execPath, args, {
         all: true,
+        buffer: false,
       });
       expect(lines).toStrictEqual(['Line 1', 'Line 2', 'Line 3']);
     });
@@ -222,6 +223,23 @@ describe('misc-utils', () => {
           },
         ),
       ).rejects.toThrow('Command failed with exit code 1');
+      expect(lines).toStrictEqual(['Some output']);
+    });
+
+    it('rejects without the command output in the message', async () => {
+      const lines: string[] = [];
+
+      const error = await runCommandWithOutput(
+        process.execPath,
+        ['-e', "console.log('Some' + ' output'); process.exit(1);"],
+        {},
+        (line) => {
+          lines.push(line);
+        },
+      ).catch((caughtError: unknown) => caughtError);
+
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).not.toContain('Some output');
       expect(lines).toStrictEqual(['Some output']);
     });
   });

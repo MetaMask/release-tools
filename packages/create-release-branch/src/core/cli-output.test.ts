@@ -10,7 +10,7 @@ import {
 } from '@clack/prompts';
 import { stripVTControlCharacters } from 'node:util';
 import { MockWritable } from 'stdio-mock';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliOutput } from './cli-output.js';
 import { createCliOutput } from './cli-output.js';
@@ -92,6 +92,10 @@ describe('cli-output', () => {
     vi.stubEnv('NO_COLOR', undefined);
     vi.stubEnv('CI', undefined);
     vi.stubEnv('TERM', 'xterm-256color');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe('createCliOutput', () => {
