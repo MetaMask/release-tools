@@ -14,7 +14,7 @@ export default mergeConfig(
       coverage: {
         exclude: [
           'src/cli.ts',
-          'src/command-line-arguments.ts',
+          'src/cli/command-line-arguments.ts',
           'src/ui/types.ts',
           'src/dirname.ts',
         ],

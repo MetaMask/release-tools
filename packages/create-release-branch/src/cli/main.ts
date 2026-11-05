@@ -1,10 +1,11 @@
 import type { WriteStream } from 'fs';
 
-import { createCliOutput } from './core/cli-output.js';
-import { createEditorFrontEnd } from './frontends/editor/editor-front-end.js';
-import { createUIFrontEnd } from './frontends/ui/server.js';
+import { createCliOutput } from '../core/cli-output.js';
+import { runRelease } from '../core/run-release.js';
+import { createEditorFrontEnd } from '../frontends/editor/editor-front-end.js';
+import { createUIFrontEnd } from '../frontends/ui/server.js';
+import { createLegacyMode } from '../modes/legacy/legacy-mode.js';
 import { determineInitialParameters } from './initial-parameters.js';
-import { createLegacyMode } from './modes/legacy/legacy-mode.js';
 
 /**
  * The main function for this tool. Designed to not access `process.argv`,
@@ -41,24 +42,15 @@ export async function main({
     formatter,
   } = await determineInitialParameters({ argv, cwd, output });
 
-  if (project.isMonorepo) {
-    output.info(
-      'Project appears to have workspaces. Following monorepo workflow.\n',
-    );
+  const mode = createLegacyMode({
+    project,
+    defaultBranch,
+    formatter,
+    output,
+  });
+  const frontEnd = interactive
+    ? createUIFrontEnd({ port })
+    : createEditorFrontEnd({ tempDirectoryPath, reset });
 
-    const mode = createLegacyMode({
-      project,
-      defaultBranch,
-      formatter,
-      output,
-    });
-    const frontEnd = interactive
-      ? createUIFrontEnd({ port })
-      : createEditorFrontEnd({ tempDirectoryPath, reset });
-    await frontEnd.run({ project, mode, releaseType, output });
-  } else {
-    output.info(
-      'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
-    );
-  }
+  await runRelease({ project, mode, releaseType, output }, frontEnd);
 }

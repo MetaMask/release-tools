@@ -8,43 +8,47 @@ import {
 import type { ReleaseType } from './types.js';
 
 /**
- * Creates a new release branch in the given project repository based on the specified release type.
+ * Determines the version of the new release from the current release version
+ * of the project.
  *
- * @param args - The arguments.
- * @param args.project - Information about the whole project (e.g., names of
+ * @param project - Information about the whole project (e.g., names of
  * packages and where they can found).
- * @param args.releaseType - The type of release ("ordinary" or "backport"),
- * which affects how the version is bumped.
- * @returns A promise that resolves to an object with the new
- * release version and a boolean indicating whether it's the first run.
+ * @param releaseType - The type of release ("ordinary" or "backport"), which
+ * affects how the version is bumped.
+ * @returns The version of the new release.
  */
-export async function createReleaseBranch({
-  project,
-  releaseType,
-}: {
-  project: Project;
-  releaseType: ReleaseType;
-}): Promise<{
-  version: string;
-  firstRun: boolean;
-}> {
-  const newReleaseVersion =
-    releaseType === 'backport'
-      ? `${project.releaseVersion.ordinaryNumber}.${
-          project.releaseVersion.backportNumber + 1
-        }.0`
-      : `${project.releaseVersion.ordinaryNumber + 1}.0.0`;
+export function determineReleaseVersion(
+  project: Project,
+  releaseType: ReleaseType,
+): string {
+  return releaseType === 'backport'
+    ? `${project.releaseVersion.ordinaryNumber}.${
+        project.releaseVersion.backportNumber + 1
+      }.0`
+    : `${project.releaseVersion.ordinaryNumber + 1}.0.0`;
+}
 
-  const releaseBranchName = `release/${newReleaseVersion}`;
+/**
+ * Switches to the release branch for the given version, creating it if it does
+ * not exist.
+ *
+ * @param project - Information about the whole project (e.g., names of
+ * packages and where they can found).
+ * @param version - The version of the new release.
+ * @returns A promise that resolves to an object with a boolean indicating
+ * whether it's the first run (that is, whether the branch was created).
+ */
+export async function ensureReleaseBranch(
+  project: Project,
+  version: string,
+): Promise<{ firstRun: boolean }> {
+  const releaseBranchName = `release/${version}`;
 
   const currentBranchName = await getCurrentBranchName(project.directoryPath);
 
   if (currentBranchName === releaseBranchName) {
     debug(`Already on ${releaseBranchName} branch.`);
-    return {
-      version: newReleaseVersion,
-      firstRun: false,
-    };
+    return { firstRun: false };
   }
 
   if (await branchExists(project.directoryPath, releaseBranchName)) {
@@ -54,10 +58,7 @@ export async function createReleaseBranch({
     await runGitCommandWithin(project.directoryPath, 'checkout', [
       releaseBranchName,
     ]);
-    return {
-      version: newReleaseVersion,
-      firstRun: false,
-    };
+    return { firstRun: false };
   }
 
   await runGitCommandWithin(project.directoryPath, 'checkout', [
@@ -65,8 +66,5 @@ export async function createReleaseBranch({
     releaseBranchName,
   ]);
 
-  return {
-    version: newReleaseVersion,
-    firstRun: true,
-  };
+  return { firstRun: true };
 }
