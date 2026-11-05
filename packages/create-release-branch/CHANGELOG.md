@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Show colors and progress spinners in the CLI output ([#154](https://github.com/MetaMask/release-tools/pull/154))
 - Show the CLI output in one block, with a spinner for long steps and the output of a failing Yarn step ([#159](https://github.com/MetaMask/release-tools/pull/159))
-- Show errors without a stack trace (set `DEBUG=create-release-branch:*` to see it), with their causes, and list release spec problems by line and package ([#<n>](https://github.com/MetaMask/release-tools/pull/<n>))
+- Show errors without a stack trace (set `DEBUG=create-release-branch:*` to see it), with their causes, and list release spec problems by line and package ([#160](https://github.com/MetaMask/release-tools/pull/160))
 
 ### Fixed
 
