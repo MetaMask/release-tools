@@ -2,63 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as envModule from '../../utils/env.js';
 import * as miscUtils from '../../utils/misc-utils.js';
-import { determineEditor, splitCommand } from './editor.js';
+import { determineEditor } from './editor.js';
 
 vi.mock('../../utils/env');
 vi.mock('../../utils/misc-utils');
 
 describe('editor', () => {
-  describe('splitCommand', () => {
-    it('splits the command into words at whitespace', () => {
-      expect(splitCommand('  idea  --wait\t-n ')).toStrictEqual([
-        'idea',
-        '--wait',
-        '-n',
-      ]);
-    });
-
-    it('keeps whitespace inside double quotes', () => {
-      expect(
-        splitCommand('"/Applications/My Editor/bin/edit" --wait'),
-      ).toStrictEqual(['/Applications/My Editor/bin/edit', '--wait']);
-    });
-
-    it('keeps whitespace inside single quotes', () => {
-      expect(splitCommand("'my editor' -w")).toStrictEqual(['my editor', '-w']);
-    });
-
-    it('keeps a quote of the other kind inside quotes', () => {
-      expect(splitCommand(`"it's" 'say "hi"'`)).toStrictEqual([
-        "it's",
-        'say "hi"',
-      ]);
-    });
-
-    it('joins quoted and unquoted parts that touch', () => {
-      expect(splitCommand('a"b c"d')).toStrictEqual(['ab cd']);
-    });
-
-    it('keeps empty quotes as an empty word', () => {
-      expect(splitCommand('edit ""')).toStrictEqual(['edit', '']);
-    });
-
-    it('keeps backslashes as they are', () => {
-      expect(splitCommand('C:\\Tools\\edit.exe')).toStrictEqual([
-        'C:\\Tools\\edit.exe',
-      ]);
-    });
-
-    it('returns no words for a command with only whitespace', () => {
-      expect(splitCommand(' \t ')).toStrictEqual([]);
-    });
-
-    it('throws if a quote is not closed', () => {
-      expect(() => splitCommand('"my editor --wait')).toThrow(
-        'Unclosed quote in "my editor --wait',
-      );
-    });
-  });
-
   describe('determineEditor', () => {
     it('passes the arguments in EDITOR to the editor', async () => {
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
@@ -123,9 +72,23 @@ describe('editor', () => {
       });
     });
 
-    it('falls back to VSCode if EDITOR has a quote that is not closed', async () => {
+    it('keeps variables in EDITOR as they are', async () => {
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
-        EDITOR: '"my editor --wait',
+        EDITOR: 'edit --config $HOME/edit.json',
+      });
+      vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
+        .calledWith('edit')
+        .thenResolve('/path/to/edit');
+
+      expect(await determineEditor()).toStrictEqual({
+        path: '/path/to/edit',
+        args: ['--config', '$HOME/edit.json'],
+      });
+    });
+
+    it('falls back to VSCode if EDITOR contains shell operators', async () => {
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: 'vim | cat',
       });
       const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
       vi.when(resolveExecutableMock)

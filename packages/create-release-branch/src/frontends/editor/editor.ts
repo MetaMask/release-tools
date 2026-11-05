@@ -1,3 +1,5 @@
+import { parse } from 'shell-quote';
+
 import { getEnvironmentVariables } from '../../utils/env.js';
 import { debug, resolveExecutable } from '../../utils/misc-utils.js';
 
@@ -14,58 +16,11 @@ export type Editor = {
 };
 
 /**
- * Splits a command into words at whitespace. Single or double quotes keep
- * whitespace inside a word. Other shell syntax, such as backslash escapes and
- * variables, is kept as it is.
- *
- * @param command - The command to split, such as `idea --wait`.
- * @returns The words in the command.
- * @throws If a quote is not closed.
- */
-export function splitCommand(command: string): string[] {
-  const words: string[] = [];
-  let word = '';
-  let isInWord = false;
-  let quote: string | null = null;
-
-  for (const character of command) {
-    if (quote !== null) {
-      if (character === quote) {
-        quote = null;
-      } else {
-        word += character;
-      }
-    } else if (character === '"' || character === "'") {
-      quote = character;
-      isInWord = true;
-    } else if (/\s/u.test(character)) {
-      if (isInWord) {
-        words.push(word);
-        word = '';
-        isInWord = false;
-      }
-    } else {
-      word += character;
-      isInWord = true;
-    }
-  }
-
-  if (quote !== null) {
-    throw new Error(`Unclosed quote in ${command}`);
-  }
-
-  if (isInWord) {
-    words.push(word);
-  }
-
-  return words;
-}
-
-/**
  * Looks for an executable that represents a code editor on your computer. Tries
  * the `EDITOR` environment variable first, falling back to the executable that
  * represents VSCode (`code`). `EDITOR` can contain arguments, such as
- * `idea --wait`.
+ * `idea --wait`, and is split like a shell would split it (quote paths that
+ * contain spaces or backslashes).
  *
  * @returns A promise that contains information about the found editor (path and
  * arguments), or null otherwise.
@@ -73,13 +28,22 @@ export function splitCommand(command: string): string[] {
 export async function determineEditor(): Promise<Editor | null> {
   const { EDITOR } = getEnvironmentVariables();
 
-  if (EDITOR !== undefined && EDITOR.trim() !== '') {
+  if (EDITOR !== undefined) {
     try {
-      const [executable, ...args] = splitCommand(EDITOR);
-      const executablePath = await resolveExecutable(executable);
+      // Variables are kept as they are, and a value with shell operators (such
+      // as `|`) is not a single command, so it is ignored.
+      const words = parse(EDITOR, (name) => `$${name}`);
+      const [executable, ...args] = words;
 
-      if (executablePath !== null) {
-        return { path: executablePath, args };
+      if (
+        typeof executable === 'string' &&
+        args.every((arg): arg is string => typeof arg === 'string')
+      ) {
+        const executablePath = await resolveExecutable(executable);
+
+        if (executablePath !== null) {
+          return { path: executablePath, args };
+        }
       }
     } catch (error) {
       debug(
