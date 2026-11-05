@@ -194,18 +194,6 @@ packages:
 `.trimStart(),
       );
     });
-
-    it('throws for a mode that has no release spec template', async () => {
-      await expect(
-        generateReleaseSpecificationTemplateForMonorepo({
-          modeName: 'changesets',
-          candidates: [{ name: 'a', currentVersion: '1.0.0', kind: 'changes' }],
-          isEditorAvailable: true,
-        }),
-      ).rejects.toThrow(
-        'Could not generate release specification: There is no release spec template for the "changesets" mode.',
-      );
-    });
   });
 
   describe('waitForUserToEditReleaseSpecification', () => {

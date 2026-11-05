@@ -35,7 +35,7 @@ type TemplateText = {
   noCandidatesMessage: string;
 };
 
-const TEMPLATE_TEXT_BY_MODE: { legacy: TemplateText } = {
+const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
   legacy: {
     instructions: `
 # This file (called the "release spec") allows you to specify which packages you
@@ -86,7 +86,6 @@ const TEMPLATE_TEXT_BY_MODE: { legacy: TemplateText } = {
  * @param args.isEditorAvailable - Whether or not an executable can be found on
  * the user's computer to edit the release spec once it is generated.
  * @returns The release specification template.
- * @throws If the mode has no release spec template.
  */
 export async function generateReleaseSpecificationTemplateForMonorepo({
   modeName,
@@ -97,12 +96,6 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
   candidates: Candidate[];
   isEditorAvailable: boolean;
 }): Promise<string> {
-  if (modeName !== 'legacy') {
-    throw new Error(
-      `Could not generate release specification: There is no release spec template for the "${modeName}" mode.`,
-    );
-  }
-
   const templateText = TEMPLATE_TEXT_BY_MODE[modeName];
   const afterEditingInstructions = isEditorAvailable
     ? templateText.afterEditingWithEditor

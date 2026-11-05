@@ -60,7 +60,8 @@ describe('initial-parameters', () => {
         reset: true,
         releaseType: 'ordinary',
         defaultBranch: 'main',
-        interactive: false,
+        modeName: 'legacy',
+        frontEndName: 'editor',
         port: 3000,
         formatter: 'prettier',
       });
@@ -289,6 +290,68 @@ describe('initial-parameters', () => {
       });
 
       expect(initialParameters.releaseType).toBe('ordinary');
+    });
+
+    it('returns initial parameters including a frontEndName of "ui", derived from a command-line argument of "--interactive true"', async () => {
+      const project = buildMockProject();
+      const output = createNoopCliOutput();
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+        .calledWith(['arg1', 'arg2'])
+        .thenResolve({
+          projectDirectory: '/path/to/project',
+          tempDirectory: '/path/to/temp',
+          reset: false,
+          backport: false,
+          defaultBranch: 'main',
+          interactive: true,
+          port: 3000,
+          formatter: 'prettier',
+        });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
+      vi.when(vi.spyOn(projectModule, 'readProject'))
+        .calledWith('/path/to/project', { output })
+        .thenResolve(project);
+
+      const initialParameters = await determineInitialParameters({
+        argv: ['arg1', 'arg2'],
+        cwd: '/path/to/somewhere',
+        output,
+      });
+
+      expect(initialParameters.frontEndName).toBe('ui');
+    });
+
+    it('returns initial parameters including a frontEndName of "editor", derived from a command-line argument of "--interactive false"', async () => {
+      const project = buildMockProject();
+      const output = createNoopCliOutput();
+      vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
+        .calledWith(['arg1', 'arg2'])
+        .thenResolve({
+          projectDirectory: '/path/to/project',
+          tempDirectory: '/path/to/temp',
+          reset: false,
+          backport: false,
+          defaultBranch: 'main',
+          interactive: false,
+          port: 3000,
+          formatter: 'prettier',
+        });
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: undefined,
+      });
+      vi.when(vi.spyOn(projectModule, 'readProject'))
+        .calledWith('/path/to/project', { output })
+        .thenResolve(project);
+
+      const initialParameters = await determineInitialParameters({
+        argv: ['arg1', 'arg2'],
+        cwd: '/path/to/somewhere',
+        output,
+      });
+
+      expect(initialParameters.frontEndName).toBe('editor');
     });
   });
 });

@@ -36,7 +36,8 @@ describe('main', () => {
       reset: true,
       defaultBranch: 'main',
       releaseType: 'backport',
-      interactive: false,
+      modeName: 'legacy',
+      frontEndName: 'editor',
       port: 3000,
       formatter: 'prettier',
     });
@@ -80,7 +81,8 @@ describe('main', () => {
       reset: true,
       defaultBranch: 'main',
       releaseType: 'backport',
-      interactive: true,
+      modeName: 'legacy',
+      frontEndName: 'ui',
       port: 3000,
       formatter: 'prettier',
     });
@@ -118,7 +120,8 @@ describe('main', () => {
       reset: false,
       defaultBranch: 'main',
       releaseType: 'backport',
-      interactive: false,
+      modeName: 'legacy',
+      frontEndName: 'editor',
       port: 3000,
       formatter: 'prettier',
     });
