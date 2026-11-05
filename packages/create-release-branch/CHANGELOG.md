@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Open the editor on the release spec without a shell, so paths with spaces or shell characters are passed as-is ([#156](https://github.com/MetaMask/release-tools/pull/156))
+- Support editor commands with arguments in `EDITOR`, such as `idea --wait` ([#<n>](https://github.com/MetaMask/release-tools/pull/<n>))
 
 ## [4.2.4]
 
