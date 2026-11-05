@@ -291,6 +291,8 @@ type CliArguments = {
   remote: string;
   baseBranch?: string;
   currentPr?: string;
+  allowMissingUnreleasedSection: boolean;
+  removeEmptyUnreleasedSection: boolean;
   _: (string | number)[];
   $0: string;
 };
@@ -352,6 +354,8 @@ async function runCommand({
     remote,
     baseBranch,
     currentPr,
+    allowMissingUnreleasedSection,
+    removeEmptyUnreleasedSection,
   } = argv;
   let { currentVersion } = argv;
   let { tagPrefix } = argv;
@@ -503,6 +507,8 @@ async function runCommand({
       remote,
       ...(baseBranch !== undefined && { baseBranch }),
       ...(currentPr !== undefined && { currentPr }),
+      allowMissingUnreleasedSection,
+      removeEmptyUnreleasedSection,
     });
   } else if (command === 'init') {
     await init({
@@ -687,6 +693,18 @@ async function main(): Promise<void> {
               'Verify that each changelog entry has one or more links to associated pull requests within the repository',
             type: 'boolean',
           })
+          .option('allowMissingUnreleasedSection', {
+            default: false,
+            description:
+              'Allow the Unreleased section to be missing. Meant for changelogs managed with Changesets, which do not use an Unreleased section.',
+            type: 'boolean',
+          })
+          .option('removeEmptyUnreleasedSection', {
+            default: false,
+            description:
+              'Expect an empty Unreleased section to be omitted, so that --fix removes it. Meant for changelogs managed with Changesets. Requires --allowMissingUnreleasedSection.',
+            type: 'boolean',
+          })
           // Dependency bump checking options
           .option('checkDeps', {
             default: false,
@@ -765,6 +783,17 @@ async function main(): Promise<void> {
 
     return changelog;
   };
+
+  if (command === 'validate') {
+    if (
+      argv.removeEmptyUnreleasedSection &&
+      !argv.allowMissingUnreleasedSection
+    ) {
+      return error(
+        '--removeEmptyUnreleasedSection requires --allowMissingUnreleasedSection.',
+      );
+    }
+  }
 
   if (all) {
     return await runCommandOnAllPackages({ argv, command, formatter });

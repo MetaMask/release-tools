@@ -144,6 +144,18 @@ type ValidateChangelogOptions = {
    * in the `currentVersion` release section; otherwise the Unreleased section.
    */
   dependencyCheckResult?: DependencyCheckResult;
+  /**
+   * Whether the Unreleased section and its link reference definition may be
+   * missing. Set this to `true` for changelogs managed with Changesets, which
+   * do not use an Unreleased section. Defaults to `false`.
+   */
+  allowMissingUnreleasedSection?: boolean;
+  /**
+   * Whether an empty Unreleased section and its link reference definition must
+   * be omitted. This is meant for changelogs managed with Changesets, and
+   * requires `allowMissingUnreleasedSection`. Defaults to `false`.
+   */
+  removeEmptyUnreleasedSection?: boolean;
 };
 
 /**
@@ -183,6 +195,13 @@ function normalizeLineEndings(value: string): string {
  * entries corresponding to each dependency bump. If `versionChanged` is true,
  * entries are checked in the `currentVersion` release section; otherwise the
  * Unreleased section.
+ * @param options.allowMissingUnreleasedSection - Whether the Unreleased
+ * section and its link reference definition may be missing. Set this to `true`
+ * for changelogs managed with Changesets. Defaults to `false`.
+ * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
+ * section and its link reference definition must be omitted. This is meant
+ * for changelogs managed with Changesets, and requires
+ * `allowMissingUnreleasedSection`. Defaults to `false`.
  * @throws `InvalidChangelogError` - Will throw if the changelog is invalid
  * @throws `MissingCurrentVersionError` - Will throw if `isReleaseCandidate` is
  * `true` and the changelog is missing the release header for the current
@@ -196,6 +215,8 @@ function normalizeLineEndings(value: string): string {
  * request link.
  * @throws `MissingDependencyEntriesError` if dependency changes are provided
  * but the changelog is missing entries for them.
+ * @throws `Error` if `removeEmptyUnreleasedSection` is `true` and
+ * `allowMissingUnreleasedSection` is not `true`.
  */
 export async function validateChangelog({
   changelogContent,
@@ -207,7 +228,15 @@ export async function validateChangelog({
   packageRename,
   ensureValidPrLinksPresent,
   dependencyCheckResult,
+  allowMissingUnreleasedSection = false,
+  removeEmptyUnreleasedSection = false,
 }: ValidateChangelogOptions): Promise<void> {
+  if (removeEmptyUnreleasedSection && !allowMissingUnreleasedSection) {
+    throw new Error(
+      'The removeEmptyUnreleasedSection option requires allowMissingUnreleasedSection: a changelog without an Unreleased section is otherwise invalid.',
+    );
+  }
+
   const normalizedChangelogContent = normalizeLineEndings(changelogContent);
   const changelog = parseChangelog({
     changelogContent: normalizedChangelogContent,
@@ -218,6 +247,8 @@ export async function validateChangelog({
     ...(ensureValidPrLinksPresent !== undefined && {
       shouldExtractPrLinks: ensureValidPrLinksPresent,
     }),
+    allowMissingUnreleasedSection,
+    removeEmptyUnreleasedSection,
   });
 
   validateReleaseCandidateState(changelog, isReleaseCandidate, currentVersion);

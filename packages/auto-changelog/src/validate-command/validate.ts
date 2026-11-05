@@ -67,6 +67,17 @@ export type ValidateOptions = {
    * PR number to use when fixing missing dependency entries.
    */
   currentPr?: string;
+  /**
+   * Whether the Unreleased section may be missing. Set this to `true` for
+   * changelogs managed with Changesets. Defaults to `false`.
+   */
+  allowMissingUnreleasedSection?: boolean;
+  /**
+   * Whether an empty Unreleased section must be omitted, so that fixing
+   * removes it. This is meant for changelogs managed with Changesets, and
+   * requires `allowMissingUnreleasedSection`. Defaults to `false`.
+   */
+  removeEmptyUnreleasedSection?: boolean;
 };
 
 /**
@@ -91,6 +102,10 @@ export type ValidateOptions = {
  * @param options.remote - Remote name for auto-detection.
  * @param options.baseBranch - Base branch for auto-detection.
  * @param options.currentPr - PR number to use when fixing missing entries.
+ * @param options.allowMissingUnreleasedSection - Whether the Unreleased
+ * section may be missing.
+ * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
+ * section must be omitted.
  * @returns A promise that resolves to nothing once the changelog is validated, or
  * rejects with an error if the changelog is invalid.
  */
@@ -112,7 +127,10 @@ export async function validate(options: ValidateOptions): Promise<void> {
     remote,
     baseBranch,
     currentPr,
+    allowMissingUnreleasedSection,
+    removeEmptyUnreleasedSection,
   } = options;
+
   const changelogContent = await readFile(changelogPath);
 
   let dependencyCheckResult: DependencyCheckResult | undefined;
@@ -146,6 +164,12 @@ export async function validate(options: ValidateOptions): Promise<void> {
       ...(packageRename !== undefined && { packageRename }),
       ensureValidPrLinksPresent,
       ...(dependencyCheckResult !== undefined && { dependencyCheckResult }),
+      ...(allowMissingUnreleasedSection !== undefined && {
+        allowMissingUnreleasedSection,
+      }),
+      ...(removeEmptyUnreleasedSection !== undefined && {
+        removeEmptyUnreleasedSection,
+      }),
     });
   } catch (caughtError) {
     if (caughtError instanceof ChangelogFormattingError) {

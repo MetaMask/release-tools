@@ -324,4 +324,165 @@ describe('Changelog', () => {
       expect(changes[ChangeCategory.Changed]?.[0].description).toBe('Updated');
     });
   });
+
+  describe('when removeEmptyUnreleasedSection is true', () => {
+    const repoUrl =
+      'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
+
+    it('omits an empty Unreleased section and its link reference', async () => {
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
+      changelog.addRelease({ version: '1.0.0' });
+      changelog.addChange({
+        version: '1.0.0',
+        category: ChangeCategory.Added,
+        description: 'Initial',
+      });
+
+      const result = await changelog.toString();
+
+      expect(result).not.toContain('## [Unreleased]');
+      expect(result).not.toContain('[Unreleased]:');
+      expect(result).toContain(
+        '[1.0.0]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/releases/tag/v1.0.0',
+      );
+      expect(result).toStrictEqual(outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [1.0.0]
+        ### Added
+        - Initial
+
+        [1.0.0]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/releases/tag/v1.0.0
+      `);
+    });
+
+    it('keeps a non-empty Unreleased section with its link reference', async () => {
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
+      changelog.addRelease({ version: '1.0.0' });
+      changelog.addChange({
+        version: '1.0.0',
+        category: ChangeCategory.Added,
+        description: 'Initial',
+      });
+      changelog.addChange({
+        category: ChangeCategory.Fixed,
+        description: 'Fix something',
+      });
+
+      const result = await changelog.toString();
+
+      expect(result).toContain('## [Unreleased]');
+      expect(result).toContain(
+        '[Unreleased]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/compare/v1.0.0...HEAD',
+      );
+    });
+
+    it('writes only the title and description when there are no releases and no unreleased changes', async () => {
+      const changelog = new Changelog({
+        repoUrl: 'fake://metamask.io',
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(await changelog.toString()).toBe(`# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+`);
+    });
+
+    it('merges legacy Unreleased changes into a release added by Changesets', async () => {
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
+      changelog.addRelease({ version: '1.0.0' });
+      changelog.addChange({
+        version: '1.0.0',
+        category: ChangeCategory.Added,
+        description: 'Initial release',
+      });
+      changelog.addRelease({ version: '1.1.0' });
+      changelog.addChange({
+        version: '1.1.0',
+        category: ChangeCategory.Changed,
+        description: 'New change',
+      });
+      changelog.addChange({
+        version: '1.1.0',
+        category: ChangeCategory.Added,
+        description: 'New feature',
+      });
+      changelog.addChange({
+        category: ChangeCategory.Fixed,
+        description: 'Legacy fix',
+      });
+      changelog.addChange({
+        category: ChangeCategory.Added,
+        description: 'Legacy feature',
+      });
+
+      changelog.migrateUnreleasedChangesToRelease('1.1.0');
+
+      expect(await changelog.toString()).toStrictEqual(outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [1.1.0]
+        ### Added
+        - Legacy feature
+        - New feature
+
+        ### Changed
+        - New change
+
+        ### Fixed
+        - Legacy fix
+
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [1.1.0]: ${repoUrl}/compare/v1.0.0...v1.1.0
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+    });
+
+    it('regenerates links for renamed packages without Unreleased', async () => {
+      const changelog = new Changelog({
+        repoUrl,
+        tagPrefix: '@metamask/test@',
+        packageRename: {
+          versionBeforeRename: '0.0.2',
+          tagPrefixBeforeRename: 'test@',
+        },
+        removeEmptyUnreleasedSection: true,
+      });
+      changelog.addRelease({ version: '0.0.1' });
+      changelog.addRelease({ version: '0.0.2' });
+      changelog.addRelease({ version: '1.0.0' });
+
+      const result = await changelog.toString();
+
+      expect(result).not.toContain('[Unreleased]:');
+      expect(result).toContain(outdent`
+        [1.0.0]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/compare/test@0.0.2...@metamask/test@1.0.0
+        [0.0.2]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/compare/test@0.0.1...test@0.0.2
+        [0.0.1]: https://github.com/ExampleUsernameOrOrganization/ExampleRepository/releases/tag/test@0.0.1
+      `);
+    });
+  });
 });
