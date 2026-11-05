@@ -1,4 +1,4 @@
-import { log, spinner, taskLog } from '@clack/prompts';
+import { cancel, log, spinner, taskLog } from '@clack/prompts';
 import { Writable } from 'node:stream';
 import { stripVTControlCharacters, styleText } from 'node:util';
 
@@ -13,6 +13,10 @@ import { stripVTControlCharacters, styleText } from 'node:util';
  * out.
  * @property warn - Writes a warning to standard error.
  * @property error - Writes an error to standard error.
+ * @property failure - Writes the error that stopped the run, with lines of
+ * details, and ends the output, to standard error.
+ * @property format - Styles parts of the text for standard error: `name` for
+ * names, such as package names, and `dim` for secondary text.
  * @property step - Runs a long-running action and returns its result.
  * @property task - Runs a long-running action that prints lines of output,
  * such as a command, and returns its result. The lines are shown only while
@@ -23,6 +27,8 @@ export type CliOutput = {
   success(text: string): void;
   warn(text: string): void;
   error(text: string): void;
+  failure(title: string, lines: string[]): void;
+  format: { name(text: string): string; dim(text: string): string };
   step<Result>(label: string, run: () => Promise<Result>): Promise<Result>;
   task<Result>(
     label: string,
@@ -198,6 +204,17 @@ export function createCliOutput({
     },
     error(text) {
       log.error(trimTrailingNewlines(text), toStderr);
+    },
+    failure(title, lines) {
+      log.error(title, toStderr);
+      log.message(lines, toStderr);
+      cancel('No release was created.', toStderr);
+    },
+    format: {
+      name: (text) =>
+        styled.stderr ? styleText('cyan', text, { stream: stderr }) : text,
+      dim: (text) =>
+        styled.stderr ? styleText('dim', text, { stream: stderr }) : text,
     },
     async step(label, run) {
       if (!animate) {

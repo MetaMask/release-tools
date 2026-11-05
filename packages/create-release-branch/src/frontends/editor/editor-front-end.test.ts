@@ -1093,8 +1093,10 @@ describe('editor-front-end', () => {
             {
               errors: [
                 {
-                  message: '"foo" is not a package in the project',
+                  packageName: 'foo',
                   entryIndex: 0,
+                  problem: 'is not a package in the project',
+                  hint: 'Check the name, or remove the line.',
                 },
               ],
               dependencyFindings: {},

@@ -1,5 +1,4 @@
 import { diff } from 'semver';
-import YAML from 'yaml';
 
 import type { Package } from '../project/package.js';
 import type { Project } from '../project/project.js';
@@ -48,13 +47,17 @@ export type DependencyFinding = {
 /**
  * A problem with the release choices.
  *
- * @property message - The message, as a single string or as separate lines.
+ * @property packageName - The name of the package that the problem is about.
  * @property entryIndex - The index of the choice in `Object.entries(choices)`,
  * for problems that point at a single entry.
+ * @property problem - What is wrong, written to follow the package name.
+ * @property hint - How to fix it.
  */
 export type ReleaseChoiceError = {
-  message: string | string[];
+  packageName?: string;
   entryIndex?: number;
+  problem: string;
+  hint?: string;
 };
 
 /**
@@ -209,29 +212,6 @@ function findCandidateDependencies(
 }
 
 /**
- * Builds the YAML example, indented for an error message, that lists the
- * given packages with the "intentionally-skip" directive.
- *
- * @param packageNames - The names of the packages to list.
- * @returns The indented YAML example.
- */
-function buildIntentionallySkipExample(packageNames: string[]): string {
-  return YAML.stringify({
-    packages: packageNames.reduce(
-      (object, packageName) => ({
-        ...object,
-        [packageName]: INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE,
-      }),
-      {},
-    ),
-  })
-    .trim()
-    .split('\n')
-    .map((line) => `    ${line}`)
-    .join('\n');
-}
-
-/**
  * Checks the release choices against the project: the names of the packages,
  * the version specifiers, and the dependencies and dependents that must be
  * released with them.
@@ -270,8 +250,10 @@ export function checkReleaseChoices(
 
       if (changedPackage === undefined) {
         errors.push({
-          message: `${JSON.stringify(changedPackageName)} is not a package in the project`,
+          packageName: changedPackageName,
           entryIndex,
+          problem: 'is not a package in the project',
+          hint: 'Check the name, or remove the line.',
         });
       }
 
@@ -282,37 +264,32 @@ export function checkReleaseChoices(
         !isValidSemver(versionSpecifierOrDirective)
       ) {
         errors.push({
-          message: [
-            `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-            `(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")`,
-          ],
+          packageName: changedPackageName,
           entryIndex,
+          problem: `"${String(versionSpecifierOrDirective)}" is not a valid version specifier`,
+          hint: 'Use major, minor, patch, or a version like 1.2.3.',
         });
       }
 
       if (isValidSemver(versionSpecifierOrDirective)) {
+        const currentVersion = changedPackage.validatedManifest.version;
         const comparison = new SemVer(versionSpecifierOrDirective).compare(
-          changedPackage.validatedManifest.version,
+          currentVersion,
         );
 
         if (comparison === 0) {
           errors.push({
-            message: [
-              `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-              `("${changedPackageName}" is already at version "${versionSpecifierOrDirective}")`,
-            ],
+            packageName: changedPackageName,
             entryIndex,
+            problem: `is already at version ${versionSpecifierOrDirective}`,
+            hint: 'Use a higher version, or major, minor, or patch.',
           });
         } else if (comparison < 0) {
           errors.push({
-            message: [
-              `${JSON.stringify(versionSpecifierOrDirective)} is not a valid version specifier for package "${changedPackageName}"`,
-              `("${changedPackageName}" is at a greater version "${String(
-                project.workspacePackages[changedPackageName].validatedManifest
-                  .version,
-              )}")`,
-            ],
+            packageName: changedPackageName,
             entryIndex,
+            problem: `"${versionSpecifierOrDirective}" is lower than the current version ${String(currentVersion)}`,
+            hint: 'Use a higher version, or major, minor, or patch.',
           });
         }
       }
@@ -328,15 +305,9 @@ export function checkReleaseChoices(
 
       if (missingDirectDependentNames.length > 0) {
         errors.push({
-          message: [
-            `The following direct dependents of package '${changedPackageName}', which is being released with a major version bump, are missing from the release spec.`,
-            missingDirectDependentNames
-              .map((dependent) => `  - ${dependent}`)
-              .join('\n'),
-            `  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.`,
-            `  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:`,
-            buildIntentionallySkipExample(missingDirectDependentNames),
-          ].join('\n\n'),
+          packageName: changedPackageName,
+          problem: `has a major bump, but its direct dependents are not in the release spec: ${missingDirectDependentNames.join(', ')}`,
+          hint: 'Add them to the release spec, or set them to intentionally-skip.',
         });
       }
 
@@ -351,15 +322,9 @@ export function checkReleaseChoices(
 
       if (missingPeerDependentNames.length > 0) {
         errors.push({
-          message: [
-            `The following dependents of package '${changedPackageName}', which is being released with a major version bump, are missing from the release spec.`,
-            missingPeerDependentNames
-              .map((dependent) => `  - ${dependent}`)
-              .join('\n'),
-            `  Consider including them in the release spec so that they are compatible with the new '${changedPackageName}' version.`,
-            `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
-            buildIntentionallySkipExample(missingPeerDependentNames),
-          ].join('\n\n'),
+          packageName: changedPackageName,
+          problem: `has a major bump, but its peer dependents are not in the release spec: ${missingPeerDependentNames.join(', ')}`,
+          hint: 'Add them so they stay compatible, or set them to intentionally-skip if they can wait.',
         });
       }
 
@@ -372,15 +337,9 @@ export function checkReleaseChoices(
 
       if (missingDependencies.length > 0) {
         errors.push({
-          message: [
-            `The following packages, which are dependencies or peer dependencies of the package '${changedPackageName}' being released, are missing from the release spec.`,
-            missingDependencies
-              .map((dependency) => `  - ${dependency}`)
-              .join('\n'),
-            `  These packages may have changes that '${changedPackageName}' relies upon. Consider including them in the release spec.`,
-            `  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:`,
-            buildIntentionallySkipExample(missingDependencies),
-          ].join('\n\n'),
+          packageName: changedPackageName,
+          problem: `depends on packages with unreleased changes that are not in the release spec: ${missingDependencies.join(', ')}`,
+          hint: 'Add them to the release spec, or set them to intentionally-skip if they can wait.',
         });
       }
 
