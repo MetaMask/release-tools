@@ -1,43 +1,43 @@
 import YAML from 'yaml';
 
-import type { Candidate } from './core/candidates.js';
-import { SKIP_PACKAGE_DIRECTIVE } from './core/release-rules.js';
+import type { Candidate } from '../../core/candidates.js';
+import type { ModeName } from '../../core/mode.js';
+import { SKIP_PACKAGE_DIRECTIVE } from '../../core/release-rules.js';
 import type {
   ReleaseChoiceError,
   ReleaseChoices,
-} from './core/release-rules.js';
+} from '../../core/release-rules.js';
+import { readFile } from '../../utils/fs.js';
+import {
+  debug,
+  wrapError,
+  isObject,
+  runCommand,
+} from '../../utils/misc-utils.js';
 import { Editor } from './editor.js';
-import { readFile } from './utils/fs.js';
-import { debug, wrapError, isObject, runCommand } from './utils/misc-utils.js';
 
 /**
- * Generates a skeleton for a release specification, which describes how a
- * project should be updated.
+ * The text of the release spec template that depends on the release mode.
  *
- * @param args - The set of arguments to this function.
- * @param args.candidates - The packages to list in the release spec.
- * @param args.isEditorAvailable - Whether or not an executable can be found on
- * the user's computer to edit the release spec once it is generated.
- * @returns The release specification template.
+ * @property instructions - The comments at the top of the template, before
+ * the instructions for when the user has finished editing.
+ * @property afterEditingWithEditor - What happens once the user closes the
+ * editor.
+ * @property afterEditingWithoutEditor - What the user does once they have
+ * edited the file in their own editor.
+ * @property noCandidatesMessage - The error message when there are no
+ * packages to list.
  */
-export async function generateReleaseSpecificationTemplateForMonorepo({
-  candidates,
-  isEditorAvailable,
-}: {
-  candidates: Candidate[];
-  isEditorAvailable: boolean;
-}): Promise<string> {
-  const afterEditingInstructions = isEditorAvailable
-    ? `
-# When you're finished, save this file and close it. The tool will update the
-# versions of the packages you've listed and will move the changelog entries to
-# a new section.`.trim()
-    : `
-# When you're finished, save this file and then run create-release-branch again.
-# The tool will update the versions of the packages you've listed and will move
-# the changelog entries to a new section.`.trim();
+type TemplateText = {
+  instructions: string;
+  afterEditingWithEditor: string;
+  afterEditingWithoutEditor: string;
+  noCandidatesMessage: string;
+};
 
-  const instructions = `
+const TEMPLATE_TEXT_BY_MODE: { legacy: TemplateText } = {
+  legacy: {
+    instructions: `
 # This file (called the "release spec") allows you to specify which packages you
 # want to include in this release along with the new versions they should
 # receive.
@@ -61,14 +61,59 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
 # - "minor" (if you want to bump the minor part of the package's version)
 # - "patch" (if you want to bump the patch part of the package's version)
 # - an exact version with major, minor, and patch parts (e.g. "1.2.3")
-#
-${afterEditingInstructions}
-  `.trim();
+#`.trim(),
+    afterEditingWithEditor: `
+# When you're finished, save this file and close it. The tool will update the
+# versions of the packages you've listed and will move the changelog entries to
+# a new section.`.trim(),
+    afterEditingWithoutEditor: `
+# When you're finished, save this file and then run create-release-branch again.
+# The tool will update the versions of the packages you've listed and will move
+# the changelog entries to a new section.`.trim(),
+    noCandidatesMessage:
+      'Could not generate release specification: There are no packages that have changed since their latest release.',
+  },
+};
+
+/**
+ * Generates a skeleton for a release specification, which describes how a
+ * project should be updated.
+ *
+ * @param args - The set of arguments to this function.
+ * @param args.modeName - The name of the release mode, which picks the
+ * instructions and the error message when there are no packages.
+ * @param args.candidates - The packages to list in the release spec.
+ * @param args.isEditorAvailable - Whether or not an executable can be found on
+ * the user's computer to edit the release spec once it is generated.
+ * @returns The release specification template.
+ * @throws If the mode has no release spec template.
+ */
+export async function generateReleaseSpecificationTemplateForMonorepo({
+  modeName,
+  candidates,
+  isEditorAvailable,
+}: {
+  modeName: ModeName;
+  candidates: Candidate[];
+  isEditorAvailable: boolean;
+}): Promise<string> {
+  if (modeName !== 'legacy') {
+    throw new Error(
+      `Could not generate release specification: There is no release spec template for the "${modeName}" mode.`,
+    );
+  }
+
+  const templateText = TEMPLATE_TEXT_BY_MODE[modeName];
+  const afterEditingInstructions = isEditorAvailable
+    ? templateText.afterEditingWithEditor
+    : templateText.afterEditingWithoutEditor;
+  const instructions = [
+    templateText.instructions,
+    afterEditingInstructions,
+  ].join('\n');
 
   if (candidates.length === 0) {
-    throw new Error(
-      'Could not generate release specification: There are no packages that have changed since their latest release.',
-    );
+    throw new Error(templateText.noCandidatesMessage);
   }
 
   const packages = candidates.reduce((obj, candidate) => {
@@ -124,7 +169,7 @@ export async function validateReleaseSpecification<Plan>(
   releaseSpecificationPath: string,
   check: (
     choices: ReleaseChoices,
-  ) => Promise<{ errors: ReleaseChoiceError[]; plan?: Plan }>,
+  ) => Promise<{ errors: ReleaseChoiceError[] } | { plan: Plan }>,
 ): Promise<Plan> {
   const releaseSpecificationContents = await readFile(releaseSpecificationPath);
   const indexOfFirstUsableLine = releaseSpecificationContents
@@ -167,18 +212,16 @@ export async function validateReleaseSpecification<Plan>(
     throw new Error(message);
   }
 
-  const { errors: choiceErrors, plan } = await check(
-    unvalidatedReleaseSpecification.packages,
-  );
-  const errors = choiceErrors.map(({ message, entryIndex }) => ({
-    message,
-    lineNumber:
-      entryIndex === undefined
-        ? undefined
-        : indexOfFirstUsableLine + entryIndex + 2,
-  }));
+  const result = await check(unvalidatedReleaseSpecification.packages);
 
-  if (plan === undefined) {
+  if (!('plan' in result)) {
+    const errors = result.errors.map(({ message, entryIndex }) => ({
+      message,
+      lineNumber:
+        entryIndex === undefined
+          ? undefined
+          : indexOfFirstUsableLine + entryIndex + 2,
+    }));
     const message = [
       'Your release spec could not be processed due to the following issues:',
       errors
@@ -210,5 +253,5 @@ export async function validateReleaseSpecification<Plan>(
     throw new Error(message);
   }
 
-  return plan;
+  return result.plan;
 }

@@ -1,8 +1,9 @@
 import type { WriteStream } from 'fs';
 
 import { createCliOutput } from './core/cli-output.js';
+import { createEditorFrontEnd } from './frontends/editor/editor-front-end.js';
 import { determineInitialParameters } from './initial-parameters.js';
-import { followMonorepoWorkflow } from './monorepo-workflow-operations.js';
+import { createLegacyMode } from './modes/legacy/legacy-mode.js';
 import { startUI } from './ui.js';
 
 /**
@@ -55,13 +56,16 @@ export async function main({
         output,
       });
     } else {
-      await followMonorepoWorkflow({
+      const mode = createLegacyMode({
         project,
-        tempDirectoryPath,
-        firstRemovingExistingReleaseSpecification: reset,
-        releaseType,
         defaultBranch,
         formatter,
+        output,
+      });
+      await createEditorFrontEnd({ tempDirectoryPath, reset }).run({
+        project,
+        mode,
+        releaseType,
         output,
       });
     }
