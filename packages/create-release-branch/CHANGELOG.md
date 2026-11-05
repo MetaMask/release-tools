@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Show colors and progress spinners in the CLI output ([#154](https://github.com/MetaMask/release-tools/pull/154))
+- Show the CLI output in one block, with a spinner for long steps and the output of a failing Yarn step ([#<n>](https://github.com/MetaMask/release-tools/pull/<n>))
 
 ### Fixed
 

@@ -440,7 +440,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@clack/prompts@npm:^1.7.0":
+"@clack/prompts@npm:^1.7.0, @clack/prompts@npm:^1.8.1":
   version: 1.8.1
   resolution: "@clack/prompts@npm:1.8.1"
   dependencies:
@@ -1069,6 +1069,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@metamask/create-release-branch@workspace:packages/create-release-branch"
   dependencies:
+    "@clack/prompts": "npm:^1.8.1"
     "@metamask/action-utils": "npm:^2.0.0"
     "@metamask/auto-changelog": "npm:^7.1.0"
     "@metamask/utils": "npm:^11.12.0"
@@ -1085,14 +1086,12 @@ __metadata:
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitejs/plugin-react": "npm:^6.1.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
-    chalk: "npm:^5.6.2"
     debug: "npm:^4.3.4"
     deepmerge: "npm:^4.2.2"
     execa: "npm:^8.0.1"
     express: "npm:^4.21.2"
     nanoid: "npm:^3.3.4"
     open: "npm:^10.1.0"
-    ora: "npm:^9.4.1"
     oxfmt: "npm:^0.45.0"
     pony-cause: "npm:^2.1.9"
     prettier: "npm:^3.3.3"

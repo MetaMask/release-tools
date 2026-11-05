@@ -249,7 +249,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data()).toStrictEqual(['Release error: Error: boom\n']);
+        expect(stderr.data().join('')).toContain('Release error: Error: boom');
       });
     });
 
@@ -320,12 +320,15 @@ describe('server', () => {
         expect(apply).toHaveBeenCalledWith(plan, '2.0.0');
         expect(yarnCommandsModule.fixConstraints).toHaveBeenCalledWith(
           '/path/to/project',
+          expect.any(Function),
         );
         expect(yarnCommandsModule.updateYarnLockfile).toHaveBeenCalledWith(
           '/path/to/project',
+          expect.any(Function),
         );
         expect(yarnCommandsModule.deduplicateDependencies).toHaveBeenCalledWith(
           '/path/to/project',
+          expect.any(Function),
         );
         expect(repoModule.commitAllChanges).toHaveBeenCalledWith(
           '/path/to/project',
@@ -396,7 +399,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data()).toStrictEqual(['Release error: Error: boom\n']);
+        expect(stderr.data().join('')).toContain('Release error: Error: boom');
         expect(closeServer).not.toHaveBeenCalled();
       });
     });
@@ -441,7 +444,9 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data()).toStrictEqual(['Changelog error: Error: boom\n']);
+        expect(stderr.data().join('')).toContain(
+          'Changelog error: Error: boom',
+        );
       });
     });
   });
@@ -466,8 +471,8 @@ describe('server', () => {
 
       const running = createUIFrontEnd({ port }).run(context);
       await vi.waitFor(() => {
-        expect(stdout.data()).toContain(
-          `\nUI server running at http://localhost:${port}\n`,
+        expect(stdout.data().join('')).toContain(
+          `UI server running at http://localhost:${port}`,
         );
       });
       const response = await postChoices(
@@ -478,11 +483,9 @@ describe('server', () => {
 
       expect(await response.json()).toStrictEqual({ status: 'success' });
       expect(openBrowser).toHaveBeenCalledWith(`http://localhost:${port}`);
-      expect(stdout.data()).toStrictEqual([
-        `\nAttempting to open UI in browser...`,
-        `\nUI server running at http://localhost:${port}\n`,
-        'Release process completed. Server shutdown.\n',
-      ]);
+      const text = stdout.data().join('');
+      expect(text).toContain('Attempting to open UI in browser...');
+      expect(text).toContain('Release process completed. Server shutdown.');
     });
 
     it('asks to open the URL manually if the browser does not open', async () => {
@@ -509,13 +512,12 @@ describe('server', () => {
       await postChoices(`http://localhost:${port}/api/release`, {});
       await running;
 
-      expect(stderr.data()).toStrictEqual([
-        `\n---------------------------------------------------\n`,
-        `Error automatically opening browser: Error: no browser\n`,
-        `Please open the following URL manually:\n`,
-        `http://localhost:${port}\n`,
-        `---------------------------------------------------\n\n`,
-      ]);
+      const text = stderr.data().join('');
+      expect(text).toContain(
+        'Error automatically opening browser: Error: no browser',
+      );
+      expect(text).toContain('Please open the following URL manually:');
+      expect(text).toContain(`http://localhost:${port}`);
     });
 
     it('rejects if the server cannot start', async () => {
@@ -541,9 +543,9 @@ describe('server', () => {
         blocker.close();
       }
 
-      expect(stderr.data()).toStrictEqual([
-        expect.stringMatching(/^Failed to start server: .*EADDRINUSE.*\n$/u),
-      ]);
+      expect(stderr.data().join('')).toMatch(
+        /Failed to start server: .*EADDRINUSE/u,
+      );
     });
   });
 });

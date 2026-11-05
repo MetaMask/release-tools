@@ -13,18 +13,17 @@ describe('yarn-commands', () => {
   describe('fixConstraints', () => {
     it('runs "yarn constraints --fix" with the correct parameters', async () => {
       const repositoryDirectoryPath = '/path/to/repo';
-      vi.when(vi.spyOn(miscUtils, 'getStdoutFromCommand'))
-        .calledWith('yarn', ['--version'])
-        .thenResolve('2.0.0');
+      const onLine = vi.fn();
 
-      await fixConstraints(repositoryDirectoryPath);
+      await fixConstraints(repositoryDirectoryPath, onLine);
 
-      expect(miscUtils.runCommand).toHaveBeenCalledWith(
+      expect(miscUtils.runCommandWithOutput).toHaveBeenCalledWith(
         'yarn',
         ['constraints', '--fix'],
         {
           cwd: repositoryDirectoryPath,
         },
+        onLine,
       );
     });
   });
@@ -32,15 +31,17 @@ describe('yarn-commands', () => {
   describe('updateYarnLockfile', () => {
     it('runs "yarn install --no--immutable" with the correct parameters', async () => {
       const repositoryDirectoryPath = '/path/to/repo';
+      const onLine = vi.fn();
 
-      await updateYarnLockfile('/path/to/repo');
+      await updateYarnLockfile('/path/to/repo', onLine);
 
-      expect(miscUtils.runCommand).toHaveBeenCalledWith(
+      expect(miscUtils.runCommandWithOutput).toHaveBeenCalledWith(
         'yarn',
         ['install', '--no-immutable'],
         {
           cwd: repositoryDirectoryPath,
         },
+        onLine,
       );
     });
   });
@@ -48,12 +49,18 @@ describe('yarn-commands', () => {
   describe('deduplicateDependencies', () => {
     it('runs "yarn dedupe" with the correct parameters', async () => {
       const repositoryDirectoryPath = '/path/to/repo';
+      const onLine = vi.fn();
 
-      await deduplicateDependencies('/path/to/repo');
+      await deduplicateDependencies('/path/to/repo', onLine);
 
-      expect(miscUtils.runCommand).toHaveBeenCalledWith('yarn', ['dedupe'], {
-        cwd: repositoryDirectoryPath,
-      });
+      expect(miscUtils.runCommandWithOutput).toHaveBeenCalledWith(
+        'yarn',
+        ['dedupe'],
+        {
+          cwd: repositoryDirectoryPath,
+        },
+        onLine,
+      );
     });
   });
 });

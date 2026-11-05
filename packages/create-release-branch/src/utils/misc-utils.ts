@@ -1,6 +1,7 @@
-import { isObject } from '@metamask/utils';
+import { assert, isObject } from '@metamask/utils';
 import createDebug from 'debug';
 import { execa, Options } from 'execa';
+import { createInterface } from 'node:readline';
 import { ErrorWithCause } from 'pony-cause';
 import which from 'which';
 
@@ -150,6 +151,29 @@ export async function runCommand(
   options?: Options | undefined,
 ): Promise<void> {
   await execa(command, args, options);
+}
+
+/**
+ * Runs a command, passing each line of its standard out and standard error to
+ * a callback as the command prints it.
+ *
+ * @param command - The command to execute.
+ * @param args - The positional arguments to the command.
+ * @param options - The options to `execa`.
+ * @param onLine - Receives each line of output.
+ * @throws An `execa` error object if the command fails in some way.
+ * @see `execa`.
+ */
+export async function runCommandWithOutput(
+  command: string,
+  args: readonly string[],
+  options: Options,
+  onLine: (line: string) => void,
+): Promise<void> {
+  const subprocess = execa(command, args, { ...options, all: true });
+  assert(subprocess.all, 'Expected `all` to be set by the `all` option.');
+  createInterface({ input: subprocess.all }).on('line', onLine);
+  await subprocess;
 }
 
 /**

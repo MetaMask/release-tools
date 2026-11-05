@@ -1,6 +1,6 @@
 import * as execaModule from 'execa';
 import type { ExecaReturnValue } from 'execa';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as whichModule from 'which';
 
 import {
@@ -10,6 +10,7 @@ import {
   wrapError,
   resolveExecutable,
   runCommand,
+  runCommandWithOutput,
   getStdoutFromCommand,
   getLinesFromCommand,
   convertToHttpsGitHubRepositoryUrl,
@@ -182,6 +183,46 @@ describe('misc-utils', () => {
         all: true,
       });
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('runCommandWithOutput', () => {
+    beforeEach(async () => {
+      const { execa } = await vi.importActual<typeof execaModule>('execa');
+      vi.spyOn(execaModule, 'execa').mockImplementation(execa);
+    });
+
+    it('passes each output line to onLine', async () => {
+      const lines: string[] = [];
+      const args = [
+        '-e',
+        "process.stdout.write('Line 1\\nLine 2\\n'); setTimeout(() => process.stderr.write('Line 3'), 100);",
+      ];
+
+      await runCommandWithOutput(process.execPath, args, {}, (line) => {
+        lines.push(line);
+      });
+
+      expect(execaModule.execa).toHaveBeenCalledWith(process.execPath, args, {
+        all: true,
+      });
+      expect(lines).toStrictEqual(['Line 1', 'Line 2', 'Line 3']);
+    });
+
+    it('rejects when the command fails', async () => {
+      const lines: string[] = [];
+
+      await expect(
+        runCommandWithOutput(
+          process.execPath,
+          ['-e', "console.log('Some output'); process.exit(1);"],
+          {},
+          (line) => {
+            lines.push(line);
+          },
+        ),
+      ).rejects.toThrow('Command failed with exit code 1');
+      expect(lines).toStrictEqual(['Some output']);
     });
   });
 

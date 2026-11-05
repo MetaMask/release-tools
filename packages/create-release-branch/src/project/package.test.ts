@@ -398,9 +398,9 @@ describe('package', () => {
         output,
       });
 
-      expect(stderr.data()).toStrictEqual([
-        'WARNING: Could not determine changes for workspace package @scope/workspace-package version 1.0.0 based on Git tag "@scope/workspace-package@1.0.0"; using tag for root package root-package version 5.0.0, "v5.0.0", instead.\n',
-      ]);
+      expect(stderr.data().join('')).toContain(
+        'WARNING: Could not determine changes for workspace package @scope/workspace-package version 1.0.0 based on Git tag "@scope/workspace-package@1.0.0"; using tag for root package root-package version 5.0.0, "v5.0.0", instead.',
+      );
     });
 
     it("throws if the project has tags, but neither a tag matching the package name + version nor 'v' + the root package version exists", async () => {

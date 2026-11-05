@@ -48,9 +48,9 @@ describe('run-release', () => {
 
       await runRelease(context, { run });
 
-      expect(stdout.data()).toStrictEqual([
-        'Project appears to have workspaces. Following monorepo workflow.\n',
-      ]);
+      expect(stdout.data().join('')).toContain(
+        'Project appears to have workspaces. Following monorepo workflow.',
+      );
       expect(run).toHaveBeenCalledWith(context);
     });
 
@@ -61,9 +61,9 @@ describe('run-release', () => {
 
       await runRelease(context, { run });
 
-      expect(stdout.data()).toStrictEqual([
-        'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
-      ]);
+      expect(stdout.data().join('')).toContain(
+        'Project does not appear to have any workspaces. Following polyrepo workflow.',
+      );
       expect(run).not.toHaveBeenCalled();
     });
   });

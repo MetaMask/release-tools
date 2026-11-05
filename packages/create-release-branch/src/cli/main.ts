@@ -1,6 +1,5 @@
-import type { WriteStream } from 'fs';
-
 import { createCliOutput } from '../core/cli-output.js';
+import type { OutputStream } from '../core/cli-output.js';
 import { runRelease } from '../core/run-release.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import { selectFrontEnd, selectMode } from './select.js';
@@ -8,8 +7,8 @@ import { selectFrontEnd, selectMode } from './select.js';
 /**
  * The main function for this tool. Designed to not access `process.argv`,
  * `process.cwd()`, `process.stdout`, or `process.stderr` directly so as to be
- * more easily testable. The output still reads `NO_COLOR` and the color
- * support that chalk detects for the process streams.
+ * more easily testable. The output still reads `NO_COLOR`, `CI`, and `TERM`,
+ * and clack picks the colors of its symbols from `process.stdout`.
  *
  * @param args - The arguments.
  * @param args.argv - The name of this executable and its arguments (as obtained
@@ -26,8 +25,8 @@ export async function main({
 }: {
   argv: string[];
   cwd: string;
-  stdout: Pick<WriteStream, 'write'>;
-  stderr: NodeJS.WritableStream;
+  stdout: OutputStream;
+  stderr: OutputStream;
 }): Promise<void> {
   const output = createCliOutput({ stdout, stderr });
   const {

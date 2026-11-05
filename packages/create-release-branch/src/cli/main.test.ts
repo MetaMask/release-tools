@@ -63,8 +63,8 @@ describe('main', () => {
       releaseType: 'backport',
       output: expect.any(Object) as CliOutput,
     });
-    expect(stdout.data()).toContain(
-      'Project appears to have workspaces. Following monorepo workflow.\n',
+    expect(stdout.data().join('')).toContain(
+      'Project appears to have workspaces. Following monorepo workflow.',
     );
   });
 
