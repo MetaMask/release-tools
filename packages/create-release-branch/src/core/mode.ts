@@ -1,4 +1,5 @@
 import type { Candidate } from './candidates.js';
+import type { Notice } from './notices.js';
 import type { ReleaseChoiceError, ReleaseChoices } from './release-rules.js';
 
 /**
@@ -32,19 +33,20 @@ export type ModePlanResult<Data> =
  *
  * @property name - The name of the mode.
  * @property prepare - Changes the project on the first run, before the
- * "Initialize Release" commit.
+ * "Initialize Release" commit, and returns the notices to print.
  * @property listCandidates - Lists the packages that can be released, including
  * the packages that the given choices pull in.
  * @property plan - Plans the release from release choices that passed the
  * shared rules.
- * @property apply - Writes the planned release to the project.
+ * @property apply - Writes the planned release to the project, and returns the
+ * notices to print.
  * @property getReleaseNotes - Returns the release notes of a package.
  */
 export type Mode<Data> = {
   name: ModeName;
-  prepare(): Promise<void>;
+  prepare(): Promise<Notice[]>;
   listCandidates(choices?: ReleaseChoices): Promise<Candidate[]>;
   plan(choices: ReleaseChoices): Promise<ModePlanResult<Data>>;
-  apply(plan: ModePlan<Data>, newRootVersion: string): Promise<void>;
+  apply(plan: ModePlan<Data>, newRootVersion: string): Promise<Notice[]>;
   getReleaseNotes(packageName: string): Promise<string>;
 };

@@ -330,7 +330,7 @@ describe('server', () => {
           releases: [{ name: 'a', newVersion: '1.1.0' }],
           data: 'x',
         };
-        const apply = vi.fn();
+        const apply = vi.fn().mockResolvedValue([]);
         const closeServer = vi.fn();
         const mode = buildMockMode({
           plan: vi.fn().mockResolvedValue({ plan }),
@@ -379,13 +379,12 @@ describe('server', () => {
             c: buildMockPackage('c', '1.0.0'),
           },
         });
-        const apply = vi.fn();
+        const apply = vi.fn().mockResolvedValue([]);
         const mode = {
           ...createLegacyMode({
             project,
             defaultBranch: 'main',
             formatter: 'prettier',
-            output: createNoopCliOutput(),
           }),
           apply,
         };

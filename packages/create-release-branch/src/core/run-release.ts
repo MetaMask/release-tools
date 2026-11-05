@@ -11,13 +11,27 @@ export async function runRelease(
   context: ReleaseContext,
   frontEnd: FrontEnd,
 ): Promise<void> {
-  if (context.project.isMonorepo) {
-    context.output.info(
+  const { project, output } = context;
+
+  if (project.isMonorepo) {
+    output.info(
       'Project appears to have workspaces. Following monorepo workflow.\n',
     );
+
+    const { packagesUsingRootTag } = project;
+    if (packagesUsingRootTag.length > 0) {
+      const rootTag = `v${project.rootPackage.validatedManifest.version.toString()}`;
+      output.warnList(
+        packagesUsingRootTag.length === 1
+          ? `1 package has no tag for its current version, so changes are compared against the root tag ${rootTag}:`
+          : `${packagesUsingRootTag.length} packages have no tag for their current version, so changes are compared against the root tag ${rootTag}:`,
+        packagesUsingRootTag,
+      );
+    }
+
     await frontEnd.run(context);
   } else {
-    context.output.info(
+    output.info(
       'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
     );
   }

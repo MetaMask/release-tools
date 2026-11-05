@@ -48,14 +48,22 @@ function buildRecordingOutput(calls: string[]): CliOutput {
       calls.push(`end task ${label}`);
       return result;
     },
+    warnList(title, items) {
+      calls.push(`warnList ${title} ${items.join(', ')}`);
+    },
   };
 }
+
+const notices = [
+  { title: 'Title 1:', items: ['a', 'b'] },
+  { title: 'Title 2:', items: ['c'] },
+];
 
 describe('release-steps', () => {
   describe('startRelease', () => {
     it('prepares and commits only on the first run', async () => {
       const project = buildMockProject();
-      const prepare = vi.fn();
+      const prepare = vi.fn().mockResolvedValue([]);
       const mode = buildMockMode({ prepare });
       const determineReleaseVersionSpy = vi
         .spyOn(releaseBranchModule, 'determineReleaseVersion')
@@ -103,6 +111,7 @@ describe('release-steps', () => {
       const mode = buildMockMode({
         prepare: vi.fn().mockImplementation(async () => {
           calls.push('prepare');
+          return [];
         }),
       });
       vi.spyOn(
@@ -140,6 +149,38 @@ describe('release-steps', () => {
         'prepare',
         'end Updating changelogs',
         'commitAllChanges /path/to/project Initialize Release 2.0.0',
+      ]);
+    });
+
+    it('prints the notices from prepare after the step', async () => {
+      const calls: string[] = [];
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+        firstRun: true,
+      });
+      vi.spyOn(repoModule, 'commitAllChanges').mockImplementation(async () => {
+        calls.push('commitAllChanges');
+      });
+
+      await startRelease({
+        project: buildMockProject(),
+        releaseType: 'ordinary',
+        mode: buildMockMode({
+          prepare: vi.fn().mockResolvedValue(notices),
+        }),
+        output: buildRecordingOutput(calls),
+      });
+
+      expect(calls).toStrictEqual([
+        'start Creating the release branch',
+        'end Creating the release branch',
+        'start Updating changelogs',
+        'end Updating changelogs',
+        'warnList Title 1: a, b',
+        'warnList Title 2: c',
+        'commitAllChanges',
       ]);
     });
 
@@ -291,6 +332,7 @@ describe('release-steps', () => {
       const calls: string[] = [];
       const apply = vi.fn().mockImplementation(async () => {
         calls.push('apply');
+        return [];
       });
       const mode = buildMockMode({ apply });
       const plan: ModePlan<string> = { releases: [], data: 'data' };
@@ -307,6 +349,24 @@ describe('release-steps', () => {
         'start Applying the release',
         'apply',
         'end Applying the release',
+      ]);
+    });
+
+    it('prints the notices from apply after the step', async () => {
+      const calls: string[] = [];
+
+      await applyRelease({
+        mode: buildMockMode({ apply: vi.fn().mockResolvedValue(notices) }),
+        plan: { releases: [], data: 'data' },
+        newReleaseVersion: '2.0.0',
+        output: buildRecordingOutput(calls),
+      });
+
+      expect(calls).toStrictEqual([
+        'start Applying the release',
+        'end Applying the release',
+        'warnList Title 1: a, b',
+        'warnList Title 2: c',
       ]);
     });
   });

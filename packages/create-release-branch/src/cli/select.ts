@@ -1,6 +1,5 @@
 import { assertExhaustive } from '@metamask/utils';
 
-import type { CliOutput } from '../core/cli-output.js';
 import type { FrontEnd, FrontEndName } from '../core/front-end.js';
 import type { Mode, ModeName } from '../core/mode.js';
 import type { Formatter } from '../core/types.js';
@@ -17,7 +16,6 @@ import type { Project } from '../project/project.js';
  * @param options.project - Information about the project.
  * @param options.defaultBranch - The name of the default branch.
  * @param options.formatter - The formatter for the changelogs.
- * @param options.output - Where to write user-facing messages.
  * @returns The mode.
  */
 export function selectMode(
@@ -26,7 +24,6 @@ export function selectMode(
     project: Project;
     defaultBranch: string;
     formatter: Formatter;
-    output: CliOutput;
   },
 ): Mode<unknown> {
   switch (name) {

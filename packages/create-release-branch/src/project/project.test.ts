@@ -8,7 +8,6 @@ import { withProtectedProcessEnv, withSandbox } from '../../tests/helpers.js';
 import {
   buildMockPackage,
   buildMockProject,
-  createNoopCliOutput,
 } from '../../tests/unit/helpers.js';
 import { IncrementableVersionParts } from '../core/release-rules.js';
 import * as repoModule from '../core/repo.js';
@@ -16,6 +15,7 @@ import * as fs from '../utils/fs.js';
 import * as miscUtils from '../utils/misc-utils.js';
 import * as packageModule from './package.js';
 import {
+  buildChangelogNotices,
   getValidRepositoryUrl,
   readProject,
   restoreChangelogsForSkippedPackages,
@@ -66,7 +66,6 @@ describe('project', () => {
           }),
         };
         const projectTagNames = ['tag1', 'tag2', 'tag3'];
-        const output = createNoopCliOutput();
         vi.when(vi.spyOn(repoModule, 'getTagNames'))
           .calledWith(projectDirectoryPath)
           .thenResolve(projectTagNames);
@@ -99,9 +98,8 @@ describe('project', () => {
             rootPackageVersion,
             projectDirectoryPath,
             projectTagNames,
-            output,
           })
-          .thenResolve(workspacePackages.a);
+          .thenResolve({ ...workspacePackages.a, usesRootTag: false });
         vi.when(readMonorepoWorkspacePackageMock)
           .calledWith({
             packageDirectoryPath: path.join(
@@ -114,9 +112,8 @@ describe('project', () => {
             rootPackageVersion,
             projectDirectoryPath,
             projectTagNames,
-            output,
           })
-          .thenResolve(workspacePackages.b);
+          .thenResolve({ ...workspacePackages.b, usesRootTag: false });
         await mkdir(path.join(projectDirectoryPath, 'packages'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'a'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'subpackages'));
@@ -124,19 +121,71 @@ describe('project', () => {
           path.join(projectDirectoryPath, 'packages', 'subpackages', 'b'),
         );
 
-        expect(
-          await readProject(projectDirectoryPath, { output }),
-        ).toStrictEqual({
+        expect(await readProject(projectDirectoryPath)).toStrictEqual({
           directoryPath: projectDirectoryPath,
           repositoryUrl: projectRepositoryUrl,
           rootPackage,
           workspacePackages,
+          packagesUsingRootTag: [],
           isMonorepo: true,
           releaseVersion: {
             ordinaryNumber: 4,
             backportNumber: 38,
           },
         });
+      });
+    });
+
+    it('lists the packages that use the root tag', async () => {
+      await withSandbox(async (sandbox) => {
+        const projectDirectoryPath = sandbox.directoryPath;
+        const rootPackage = buildMockPackage('root', '1.0.0', {
+          directoryPath: projectDirectoryPath,
+          validatedManifest: { workspaces: ['packages/*'] },
+          unvalidatedManifest: { repository: 'https://github.com/org/repo' },
+        });
+        vi.spyOn(repoModule, 'getTagNames').mockResolvedValue(['v1.0.0']);
+        vi.spyOn(packageModule, 'readMonorepoRootPackage').mockResolvedValue(
+          rootPackage,
+        );
+        vi.spyOn(actionUtils, 'getWorkspaceLocations').mockResolvedValue([
+          'packages/c',
+          'packages/a',
+          'packages/b',
+        ]);
+        const readMonorepoWorkspacePackageMock = vi.spyOn(
+          packageModule,
+          'readMonorepoWorkspacePackage',
+        );
+        for (const [name, usesRootTag] of [
+          ['c', true],
+          ['a', false],
+          ['b', true],
+        ] as const) {
+          vi.when(readMonorepoWorkspacePackageMock)
+            .calledWith({
+              packageDirectoryPath: path.join(
+                projectDirectoryPath,
+                'packages',
+                name,
+              ),
+              rootPackageName: 'root',
+              rootPackageVersion: rootPackage.validatedManifest.version,
+              projectDirectoryPath,
+              projectTagNames: ['v1.0.0'],
+            })
+            .thenResolve({ ...buildMockPackage(name), usesRootTag });
+        }
+
+        const project = await readProject(projectDirectoryPath);
+
+        expect(project.packagesUsingRootTag).toStrictEqual(['c', 'b']);
+        expect(Object.keys(project.workspacePackages)).toStrictEqual([
+          'c',
+          'a',
+          'b',
+        ]);
+        expect(project.workspacePackages.c).not.toHaveProperty('usesRootTag');
       });
     });
   });
@@ -317,7 +366,6 @@ describe('project', () => {
 
   describe('updateChangelogsForChangedPackages', () => {
     it('should update changelog files of all the packages that has changes since latest release', async () => {
-      const output = createNoopCliOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
@@ -330,34 +378,30 @@ describe('project', () => {
         },
       });
 
-      const updatePackageChangelogSpy = vi.spyOn(
-        packageModule,
-        'updatePackageChangelog',
-      );
+      const updatePackageChangelogSpy = vi
+        .spyOn(packageModule, 'updatePackageChangelog')
+        .mockResolvedValue('updated');
 
-      await updateChangelogsForChangedPackages({
+      const notices = await updateChangelogsForChangedPackages({
         project,
         formatter: 'prettier',
-        output,
       });
 
       expect(updatePackageChangelogSpy).toHaveBeenCalledWith({
         project,
         package: project.workspacePackages.a,
         formatter: 'prettier',
-        output,
       });
 
       expect(updatePackageChangelogSpy).toHaveBeenCalledWith({
         project,
         package: project.workspacePackages.b,
         formatter: 'prettier',
-        output,
       });
+      expect(notices).toStrictEqual([]);
     });
 
     it('should not update changelog files of all the packages that has not changed since latest release', async () => {
-      const output = createNoopCliOutput();
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
@@ -375,14 +419,67 @@ describe('project', () => {
       await updateChangelogsForChangedPackages({
         project,
         formatter: 'prettier',
-        output,
       });
 
-      expect(updatePackageChangelogSpy).not.toHaveBeenCalledWith({
-        project,
-        package: project.workspacePackages.a,
-        output,
+      expect(updatePackageChangelogSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns the packages without a changelog or without updates as notices', async () => {
+      const project = buildMockProject({
+        workspacePackages: Object.fromEntries(
+          ['a', 'b', 'c', 'd'].map((name) => [
+            name,
+            buildMockPackage(name, { hasChangesSinceLatestRelease: true }),
+          ]),
+        ),
       });
+      const results = {
+        a: 'no-updates',
+        b: 'no-changelog',
+        c: 'no-updates',
+        d: 'updated',
+      } as const;
+      vi.spyOn(packageModule, 'updatePackageChangelog').mockImplementation(
+        async ({ package: pkg }) =>
+          results[pkg.validatedManifest.name as keyof typeof results],
+      );
+
+      const notices = await updateChangelogsForChangedPackages({
+        project,
+        formatter: 'prettier',
+      });
+
+      expect(notices).toStrictEqual([
+        {
+          title: '1 package has no changelog, so it was not updated:',
+          items: ['b'],
+        },
+        { title: '2 changelogs have no updates to make:', items: ['a', 'c'] },
+      ]);
+    });
+  });
+
+  describe('buildChangelogNotices', () => {
+    it('uses plural titles for more than one package', () => {
+      expect(
+        buildChangelogNotices([
+          { name: 'a', result: 'no-changelog' },
+          { name: 'b', result: 'no-changelog' },
+          { name: 'c', result: 'no-updates' },
+        ]),
+      ).toStrictEqual([
+        {
+          title: '2 packages have no changelog, so it was not updated:',
+          items: ['a', 'b'],
+        },
+        { title: '1 changelog has no updates to make:', items: ['c'] },
+      ]);
+    });
+
+    it('returns no notices when every changelog was updated', () => {
+      expect(
+        buildChangelogNotices([{ name: 'a', result: 'updated' }]),
+      ).toStrictEqual([]);
     });
   });
 });

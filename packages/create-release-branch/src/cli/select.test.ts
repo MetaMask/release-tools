@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  buildMockProject,
-  createNoopCliOutput,
-} from '../../tests/unit/helpers.js';
+import { buildMockProject } from '../../tests/unit/helpers.js';
 import type { FrontEnd } from '../core/front-end.js';
 import type { Mode } from '../core/mode.js';
 import * as editorFrontEndModule from '../frontends/editor/editor-front-end.js';
@@ -19,7 +16,6 @@ describe('select', () => {
   describe('selectMode', () => {
     it('selectMode returns the legacy mode', () => {
       const project = buildMockProject();
-      const output = createNoopCliOutput();
       const legacyMode = { name: 'legacy' } as Mode<never>;
       const createLegacyModeSpy = vi
         .spyOn(legacyModeModule, 'createLegacyMode')
@@ -29,14 +25,12 @@ describe('select', () => {
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output,
       });
 
       expect(createLegacyModeSpy).toHaveBeenCalledWith({
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output,
       });
       expect(mode).toBe(legacyMode);
     });

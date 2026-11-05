@@ -128,6 +128,29 @@ describe('cli-output', () => {
       expect(stdout.data()).toStrictEqual([]);
     });
 
+    it('warnList writes the title and indented items to stderr', () => {
+      const stdout = new MockWritable();
+      const plainStderr = new MockWritable();
+      const styledStderr = buildTerminalStream();
+
+      createCliOutput({ stdout, stderr: plainStderr }).warnList('Some title:', [
+        'a',
+        'b',
+      ]);
+      createCliOutput({ stdout, stderr: styledStderr }).warnList(
+        'Some title:',
+        ['a'],
+      );
+
+      expect(textOf(plainStderr)).toBe(
+        `${logLine(S_WARN, 'Some title:')}${S_BAR}    a\n${S_BAR}    b\n`,
+      );
+      expect(textOf(styledStderr)).toContain(
+        `  ${styleText('dim', 'a', { validateStream: false })}`,
+      );
+      expect(stdout.data()).toStrictEqual([]);
+    });
+
     it('writes stderr without colors when only stdout is a color terminal', () => {
       const stdout = buildTerminalStream();
       const stderr = new MockWritable();

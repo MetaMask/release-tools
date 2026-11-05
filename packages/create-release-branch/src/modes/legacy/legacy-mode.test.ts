@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildMockPackage,
   buildMockProject,
-  createNoopCliOutput,
 } from '../../../tests/unit/helpers.js';
+import type { Notice } from '../../core/notices.js';
 import { IncrementableVersionParts } from '../../core/release-rules.js';
 import * as projectModule from '../../project/project.js';
 import * as fsModule from '../../utils/fs.js';
@@ -21,23 +21,38 @@ vi.mock(import('./release-plan.js'), async (importActual) => ({
   executeReleasePlan: vi.fn(),
 }));
 
+const notices: Notice[] = [
+  { title: '1 changelog has no updates to make:', items: ['a'] },
+];
+
 describe('legacy mode', () => {
   describe('createLegacyMode', () => {
     it('updates the changelogs of changed packages when preparing', async () => {
       const project = buildMockProject();
-      const output = createNoopCliOutput();
       const mode = createLegacyMode({
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output,
       });
 
       await mode.prepare();
 
       expect(
         projectModule.updateChangelogsForChangedPackages,
-      ).toHaveBeenCalledWith({ project, formatter: 'prettier', output });
+      ).toHaveBeenCalledWith({ project, formatter: 'prettier' });
+    });
+
+    it('prepare returns the grouped changelog notices', async () => {
+      vi.mocked(
+        projectModule.updateChangelogsForChangedPackages,
+      ).mockResolvedValue(notices);
+      const mode = createLegacyMode({
+        project: buildMockProject(),
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+
+      expect(await mode.prepare()).toStrictEqual(notices);
     });
 
     it('lists the legacy candidates for the given choices', async () => {
@@ -55,7 +70,6 @@ describe('legacy mode', () => {
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output: createNoopCliOutput(),
       });
 
       expect(await mode.listCandidates({ a: 'major' })).toStrictEqual([
@@ -78,7 +92,6 @@ describe('legacy mode', () => {
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output: createNoopCliOutput(),
       });
 
       const result = await mode.plan({
@@ -104,7 +117,6 @@ describe('legacy mode', () => {
 
     it('apply restores skipped changelogs before executing the plan', async () => {
       const project = buildMockProject();
-      const output = createNoopCliOutput();
       const releasePlan: ReleasePlan = { newVersion: '2.0.0', packages: [] };
       const releaseSpecificationPackages = {
         a: IncrementableVersionParts.major,
@@ -122,13 +134,13 @@ describe('legacy mode', () => {
       vi.mocked(releasePlanModule.executeReleasePlan).mockImplementation(
         async () => {
           calls.push('executeReleasePlan');
+          return [];
         },
       );
       const mode = createLegacyMode({
         project,
         defaultBranch: 'main',
         formatter: 'oxfmt',
-        output,
       });
 
       await mode.apply(
@@ -157,8 +169,22 @@ describe('legacy mode', () => {
         project,
         releasePlan,
         'oxfmt',
-        output,
       );
+    });
+
+    it('apply returns the grouped changelog notices', async () => {
+      vi.mocked(releasePlanModule.executeReleasePlan).mockResolvedValue(
+        notices,
+      );
+      const mode = createLegacyMode({
+        project: buildMockProject(),
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+
+      expect(
+        await mode.apply({ releases: [], data: {} }, '2.0.0'),
+      ).toStrictEqual(notices);
     });
 
     it('getReleaseNotes returns the changelog', async () => {
@@ -176,7 +202,6 @@ describe('legacy mode', () => {
         project,
         defaultBranch: 'main',
         formatter: 'prettier',
-        output: createNoopCliOutput(),
       });
 
       expect(await mode.getReleaseNotes('a')).toBe('# Changelog');
