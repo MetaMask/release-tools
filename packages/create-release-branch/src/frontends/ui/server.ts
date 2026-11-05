@@ -55,25 +55,18 @@ async function startUI({
     closeServer: () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       server.close();
-      output.success('Release process completed. Server shutdown.\n');
     },
   });
 
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
 
-    output.info(`\nAttempting to open UI in browser...`);
-    openBrowser(url)
-      .then(() => {
-        output.info(`\nUI server running at ${url}\n`);
-      })
-      .catch((error: unknown) => {
-        output.error(`\n---------------------------------------------------\n`);
-        output.error(`Error automatically opening browser: ${String(error)}\n`);
-        output.error(`Please open the following URL manually:\n`);
-        output.error(`${url}\n`);
-        output.error(`---------------------------------------------------\n\n`);
-      });
+    output.info(`Opening the release UI at ${url}`);
+    openBrowser(url).catch((error: unknown) => {
+      output.warn(
+        `Could not open your browser (${String(error)}). Open ${url} yourself.`,
+      );
+    });
   });
 
   return new Promise((resolve, reject) => {
@@ -215,7 +208,12 @@ export function createApp({
           newReleaseVersion,
           output,
         });
-        await finishRelease({ project, newReleaseVersion, output });
+        await finishRelease({
+          project,
+          newReleaseVersion,
+          releases: result.plan.releases,
+          output,
+        });
 
         res.json({ status: 'success' });
 

@@ -11,11 +11,12 @@ export async function runRelease(
   context: ReleaseContext,
   frontEnd: FrontEnd,
 ): Promise<void> {
-  const { project, output } = context;
+  const { project, mode, output } = context;
 
   if (project.isMonorepo) {
-    output.info(
-      'Project appears to have workspaces. Following monorepo workflow.\n',
+    output.header(
+      'create-release-branch',
+      `${project.rootPackage.validatedManifest.name} · monorepo · ${mode.name} mode`,
     );
 
     const { packagesUsingRootTag } = project;

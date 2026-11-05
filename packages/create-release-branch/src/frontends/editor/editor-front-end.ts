@@ -101,7 +101,7 @@ async function followEditorWorkflow({
 
   if (!reset && (await fileExists(releaseSpecificationPath))) {
     output.info(
-      'Release spec already exists. Picking back up from previous run.\n',
+      'Release spec already exists. Picking back up from previous run.',
     );
   } else {
     const editor = await determineEditor();
@@ -125,6 +125,7 @@ async function followEditorWorkflow({
       return;
     }
 
+    output.info('Waiting for your editor to close RELEASE_SPEC.yml');
     try {
       await waitForUserToEditReleaseSpecification(
         releaseSpecificationPath,
@@ -134,6 +135,7 @@ async function followEditorWorkflow({
       await removeFile(releaseSpecificationPath);
       throw error;
     }
+    output.done('Closed RELEASE_SPEC.yml');
   }
 
   const plan = await validateReleaseSpecification(
@@ -143,5 +145,10 @@ async function followEditorWorkflow({
 
   await applyRelease({ mode, plan, newReleaseVersion, output });
   await removeFile(releaseSpecificationPath);
-  await finishRelease({ project, newReleaseVersion, output });
+  await finishRelease({
+    project,
+    newReleaseVersion,
+    releases: plan.releases,
+    output,
+  });
 }

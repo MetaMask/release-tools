@@ -64,7 +64,7 @@ describe('main', () => {
       output: expect.any(Object) as CliOutput,
     });
     expect(writtenText(stdout)).toContain(
-      'Project appears to have workspaces. Following monorepo workflow.',
+      'create-release-branch root · monorepo · legacy mode',
     );
   });
 

@@ -1,4 +1,12 @@
-import { cancel, log, spinner, taskLog } from '@clack/prompts';
+import {
+  cancel,
+  intro,
+  log,
+  note,
+  outro,
+  spinner,
+  taskLog,
+} from '@clack/prompts';
 import { Writable } from 'node:stream';
 import type { WriteStream } from 'node:tty';
 import { stripVTControlCharacters, styleText } from 'node:util';
@@ -9,9 +17,15 @@ import { stripVTControlCharacters, styleText } from 'node:util';
  * Each message is laid out by clack, which adds its own spacing, so any
  * trailing newlines in the text are dropped.
  *
+ * @property header - Writes the first line of the run, with a title and
+ * details, to standard out.
  * @property info - Writes an informational message to standard out.
  * @property success - Writes a message about a completed action to standard
  * out.
+ * @property done - Writes a completed step that has no spinner to standard
+ * out.
+ * @property summary - Writes a box with a title and lines, then the last line
+ * of the run, to standard out.
  * @property warn - Writes a warning to standard error.
  * @property warnList - Writes a warning to standard error, with each item, such
  * as a package name, on its own line below it.
@@ -20,24 +34,43 @@ import { stripVTControlCharacters, styleText } from 'node:util';
  * details, and ends the output, to standard error.
  * @property format - Styles parts of the text for standard error: `name` for
  * names, such as package names, and `dim` for secondary text.
- * @property step - Runs a long-running action and returns its result.
+ * @property step - Runs a long-running action and returns its result. The
+ * step ends with the text from `options.result`, or else with the label.
  * @property task - Runs a long-running action that prints lines of output,
  * such as a command, and returns its result. The lines are shown only while
- * the action runs, or if it fails.
+ * the action runs, or if it fails. The task ends like a step.
  */
 export type CliOutput = {
+  header(title: string, details: string): void;
   info(text: string): void;
   success(text: string): void;
+  done(text: string): void;
+  summary(title: string, lines: string[], outro: string): void;
   warn(text: string): void;
   warnList(title: string, items: string[]): void;
   error(text: string): void;
   failure(title: string, lines: string[]): void;
   format: { name(text: string): string; dim(text: string): string };
-  step<Result>(label: string, run: () => Promise<Result>): Promise<Result>;
+  step<Result>(
+    label: string,
+    run: () => Promise<Result>,
+    options?: StepOptions<Result>,
+  ): Promise<Result>;
   task<Result>(
     label: string,
     run: (log: (line: string) => void) => Promise<Result>,
+    options?: StepOptions<Result>,
   ): Promise<Result>;
+};
+
+/**
+ * Options for a step or a task.
+ *
+ * @property result - Builds the text that the step ends with when it succeeds,
+ * from the result of the action.
+ */
+export type StepOptions<Result> = {
+  result?: (value: Result) => string;
 };
 
 /**
@@ -45,6 +78,11 @@ export type CliOutput = {
  */
 export type OutputStream = Writable &
   Partial<Pick<WriteStream, 'isTTY' | 'columns' | 'hasColors'>>;
+
+/**
+ * A style, or a list of styles, that `styleText` accepts.
+ */
+type Style = Parameters<typeof styleText>[0];
 
 /**
  * The number of lines of output that a running task shows.
@@ -95,7 +133,8 @@ function trimTrailingNewlines(text: string): string {
 /**
  * Creates a `CliOutput` that writes to the given streams.
  *
- * Messages, and lines for completed steps and tasks, go to standard out.
+ * The header, messages, lines for completed steps and tasks, and the summary
+ * go to standard out.
  * Warnings, errors, spinners, and task output go to standard error. A stream
  * that is not styled gets no ANSI codes. When animating, a step shows a
  * spinner and a task streams its output until it ends. Otherwise, each ends
@@ -129,6 +168,8 @@ export function createCliOutput({
 }): CliOutput {
   const toStdout = { output: styled.stdout ? stdout : withoutColors(stdout) };
   const toStderr = { output: styled.stderr ? stderr : withoutColors(stderr) };
+  const styleStdout = (style: Style, text: string): string =>
+    styled.stdout ? styleText(style, text, { stream: stdout }) : text;
   const format = {
     name: (text: string): string =>
       styled.stderr ? styleText('cyan', text, { stream: stderr }) : text,
@@ -137,11 +178,26 @@ export function createCliOutput({
   };
 
   return {
+    header(title, details) {
+      intro(
+        styled.stdout
+          ? `${styleStdout(['inverse', 'cyan'], ` ${title} `)} ${styleStdout('dim', details)}`
+          : `${title} ${details}`,
+        toStdout,
+      );
+    },
     info(text) {
       log.info(trimTrailingNewlines(text), toStdout);
     },
     success(text) {
       log.success(trimTrailingNewlines(text), toStdout);
+    },
+    done(text) {
+      log.step(text, toStdout);
+    },
+    summary(title, lines, outroText) {
+      note(lines.join('\n'), title, toStdout);
+      outro(styleStdout('green', outroText), toStdout);
     },
     warn(text) {
       log.warn(trimTrailingNewlines(text), toStderr);
@@ -169,11 +225,11 @@ export function createCliOutput({
       cancel('The release did not finish.', toStderr);
     },
     format,
-    async step(label, run) {
+    async step(label, run, options) {
       if (!animate) {
         try {
           const result = await run();
-          log.step(label, toStdout);
+          log.step(options?.result?.(result) ?? label, toStdout);
           return result;
         } catch (error) {
           log.error(label, toStderr);
@@ -186,21 +242,21 @@ export function createCliOutput({
       indicator.start(label);
       try {
         const result = await run();
-        indicator.stop(label);
+        indicator.stop(options?.result?.(result) ?? label);
         return result;
       } catch (error) {
         indicator.error(label);
         throw error;
       }
     },
-    async task(label, run) {
+    async task(label, run, options) {
       if (!animate) {
         const lines: string[] = [];
         try {
           const result = await run((line) => {
             lines.push(line);
           });
-          log.step(label, toStdout);
+          log.step(options?.result?.(result) ?? label, toStdout);
           return result;
         } catch (error) {
           log.error(label, toStderr);
@@ -222,7 +278,7 @@ export function createCliOutput({
         const result = await run((line) => {
           taskOutput.message(line);
         });
-        taskOutput.success(label);
+        taskOutput.success(options?.result?.(result) ?? label);
         return result;
       } catch (error) {
         taskOutput.error(label, { showLog: true });
