@@ -193,10 +193,17 @@ export function createApp({
         if (!('plan' in result)) {
           res.json({
             status: 'error',
-            errors: result.errors.map(({ message, entryIndex }) =>
-              entryIndex === undefined
-                ? { message }
-                : { message, lineNumber: entryIndex + 2 },
+            errors: result.errors.map(
+              ({ packageName, entryIndex, problem, hint }) => {
+                const text =
+                  packageName === undefined
+                    ? problem
+                    : `${packageName}: ${problem}`;
+                const message = hint === undefined ? text : [text, hint];
+                return entryIndex === undefined
+                  ? { message }
+                  : { message, lineNumber: entryIndex + 2 };
+              },
             ),
           });
           return;

@@ -185,11 +185,10 @@ describe('release-steps', () => {
       expect(result).toStrictEqual({
         errors: [
           {
-            message: [
-              '"foo" is not a valid version specifier for package "a"',
-              '(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3")',
-            ],
+            packageName: 'a',
             entryIndex: 0,
+            problem: '"foo" is not a valid version specifier',
+            hint: 'Use major, minor, patch, or a version like 1.2.3.',
           },
         ],
         dependencyFindings: {},
@@ -202,7 +201,7 @@ describe('release-steps', () => {
       const project = buildMockProject({
         workspacePackages: { a: buildMockPackage('a', '1.0.0') },
       });
-      const planErrors = [{ message: 'Nothing to release' }];
+      const planErrors = [{ problem: 'Nothing to release' }];
       const plan = vi.fn().mockResolvedValue({ errors: planErrors });
       const mode = buildMockMode({ plan });
 

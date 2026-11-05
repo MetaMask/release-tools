@@ -1,12 +1,14 @@
 import YAML from 'yaml';
 
 import type { Candidate } from '../../core/candidates.js';
+import type { CliOutput } from '../../core/cli-output.js';
 import type { ModeName } from '../../core/mode.js';
 import { SKIP_PACKAGE_DIRECTIVE } from '../../core/release-rules.js';
 import type {
   ReleaseChoiceError,
   ReleaseChoices,
 } from '../../core/release-rules.js';
+import { UserFacingError } from '../../core/user-facing-error.js';
 import { readFile } from '../../utils/fs.js';
 import {
   debug,
@@ -74,6 +76,88 @@ const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
       'Could not generate release specification: There are no packages that have changed since their latest release.',
   },
 };
+
+/**
+ * A problem in the release spec.
+ *
+ * @property lineNumber - The line of the release spec that has the problem.
+ * @property packageName - The name of the package that has the problem.
+ * @property problem - What is wrong, written to follow the package name, or
+ * "The release spec" if there is no package.
+ * @property hint - How to fix it.
+ */
+export type ReleaseSpecificationProblem = {
+  lineNumber?: number;
+  packageName?: string;
+  problem: string;
+  hint?: string;
+};
+
+/**
+ * The problems in a release spec that the user has edited. The release spec
+ * is kept, so the user can fix it and run the tool again.
+ */
+export class ReleaseSpecificationError extends UserFacingError {
+  problems: ReleaseSpecificationProblem[];
+
+  specPath: string;
+
+  /**
+   * Creates the error.
+   *
+   * @param args - The arguments.
+   * @param args.problems - The problems in the release spec.
+   * @param args.specPath - The path to the release spec.
+   * @param options - The options.
+   * @param options.cause - The error that caused the problems.
+   */
+  constructor(
+    {
+      problems,
+      specPath,
+    }: { problems: ReleaseSpecificationProblem[]; specPath: string },
+    options?: { cause: unknown },
+  ) {
+    super(undefined, options);
+    this.problems = problems;
+    this.specPath = specPath;
+    const { title, lines } = this.describe({
+      name: (text) => text,
+      dim: (text) => text,
+    });
+    this.message = [title, '', ...lines].join('\n');
+  }
+
+  describe(format: CliOutput['format']): { title: string; lines: string[] } {
+    const count = this.problems.length;
+    const title = `The release spec has ${count} ${count === 1 ? 'problem' : 'problems'}:`;
+    const problemLines = this.problems.map(
+      ({ lineNumber, packageName, problem, hint }) => {
+        const subject =
+          packageName === undefined
+            ? 'The release spec'
+            : format.name(packageName);
+        const linePrefix =
+          lineNumber === undefined ? '' : `Line ${lineNumber}  `;
+        const indent = ' '.repeat(Math.max(linePrefix.length, 2));
+        return [
+          `${linePrefix}${subject}`,
+          `${indent}${problem}`,
+          ...(hint === undefined ? [] : [`${indent}${format.dim(hint)}`]),
+        ];
+      },
+    );
+
+    return {
+      title,
+      lines: [
+        ...problemLines.flatMap((lines) => [...lines, '']),
+        'Fix the release spec and run the tool again. It was kept at:',
+        format.dim(this.specPath),
+      ],
+    };
+  }
+}
 
 /**
  * Generates a skeleton for a release specification, which describes how a
@@ -156,7 +240,7 @@ export async function waitForUserToEditReleaseSpecification(
  * @param check - Checks the release choices. It returns the plan only when
  * there are no errors.
  * @returns The plan that `check` returns.
- * @throws If there are any issues with the file.
+ * @throws A `ReleaseSpecificationError` if there are any issues with the file.
  */
 export async function validateReleaseSpecification<Plan>(
   releaseSpecificationPath: string,
@@ -173,22 +257,24 @@ export async function validateReleaseSpecification<Plan>(
     packages: ReleaseChoices;
   };
 
-  const afterwordForAllErrorMessages = [
-    "The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.",
-    releaseSpecificationPath,
-  ].join('\n\n');
-
   try {
     unvalidatedReleaseSpecification = YAML.parse(
       releaseSpecificationContents,
     ) as { packages: ReleaseChoices };
   } catch (error) {
-    throw wrapError(
-      [
-        'Your release spec does not appear to be valid YAML.',
-        afterwordForAllErrorMessages,
-      ].join('\n\n'),
-      error,
+    // Typecast: `YAML.parse` throws a `YAMLParseError`, which is an `Error`.
+    const [firstLineOfMessage] = (error as Error).message.split('\n');
+    throw new ReleaseSpecificationError(
+      {
+        problems: [
+          {
+            problem: 'is not valid YAML',
+            hint: `Fix the syntax: ${firstLineOfMessage.replace(/:$/u, '')}`,
+          },
+        ],
+        specPath: releaseSpecificationPath,
+      },
+      { cause: error },
     );
   }
 
@@ -196,54 +282,28 @@ export async function validateReleaseSpecification<Plan>(
     !isObject(unvalidatedReleaseSpecification) ||
     unvalidatedReleaseSpecification.packages === undefined
   ) {
-    const message = [
-      `Your release spec could not be processed because it needs to be an object with a \`packages\` property. The value of \`packages\` must itself be an object, where each key is a workspace package in the project and each value is a version specifier ("major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1.2.3").`,
-      `Here is the parsed version of the file you provided:`,
-      JSON.stringify(unvalidatedReleaseSpecification, null, 2),
-      afterwordForAllErrorMessages,
-    ].join('\n\n');
-    throw new Error(message);
+    throw new ReleaseSpecificationError({
+      problems: [
+        {
+          problem:
+            'needs a packages object, where each key is a package name and each value is a version specifier',
+        },
+      ],
+      specPath: releaseSpecificationPath,
+    });
   }
 
   const result = await check(unvalidatedReleaseSpecification.packages);
 
   if (!('plan' in result)) {
-    const errors = result.errors.map(({ message, entryIndex }) => ({
-      message,
-      lineNumber:
+    throw new ReleaseSpecificationError({
+      problems: result.errors.map(({ entryIndex, ...problem }) =>
         entryIndex === undefined
-          ? undefined
-          : indexOfFirstUsableLine + entryIndex + 2,
-    }));
-    const message = [
-      'Your release spec could not be processed due to the following issues:',
-      errors
-        .flatMap((error) => {
-          const itemPrefix = '* ';
-
-          if (error.lineNumber === undefined) {
-            return `${itemPrefix}${String(error.message)}`;
-          }
-
-          const lineNumberPrefix = `Line ${error.lineNumber}: `;
-
-          if (Array.isArray(error.message)) {
-            return [
-              `${itemPrefix}${lineNumberPrefix}${error.message[0]}`,
-              ...error.message.slice(1).map((line) => {
-                const indentedLineLength =
-                  itemPrefix.length + lineNumberPrefix.length + line.length;
-                return line.padStart(indentedLineLength, ' ');
-              }),
-            ];
-          }
-
-          return `${itemPrefix}${lineNumberPrefix}${error.message}`;
-        })
-        .join('\n'),
-      afterwordForAllErrorMessages,
-    ].join('\n\n');
-    throw new Error(message);
+          ? problem
+          : { lineNumber: indexOfFirstUsableLine + entryIndex + 2, ...problem },
+      ),
+      specPath: releaseSpecificationPath,
+    });
   }
 
   return result.plan;

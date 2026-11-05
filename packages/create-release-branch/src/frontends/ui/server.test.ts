@@ -274,12 +274,16 @@ describe('server', () => {
               status: 'error',
               errors: [
                 {
-                  message: expect.stringContaining(
-                    "The following direct dependents of package 'a'",
-                  ) as string,
+                  message: [
+                    'a: has a major bump, but its direct dependents are not in the release spec: b',
+                    'Add them to the release spec, or set them to intentionally-skip.',
+                  ],
                 },
                 {
-                  message: '"nonexistent" is not a package in the project',
+                  message: [
+                    'nonexistent: is not a package in the project',
+                    'Check the name, or remove the line.',
+                  ],
                   lineNumber: 3,
                 },
               ],
@@ -289,6 +293,36 @@ describe('server', () => {
 
         expect(apply).not.toHaveBeenCalled();
         expect(closeServer).not.toHaveBeenCalled();
+      });
+
+      it('returns the problem and hint as the message', async () => {
+        const mode = buildMockMode({
+          plan: vi.fn().mockResolvedValue({
+            errors: [
+              { packageName: 'a', problem: 'is wrong', hint: 'Fix it.' },
+              { problem: 'is broken' },
+            ],
+          }),
+        });
+
+        await withApp(
+          {
+            context: buildContext(mode),
+            newReleaseVersion: '2.0.0',
+            closeServer: vi.fn(),
+          },
+          async (url) => {
+            const response = await postChoices(`${url}/api/release`, {});
+
+            expect(await response.json()).toStrictEqual({
+              status: 'error',
+              errors: [
+                { message: ['a: is wrong', 'Fix it.'] },
+                { message: 'is broken' },
+              ],
+            });
+          },
+        );
       });
 
       it('applies, finishes, and closes the server', async () => {
