@@ -49,8 +49,10 @@ export function describeError(
 
   const [title, ...lines] = messageOf(error).split('\n');
 
+  const seen = new Set<unknown>([error]);
   let cause = error instanceof Error ? error.cause : undefined;
-  while (cause !== undefined) {
+  while (cause !== undefined && !seen.has(cause)) {
+    seen.add(cause);
     lines.push(`Caused by: ${messageOf(cause)}`);
     cause = cause instanceof Error ? cause.cause : undefined;
   }

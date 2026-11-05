@@ -266,7 +266,11 @@ export function checkReleaseChoices(
         errors.push({
           packageName: changedPackageName,
           entryIndex,
-          problem: `"${String(versionSpecifierOrDirective)}" is not a valid version specifier`,
+          problem: `"${
+            typeof versionSpecifierOrDirective === 'string'
+              ? versionSpecifierOrDirective
+              : JSON.stringify(versionSpecifierOrDirective)
+          }" is not a valid version specifier`,
           hint: 'Use major, minor, patch, or a version like 1.2.3.',
         });
       }

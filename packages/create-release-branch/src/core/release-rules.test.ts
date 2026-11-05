@@ -10,6 +10,7 @@ import {
   IncrementableVersionParts,
   normalizeReleaseChoices,
 } from './release-rules.js';
+import type { ReleaseChoices } from './release-rules.js';
 
 describe('release-rules', () => {
   describe('checkReleaseChoices', () => {
@@ -151,6 +152,17 @@ describe('release-rules', () => {
           packageName: 'a',
           entryIndex: 0,
           problem: '"asdf" is not a valid version specifier',
+          hint: 'Use major, minor, patch, or a version like 1.2.3.',
+        },
+      },
+      {
+        rule: 'a version specifier that is not a string',
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+        choices: { a: { version: '2.0.0' } } as unknown as ReleaseChoices,
+        error: {
+          packageName: 'a',
+          entryIndex: 0,
+          problem: '"{"version":"2.0.0"}" is not a valid version specifier',
           hint: 'Use major, minor, patch, or a version like 1.2.3.',
         },
       },

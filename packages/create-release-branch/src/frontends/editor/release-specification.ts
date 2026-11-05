@@ -267,9 +267,16 @@ export async function validateReleaseSpecification<Plan>(
       releaseSpecificationContents,
     ) as { packages: ReleaseChoices };
   } catch (error) {
+    // Typecast: `YAML.parse` throws a `YAMLParseError`, which is an `Error`.
+    const [firstLineOfMessage] = (error as Error).message.split('\n');
     throw new ReleaseSpecificationError(
       {
-        problems: [{ problem: 'is not valid YAML', hint: 'Fix the syntax.' }],
+        problems: [
+          {
+            problem: 'is not valid YAML',
+            hint: `Fix the syntax: ${firstLineOfMessage}`,
+          },
+        ],
         specPath: releaseSpecificationPath,
       },
       { cause: error },
