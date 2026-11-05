@@ -148,7 +148,12 @@ export function createCliOutput({
     },
     warnList(title, items) {
       log.warn(
-        [title, ...items.map((item) => `  ${format.dim(item)}`)].join('\n'),
+        [
+          title,
+          ...items
+            .flatMap((item) => item.split('\n'))
+            .map((line) => `  ${format.dim(line)}`),
+        ].join('\n'),
         toStderr,
       );
     },
