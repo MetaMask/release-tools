@@ -63,6 +63,9 @@ describe('editor', () => {
       const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
       vi.when(resolveExecutableMock).calledWith('idea').thenResolve(null);
       vi.when(resolveExecutableMock)
+        .calledWith('idea --wait --new-window')
+        .thenResolve(null);
+      vi.when(resolveExecutableMock)
         .calledWith('code')
         .thenResolve('/path/to/code');
 
@@ -72,9 +75,10 @@ describe('editor', () => {
       });
     });
 
-    it('keeps variables in EDITOR as they are', async () => {
+    it('expands variables in EDITOR', async () => {
+      vi.stubEnv('EDITOR_CONFIG_DIRECTORY', '/path/to/config');
       vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
-        EDITOR: 'edit --config $HOME/edit.json',
+        EDITOR: 'edit --config $EDITOR_CONFIG_DIRECTORY/edit.json',
       });
       vi.when(vi.spyOn(miscUtils, 'resolveExecutable'))
         .calledWith('edit')
@@ -82,7 +86,25 @@ describe('editor', () => {
 
       expect(await determineEditor()).toStrictEqual({
         path: '/path/to/edit',
-        args: ['--config', '$HOME/edit.json'],
+        args: ['--config', '/path/to/config/edit.json'],
+      });
+    });
+
+    it('resolves an unquoted editor path that contains spaces as a whole', async () => {
+      vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+        EDITOR: '/Applications/My Editor/bin/edit',
+      });
+      const resolveExecutableMock = vi.spyOn(miscUtils, 'resolveExecutable');
+      vi.when(resolveExecutableMock)
+        .calledWith('/Applications/My')
+        .thenResolve(null);
+      vi.when(resolveExecutableMock)
+        .calledWith('/Applications/My Editor/bin/edit')
+        .thenResolve('/Applications/My Editor/bin/edit');
+
+      expect(await determineEditor()).toStrictEqual({
+        path: '/Applications/My Editor/bin/edit',
+        args: [],
       });
     });
 
