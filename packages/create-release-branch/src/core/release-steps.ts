@@ -165,17 +165,17 @@ export async function finishRelease({
   newReleaseVersion: string;
   output: CliOutput;
 }): Promise<void> {
-  await output.step(
+  await output.task(
     'Fixing Yarn constraints',
-    async () => await fixConstraints(project.directoryPath),
+    async (log) => await fixConstraints(project.directoryPath, log),
   );
-  await output.step(
+  await output.task(
     'Installing dependencies',
-    async () => await updateYarnLockfile(project.directoryPath),
+    async (log) => await updateYarnLockfile(project.directoryPath, log),
   );
-  await output.step(
+  await output.task(
     'Deduplicating dependencies',
-    async () => await deduplicateDependencies(project.directoryPath),
+    async (log) => await deduplicateDependencies(project.directoryPath, log),
   );
   // Not run in a step: a spinner would draw over a GPG pinentry in the
   // terminal.

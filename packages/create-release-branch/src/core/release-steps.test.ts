@@ -24,9 +24,11 @@ vi.mock('./repo');
 vi.mock('./yarn-commands');
 
 /**
- * Builds an output that records when each step starts and ends.
+ * Builds an output that records when each step and task starts and ends, and
+ * the lines that each task logs.
  *
- * @param calls - The list to which the start and end of each step are added.
+ * @param calls - The list to which the start and end of each step and task,
+ * and the lines, are added.
  * @returns The output.
  */
 function buildRecordingOutput(calls: string[]): CliOutput {
@@ -36,6 +38,14 @@ function buildRecordingOutput(calls: string[]): CliOutput {
       calls.push(`start ${label}`);
       const result = await run();
       calls.push(`end ${label}`);
+      return result;
+    },
+    async task(label, run) {
+      calls.push(`start task ${label}`);
+      const result = await run((line) => {
+        calls.push(`log ${line}`);
+      });
+      calls.push(`end task ${label}`);
       return result;
     },
   };
@@ -303,24 +313,27 @@ describe('release-steps', () => {
   });
 
   describe('finishRelease', () => {
-    it('runs each Yarn command in a step, then commits outside any step', async () => {
+    it('runs each Yarn command in a task, then commits outside any step', async () => {
       const project = buildMockProject();
       const calls: string[] = [];
       vi.spyOn(yarnCommandsModule, 'fixConstraints').mockImplementation(
-        async (directoryPath) => {
+        async (directoryPath, onLine) => {
           calls.push(`fixConstraints ${directoryPath}`);
+          onLine('constraints output');
         },
       );
       vi.spyOn(yarnCommandsModule, 'updateYarnLockfile').mockImplementation(
-        async (directoryPath) => {
+        async (directoryPath, onLine) => {
           calls.push(`updateYarnLockfile ${directoryPath}`);
+          onLine('install output');
         },
       );
       vi.spyOn(
         yarnCommandsModule,
         'deduplicateDependencies',
-      ).mockImplementation(async (directoryPath) => {
+      ).mockImplementation(async (directoryPath, onLine) => {
         calls.push(`deduplicateDependencies ${directoryPath}`);
+        onLine('dedupe output');
       });
       vi.spyOn(repoModule, 'commitAllChanges').mockImplementation(
         async (directoryPath, commitMessage) => {
@@ -335,15 +348,18 @@ describe('release-steps', () => {
       });
 
       expect(calls).toStrictEqual([
-        'start Fixing Yarn constraints',
+        'start task Fixing Yarn constraints',
         'fixConstraints /path/to/project',
-        'end Fixing Yarn constraints',
-        'start Installing dependencies',
+        'log constraints output',
+        'end task Fixing Yarn constraints',
+        'start task Installing dependencies',
         'updateYarnLockfile /path/to/project',
-        'end Installing dependencies',
-        'start Deduplicating dependencies',
+        'log install output',
+        'end task Installing dependencies',
+        'start task Deduplicating dependencies',
         'deduplicateDependencies /path/to/project',
-        'end Deduplicating dependencies',
+        'log dedupe output',
+        'end task Deduplicating dependencies',
         'commitAllChanges /path/to/project Update Release 2.0.0',
       ]);
     });
