@@ -164,6 +164,21 @@ describe('cli-output', () => {
           Object.assign(new MockWritable(), { isTTY: true, columns: 80 }),
         arrange: (): void => undefined,
       },
+      {
+        condition: 'the tool runs in GitHub Actions',
+        buildStream: buildTerminalStream,
+        arrange: (): void => {
+          vi.stubEnv('CI', 'true');
+          vi.stubEnv('GITHUB_ACTIONS', 'true');
+        },
+      },
+      {
+        condition: 'CI is 1',
+        buildStream: buildTerminalStream,
+        arrange: (): void => {
+          vi.stubEnv('CI', '1');
+        },
+      },
     ])(
       'writes no ANSI codes when no stream is styled because $condition',
       async ({ buildStream, arrange }) => {
@@ -238,13 +253,6 @@ describe('cli-output', () => {
         arrange: (): void => undefined,
       },
       {
-        condition: 'CI is set',
-        buildStderr: buildTerminalStream,
-        arrange: (): void => {
-          vi.stubEnv('CI', 'true');
-        },
-      },
-      {
         condition: 'TERM is dumb',
         buildStderr: buildTerminalStream,
         arrange: (): void => {
@@ -262,6 +270,21 @@ describe('cli-output', () => {
       expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Doing something'));
     });
 
+    it.each(['', '0', 'false'])(
+      'shows a spinner when CI is "%s"',
+      async (value) => {
+        vi.stubEnv('CI', value);
+        const output = createCliOutput({
+          stdout: new MockWritable(),
+          stderr: buildTerminalStream(),
+        });
+
+        await output.step('Doing something', async () => undefined);
+
+        expect(spinner).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it('streams task output and clears it when the task succeeds', async () => {
       const stdout = new MockWritable();
       const stderr = buildTerminalStream();
@@ -276,6 +299,8 @@ describe('cli-output', () => {
       expect(result).toBe(42);
       expect(taskLog).toHaveBeenCalledExactlyOnceWith({
         title: 'Running something',
+        limit: 10,
+        retainLog: true,
         output: stderr,
       });
       expect(indicators.taskLog.message.mock.calls).toStrictEqual([
@@ -312,6 +337,45 @@ describe('cli-output', () => {
       expect(indicators.taskLog.success).not.toHaveBeenCalled();
     });
 
+    it('shows only the last lines while a task runs, and every line when it fails', async () => {
+      const actual =
+        await vi.importActual<typeof import('@clack/prompts')>(
+          '@clack/prompts',
+        );
+      vi.mocked(taskLog).mockImplementation(actual.taskLog);
+      const stderr = buildTerminalStream();
+      const output = createCliOutput({ stdout: new MockWritable(), stderr });
+      const lines = Array.from(
+        { length: 15 },
+        (_, index) => `Line ${index + 1}`,
+      );
+      let writesBeforeFailure = 0;
+
+      await expect(
+        output.task('Running something', async (log) => {
+          lines.forEach(log);
+          writesBeforeFailure = stderr.data().length;
+          throw new Error('oops');
+        }),
+      ).rejects.toThrow('oops');
+
+      const lastRedraw = stripVTControlCharacters(
+        stderr
+          .data()
+          .slice(writesBeforeFailure - 1, writesBeforeFailure)
+          .join(''),
+      );
+      expect(lastRedraw).not.toContain('Line 5\n');
+      expect(lastRedraw).toContain('Line 6\n');
+      const failure = stripVTControlCharacters(
+        stderr.data().slice(writesBeforeFailure).join(''),
+      );
+      expect(failure).toContain(`${S_ERROR}  Running something`);
+      for (const line of lines) {
+        expect(failure).toContain(`${S_BAR}  ${line}\n`);
+      }
+    });
+
     it('prints the task output only when it fails in plain output', async () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
@@ -340,7 +404,14 @@ describe('cli-output', () => {
       expect(taskLog).not.toHaveBeenCalled();
     });
 
-    it('exits with 130 on Ctrl+C during a step', async () => {
+    it.each([
+      { keyName: 'Ctrl+C', input: '\u0003', key: { ctrl: true, name: 'c' } },
+      {
+        keyName: 'Escape',
+        input: '\u001b',
+        key: { ctrl: false, name: 'escape' },
+      },
+    ])('exits with 130 on $keyName during a step', async ({ input, key }) => {
       const exit = vi
         .spyOn(process, 'exit')
         .mockImplementation(() => undefined as never);
@@ -348,16 +419,16 @@ describe('cli-output', () => {
         stdout: new MockWritable(),
         stderr: buildTerminalStream(),
       });
-      const pressCtrlC = (): void => {
-        process.stdin.emit('keypress', '\u0003', { ctrl: true, name: 'c' });
+      const press = (): void => {
+        process.stdin.emit('keypress', input, key);
       };
 
       await output.step('Doing something', async () => {
         process.stdin.emit('keypress', 'c', { ctrl: false, name: 'c' });
         expect(exit).not.toHaveBeenCalled();
-        pressCtrlC();
+        press();
       });
-      pressCtrlC();
+      press();
 
       expect(exit).toHaveBeenCalledExactlyOnceWith(130);
     });
