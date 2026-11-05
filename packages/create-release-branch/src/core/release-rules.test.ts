@@ -132,6 +132,25 @@ describe('release-rules', () => {
       ]);
     });
 
+    it('reports an unknown package with an exact version only as unknown', () => {
+      const project = buildMockProject({
+        workspacePackages: {
+          a: buildMockPackage('a', '1.0.0'),
+        },
+      });
+
+      expect(checkReleaseChoices(project, { b: '1.2.3' }).errors).toStrictEqual(
+        [
+          {
+            packageName: 'b',
+            entryIndex: 0,
+            problem: 'is not a package in the project',
+            hint: 'Check the name, or remove the line.',
+          },
+        ],
+      );
+    });
+
     it.each([
       {
         rule: 'an unknown package',
