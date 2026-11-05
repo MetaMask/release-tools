@@ -109,7 +109,8 @@ export async function planRelease({
  * @param releasePlan - Compiled instructions on how exactly to update the
  * project in order to prepare a new release.
  * @param formatter - The formatter to use for formatting the changelog.
- * @returns The packages without a changelog as notices.
+ * @returns The packages without a changelog as notices, leaving out the root
+ * package.
  */
 export async function executeReleasePlan(
   project: Project,
@@ -121,6 +122,7 @@ export async function executeReleasePlan(
       const { name } = workspaceReleasePlan.package.validatedManifest;
       debug(`Updating package ${name}...`);
       return {
+        isRoot: workspaceReleasePlan.package === project.rootPackage,
         name,
         result: await updatePackage({
           project,
@@ -130,5 +132,5 @@ export async function executeReleasePlan(
       };
     }),
   );
-  return buildChangelogNotices(results);
+  return buildChangelogNotices(results.filter(({ isRoot }) => !isRoot));
 }

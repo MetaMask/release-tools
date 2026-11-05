@@ -201,15 +201,15 @@ describe('release-plan-utils', () => {
     it('returns the packages without a changelog as a notice', async () => {
       const releasePlan = {
         newVersion: '2.0.0',
-        packages: ['root', 'a', 'b'].map((name) => ({
+        packages: ['a', 'b', 'c'].map((name) => ({
           package: buildMockPackage(name),
           newVersion: '2.0.0',
         })),
       };
       const results = {
-        root: 'no-changelog',
-        a: 'updated',
-        b: 'no-changelog',
+        a: 'no-changelog',
+        b: 'updated',
+        c: 'no-changelog',
       } as const;
       vi.spyOn(packageUtils, 'updatePackage').mockImplementation(
         async ({ packageReleasePlan }) =>
@@ -228,7 +228,34 @@ describe('release-plan-utils', () => {
       expect(notices).toStrictEqual([
         {
           title: '2 packages have no changelog to update:',
-          items: ['root', 'b'],
+          items: ['a', 'c'],
+        },
+      ]);
+    });
+
+    it('does not list the root package as having no changelog', async () => {
+      const project = buildMockProject({
+        rootPackage: buildMockPackage('monorepo'),
+      });
+      const releasePlan = {
+        newVersion: '2.0.0',
+        packages: [project.rootPackage, buildMockPackage('a')].map((pkg) => ({
+          package: pkg,
+          newVersion: '2.0.0',
+        })),
+      };
+      vi.spyOn(packageUtils, 'updatePackage').mockResolvedValue('no-changelog');
+
+      const notices = await executeReleasePlan(
+        project,
+        releasePlan,
+        'prettier',
+      );
+
+      expect(notices).toStrictEqual([
+        {
+          title: '1 package has no changelog to update:',
+          items: ['a'],
         },
       ]);
     });

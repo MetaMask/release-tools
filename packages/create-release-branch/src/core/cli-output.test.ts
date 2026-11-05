@@ -151,6 +151,19 @@ describe('cli-output', () => {
       expect(stdout.data()).toStrictEqual([]);
     });
 
+    it('warnList indents every line of a multi-line item', () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+
+      createCliOutput({ stdout, stderr }).warnList('Some title:', [
+        'Line 1\nLine 2',
+      ]);
+
+      expect(textOf(stderr)).toBe(
+        `${logLine(S_WARN, 'Some title:')}${S_BAR}    Line 1\n${S_BAR}    Line 2\n`,
+      );
+    });
+
     it('writes stderr without colors when only stdout is a color terminal', () => {
       const stdout = buildTerminalStream();
       const stderr = new MockWritable();
