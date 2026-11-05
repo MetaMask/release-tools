@@ -1,21 +1,25 @@
 import path from 'path';
 
 import type { CliOutput } from './core/cli-output.js';
+import { createReleaseBranch } from './core/release-branch.js';
 import { commitAllChanges } from './core/repo.js';
+import type { Formatter, ReleaseType } from './core/types.js';
 import {
   deduplicateDependencies,
   fixConstraints,
   updateYarnLockfile,
 } from './core/yarn-commands.js';
 import { determineEditor } from './editor.js';
-import { Formatter, ReleaseType } from './initial-parameters.js';
 import { listLegacyCandidates } from './modes/legacy/candidates.js';
+import {
+  planRelease,
+  executeReleasePlan,
+} from './modes/legacy/release-plan.js';
 import {
   Project,
   updateChangelogsForChangedPackages,
   restoreChangelogsForSkippedPackages,
 } from './project/project.js';
-import { planRelease, executeReleasePlan } from './release-plan.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
@@ -27,7 +31,6 @@ import {
   removeFile,
   writeFile,
 } from './utils/fs.js';
-import { createReleaseBranch } from './workflow-operations.js';
 
 /**
  * For a monorepo, the process works like this:

@@ -3,29 +3,32 @@ import openBrowser from 'open';
 import { join } from 'path';
 
 import type { CliOutput } from './core/cli-output.js';
+import { createReleaseBranch } from './core/release-branch.js';
 import {
   checkReleaseChoices,
   normalizeReleaseChoices,
 } from './core/release-rules.js';
 import type { ReleaseChoices } from './core/release-rules.js';
 import { commitAllChanges } from './core/repo.js';
+import type { Formatter } from './core/types.js';
 import {
   deduplicateDependencies,
   fixConstraints,
   updateYarnLockfile,
 } from './core/yarn-commands.js';
 import { getCurrentDirectoryPath } from './dirname.js';
-import { Formatter } from './initial-parameters.js';
 import { listLegacyCandidates } from './modes/legacy/candidates.js';
+import {
+  executeReleasePlan,
+  planRelease,
+} from './modes/legacy/release-plan.js';
 import { Package } from './project/package.js';
 import type { Project } from './project/project.js';
 import {
   restoreChangelogsForSkippedPackages,
   updateChangelogsForChangedPackages,
 } from './project/project.js';
-import { executeReleasePlan, planRelease } from './release-plan.js';
 import { readFile } from './utils/fs.js';
-import { createReleaseBranch } from './workflow-operations.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 

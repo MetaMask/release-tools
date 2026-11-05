@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildMockProject } from '../tests/unit/helpers.js';
-import * as repoModule from './core/repo.js';
-import { createReleaseBranch } from './workflow-operations.js';
+import { buildMockProject } from '../../tests/unit/helpers.js';
+import { createReleaseBranch } from './release-branch.js';
+import * as repoModule from './repo.js';
 
-vi.mock('./core/repo');
+vi.mock('./repo');
 
-describe('workflow-operations', () => {
+describe('release-branch', () => {
   describe('createReleaseBranch', () => {
     it('should create a ordinary release branch if it does not exist', async () => {
       const project = buildMockProject();

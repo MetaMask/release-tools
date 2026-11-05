@@ -1,7 +1,3 @@
-import {
-  ManifestFieldNames as PackageManifestFieldNames,
-  ManifestDependencyFieldNames as PackageManifestDependenciesFieldNames,
-} from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
 import path from 'path';
 import validateNPMPackageName from 'validate-npm-package-name';
@@ -10,7 +6,29 @@ import { readJsonObjectFile } from '../utils/fs.js';
 import { isTruthyString } from '../utils/misc-utils.js';
 import { semver, SemVer } from '../utils/semver.js';
 
-export { PackageManifestFieldNames, PackageManifestDependenciesFieldNames };
+/**
+ * The fields of a package manifest that this tool reads.
+ */
+export const PackageManifestFieldNames = {
+  Name: 'name',
+  Private: 'private',
+  Version: 'version',
+  Workspaces: 'workspaces',
+} as const;
+
+export type PackageManifestFieldName =
+  (typeof PackageManifestFieldNames)[keyof typeof PackageManifestFieldNames];
+
+/**
+ * The dependency fields of a package manifest that this tool reads.
+ */
+export const PackageManifestDependenciesFieldNames = {
+  Production: 'dependencies',
+  Peer: 'peerDependencies',
+} as const;
+
+export type PackageManifestDependenciesFieldName =
+  (typeof PackageManifestDependenciesFieldNames)[keyof typeof PackageManifestDependenciesFieldNames];
 
 /**
  * An unverified representation of the data in a package's `package.json`.
@@ -62,10 +80,9 @@ function buildPackageManifestFieldValidationErrorMessage({
   fieldName: keyof UnvalidatedPackageManifest;
   verbPhrase: string;
 }): string {
-  const subject = isTruthyString(manifest[PackageManifestFieldNames.Name])
-    ? `The value of "${fieldName}" in the manifest for "${
-        manifest[PackageManifestFieldNames.Name]
-      }"`
+  const packageName = manifest[PackageManifestFieldNames.Name];
+  const subject = isTruthyString(packageName)
+    ? `The value of "${fieldName}" in the manifest for "${packageName}"`
     : `The value of "${fieldName}" in the manifest located at "${parentDirectory}"`;
   return `${subject} ${verbPhrase}`;
 }
@@ -355,9 +372,7 @@ function isValidPackageManifestDependenciesField(
 export function readPackageManifestDependenciesField(
   manifest: UnvalidatedPackageManifest,
   parentDirectory: string,
-  fieldName:
-    | PackageManifestDependenciesFieldNames.Production
-    | PackageManifestDependenciesFieldNames.Peer,
+  fieldName: PackageManifestDependenciesFieldName,
 ): Record<string, string> {
   const value = manifest[fieldName];
   const schema = schemata[fieldName];

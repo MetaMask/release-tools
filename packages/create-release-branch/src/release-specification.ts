@@ -6,21 +6,12 @@ import {
   normalizeReleaseChoices,
   SKIP_PACKAGE_DIRECTIVE,
 } from './core/release-rules.js';
-import type {
-  IncrementableVersionPart,
-  ReleaseChoices,
-} from './core/release-rules.js';
+import type { ReleaseChoices } from './core/release-rules.js';
+import type { VersionSpecifiers } from './core/types.js';
 import { Editor } from './editor.js';
 import { Project } from './project/project.js';
 import { readFile } from './utils/fs.js';
 import { debug, wrapError, isObject, runCommand } from './utils/misc-utils.js';
-import type { SemVer } from './utils/semver.js';
-
-/**
- * Describes how to update the version for a package, either by bumping a part
- * of the version or by setting that version exactly.
- */
-type VersionSpecifier = IncrementableVersionPart | SemVer;
 
 /**
  * User-provided instructions for how to update this project in order to prepare
@@ -30,7 +21,7 @@ type VersionSpecifier = IncrementableVersionPart | SemVer;
  * @property path - The path to the original release specification file.
  */
 export type ReleaseSpecification = {
-  packages: Record<string, VersionSpecifier>;
+  packages: VersionSpecifiers;
   path: string;
 };
 

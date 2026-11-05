@@ -44,7 +44,8 @@ type MockPackageOverrides = Omit<
 > & {
   validatedManifest?: Omit<
     Partial<ValidatedPackageManifest>,
-    PackageManifestFieldNames.Name | PackageManifestFieldNames.Version
+    | typeof PackageManifestFieldNames.Name
+    | typeof PackageManifestFieldNames.Version
   >;
   unvalidatedManifest?: UnvalidatedPackageManifest;
 };

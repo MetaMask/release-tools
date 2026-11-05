@@ -10,8 +10,7 @@ import { format } from 'util';
 
 import type { CliOutput } from '../core/cli-output.js';
 import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
-import { Formatter } from '../initial-parameters.js';
-import { PackageReleasePlan } from '../release-plan.js';
+import type { Formatter } from '../core/types.js';
 import { readFile, writeFile, writeJsonFile } from '../utils/fs.js';
 import { isErrorWithCode } from '../utils/misc-utils.js';
 import { SemVer } from '../utils/semver.js';
@@ -42,6 +41,19 @@ export type Package = {
   validatedManifest: ValidatedPackageManifest;
   changelogPath: string;
   hasChangesSinceLatestRelease: boolean;
+};
+
+/**
+ * Instructions for how to update a package within a project in order to prepare
+ * it for a new release.
+ *
+ * @property package - Information about the package.
+ * @property newVersion - The new version for the package, as a
+ * SemVer-compatible string.
+ */
+export type PackageReleasePlan = {
+  package: Package;
+  newVersion: string;
 };
 
 /**
