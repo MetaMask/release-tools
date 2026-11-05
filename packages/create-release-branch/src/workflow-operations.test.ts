@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildMockProject } from '../tests/unit/helpers.js';
-import * as repoModule from './repo.js';
+import * as repoModule from './core/repo.js';
 import { createReleaseBranch } from './workflow-operations.js';
 
-vi.mock('./repo');
+vi.mock('./core/repo');
 
 describe('workflow-operations', () => {
   describe('createReleaseBranch', () => {

@@ -1,5 +1,5 @@
-import { getEnvironmentVariables } from './env.js';
-import { debug, resolveExecutable } from './misc-utils.js';
+import { getEnvironmentVariables } from './utils/env.js';
+import { debug, resolveExecutable } from './utils/misc-utils.js';
 
 /**
  * Information about the editor present on the user's computer.

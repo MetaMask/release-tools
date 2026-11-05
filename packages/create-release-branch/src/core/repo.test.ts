@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import * as miscUtils from './misc-utils.js';
+import * as miscUtils from '../utils/misc-utils.js';
 import {
   commitAllChanges,
   getTagNames,
@@ -10,7 +10,7 @@ import {
   restoreFiles,
 } from './repo.js';
 
-vi.mock('./misc-utils');
+vi.mock('../utils/misc-utils');
 
 describe('repo', () => {
   describe('commitAllChanges', () => {

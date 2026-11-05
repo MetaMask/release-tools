@@ -1,4 +1,4 @@
-import { debug, runCommand } from './misc-utils.js';
+import { debug, runCommand } from '../utils/misc-utils.js';
 
 /**
  * Runs `yarn constraints --fix` to autofix all unmet constraints.

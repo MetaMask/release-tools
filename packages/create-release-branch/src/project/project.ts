@@ -3,12 +3,15 @@ import { isPlainObject } from '@metamask/utils';
 import { WriteStream } from 'fs';
 import { resolve } from 'path';
 
-import { WriteStreamLike, fileExists } from './fs.js';
-import { Formatter } from './initial-parameters.js';
+import { getTagNames, restoreFiles } from '../core/repo.js';
+import { Formatter } from '../initial-parameters.js';
+import { ReleaseSpecification } from '../release-specification.js';
+import { WriteStreamLike, fileExists } from '../utils/fs.js';
 import {
   convertToHttpsGitHubRepositoryUrl,
   getStdoutFromCommand,
-} from './misc-utils.js';
+} from '../utils/misc-utils.js';
+import { SemVer } from '../utils/semver.js';
 import {
   PackageManifestFieldNames,
   UnvalidatedPackageManifest,
@@ -19,9 +22,6 @@ import {
   readMonorepoWorkspacePackage,
   updatePackageChangelog,
 } from './package.js';
-import { ReleaseSpecification } from './release-specification.js';
-import { getTagNames, restoreFiles } from './repo.js';
-import { SemVer } from './semver.js';
 
 /**
  * The release version of the root package of a monorepo extracted from its

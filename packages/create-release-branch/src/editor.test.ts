@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { determineEditor } from './editor.js';
-import * as envModule from './env.js';
-import * as miscUtils from './misc-utils.js';
+import * as envModule from './utils/env.js';
+import * as miscUtils from './utils/misc-utils.js';
 
-vi.mock('./env');
-vi.mock('./misc-utils');
+vi.mock('./utils/env');
+vi.mock('./utils/misc-utils');
 
 describe('editor', () => {
   describe('determineEditor', () => {

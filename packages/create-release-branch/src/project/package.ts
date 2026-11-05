@@ -9,18 +9,23 @@ import fs, { WriteStream } from 'fs';
 import path from 'path';
 import { format } from 'util';
 
-import { WriteStreamLike, readFile, writeFile, writeJsonFile } from './fs.js';
-import { Formatter } from './initial-parameters.js';
-import { isErrorWithCode } from './misc-utils.js';
+import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
+import { Formatter } from '../initial-parameters.js';
+import { PackageReleasePlan } from '../release-plan.js';
+import {
+  WriteStreamLike,
+  readFile,
+  writeFile,
+  writeJsonFile,
+} from '../utils/fs.js';
+import { isErrorWithCode } from '../utils/misc-utils.js';
+import { SemVer } from '../utils/semver.js';
 import {
   readPackageManifest,
   UnvalidatedPackageManifest,
   ValidatedPackageManifest,
 } from './package-manifest.js';
 import { Project } from './project.js';
-import { PackageReleasePlan } from './release-plan.js';
-import { hasChangesInDirectorySinceGitTag } from './repo.js';
-import { SemVer } from './semver.js';
 
 const MANIFEST_FILE_NAME = 'package.json';
 const CHANGELOG_FILE_NAME = 'CHANGELOG.md';

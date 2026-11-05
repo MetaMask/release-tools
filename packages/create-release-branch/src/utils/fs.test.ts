@@ -4,7 +4,7 @@ import path from 'path';
 import { rimraf } from 'rimraf';
 import { describe, expect, it, vi } from 'vitest';
 
-import { withSandbox } from '../tests/helpers.js';
+import { withSandbox } from '../../tests/helpers.js';
 import {
   readFile,
   writeFile,
