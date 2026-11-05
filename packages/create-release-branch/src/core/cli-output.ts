@@ -191,6 +191,12 @@ export function createCliOutput({
 }): CliOutput {
   const toStdout = { output: styled.stdout ? stdout : withoutColors(stdout) };
   const toStderr = { output: styled.stderr ? stderr : withoutColors(stderr) };
+  const format = {
+    name: (text: string): string =>
+      styled.stderr ? styleText('cyan', text, { stream: stderr }) : text,
+    dim: (text: string): string =>
+      styled.stderr ? styleText('dim', text, { stream: stderr }) : text,
+  };
 
   return {
     info(text) {
@@ -206,16 +212,14 @@ export function createCliOutput({
       log.error(trimTrailingNewlines(text), toStderr);
     },
     failure(title, lines) {
+      const details = lines.flatMap((line) => line.split('\n'));
       log.error(title, toStderr);
-      log.message(lines, toStderr);
-      cancel('No release was created.', toStderr);
+      // clack writes one gutter line before the details, so an empty entry
+      // after them adds the same gutter line before the closing line.
+      log.message(details.length > 0 ? [...details, ''] : [], toStderr);
+      cancel('The release did not finish.', toStderr);
     },
-    format: {
-      name: (text) =>
-        styled.stderr ? styleText('cyan', text, { stream: stderr }) : text,
-      dim: (text) =>
-        styled.stderr ? styleText('dim', text, { stream: stderr }) : text,
-    },
+    format,
     async step(label, run) {
       if (!animate) {
         try {
@@ -253,10 +257,7 @@ export function createCliOutput({
           return result;
         } catch (error) {
           log.error(label, toStderr);
-          log.message(
-            lines.map((line) => styleText('dim', line, { stream: stderr })),
-            toStderr,
-          );
+          log.message(lines.map(format.dim), toStderr);
           throw error;
         }
       }

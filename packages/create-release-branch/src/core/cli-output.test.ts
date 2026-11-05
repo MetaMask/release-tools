@@ -419,11 +419,43 @@ describe('cli-output', () => {
       expect(textOf(stderr)).toBe(
         [
           logLine(S_ERROR, 'Something failed'),
-          `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}\n${S_BAR}  Line 2\n`,
-          `${S_BAR_END}  No release was created.\n\n`,
+          `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}\n${S_BAR}  Line 2\n${S_BAR}\n`,
+          `${S_BAR_END}  The release did not finish.\n\n`,
         ].join(''),
       );
       expect(stdout.data()).toStrictEqual([]);
+    });
+
+    it('failure writes a gutter line before the closing line when there are no lines', () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+      const output = createCliOutput({ stdout, stderr });
+
+      output.failure('Something failed', []);
+
+      expect(textOf(stderr)).toBe(
+        [
+          logLine(S_ERROR, 'Something failed'),
+          `${S_BAR}\n`,
+          `${S_BAR_END}  The release did not finish.\n\n`,
+        ].join(''),
+      );
+    });
+
+    it('failure keeps the gutter on every line of a multi-line entry', () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+      const output = createCliOutput({ stdout, stderr });
+
+      output.failure('Something failed', ['Line 1\nLine 2']);
+
+      expect(textOf(stderr)).toBe(
+        [
+          logLine(S_ERROR, 'Something failed'),
+          `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}  Line 2\n${S_BAR}\n`,
+          `${S_BAR_END}  The release did not finish.\n\n`,
+        ].join(''),
+      );
     });
 
     it('formats names and dim text for stderr only when stderr is styled', () => {

@@ -274,7 +274,7 @@ export async function validateReleaseSpecification<Plan>(
         problems: [
           {
             problem: 'is not valid YAML',
-            hint: `Fix the syntax: ${firstLineOfMessage}`,
+            hint: `Fix the syntax: ${firstLineOfMessage.replace(/:$/u, '')}`,
           },
         ],
         specPath: releaseSpecificationPath,
