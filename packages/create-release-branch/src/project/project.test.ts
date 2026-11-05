@@ -451,7 +451,7 @@ describe('project', () => {
 
       expect(notices).toStrictEqual([
         {
-          title: '1 package has no changelog, so it was not updated:',
+          title: '1 package has no changelog to update:',
           items: ['b'],
         },
         { title: '2 changelogs have no updates to make:', items: ['a', 'c'] },
@@ -469,7 +469,7 @@ describe('project', () => {
         ]),
       ).toStrictEqual([
         {
-          title: '2 packages have no changelog, so it was not updated:',
+          title: '2 packages have no changelog to update:',
           items: ['a', 'b'],
         },
         { title: '1 changelog has no updates to make:', items: ['c'] },

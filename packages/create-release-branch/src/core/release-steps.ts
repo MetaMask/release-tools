@@ -1,6 +1,7 @@
 import type { Project } from '../project/project.js';
 import type { CliOutput } from './cli-output.js';
 import type { Mode, ModePlan } from './mode.js';
+import type { Notice } from './notices.js';
 import {
   determineReleaseVersion,
   ensureReleaseBranch,
@@ -18,6 +19,18 @@ import {
   fixConstraints,
   updateYarnLockfile,
 } from './yarn-commands.js';
+
+/**
+ * Prints each notice as one warning with its items.
+ *
+ * @param output - Where to write user-facing messages.
+ * @param notices - The notices.
+ */
+function printNotices(output: CliOutput, notices: Notice[]): void {
+  for (const { title, items } of notices) {
+    output.warnList(title, items);
+  }
+}
 
 /**
  * Creates (or switches to) the release branch. On the first run, prepares the
@@ -54,9 +67,7 @@ export async function startRelease<Data>({
       'Updating changelogs',
       async () => await mode.prepare(),
     );
-    for (const { title, items } of notices) {
-      output.warnList(title, items);
-    }
+    printNotices(output, notices);
     // `prepare` may change nothing, and the release branch still needs this
     // commit.
     await commitAllChanges(
@@ -153,9 +164,7 @@ export async function applyRelease<Data>({
     'Applying the release',
     async () => await mode.apply(plan, newReleaseVersion),
   );
-  for (const { title, items } of notices) {
-    output.warnList(title, items);
-  }
+  printNotices(output, notices);
 }
 
 /**

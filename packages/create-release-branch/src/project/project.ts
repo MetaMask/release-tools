@@ -258,8 +258,8 @@ export function buildChangelogNotices(
     {
       title:
         withoutChangelog.length === 1
-          ? '1 package has no changelog, so it was not updated:'
-          : `${withoutChangelog.length} packages have no changelog, so it was not updated:`,
+          ? '1 package has no changelog to update:'
+          : `${withoutChangelog.length} packages have no changelog to update:`,
       items: withoutChangelog,
     },
     {

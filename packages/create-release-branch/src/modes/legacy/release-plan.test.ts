@@ -227,7 +227,7 @@ describe('release-plan-utils', () => {
 
       expect(notices).toStrictEqual([
         {
-          title: '2 packages have no changelog, so it was not updated:',
+          title: '2 packages have no changelog to update:',
           items: ['root', 'b'],
         },
       ]);
