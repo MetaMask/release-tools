@@ -65,7 +65,6 @@ export type CheckChoicesResult<Data> =
       dependencyFindings: Record<string, DependencyFinding>;
     }
   | {
-      errors: [];
       dependencyFindings: Record<string, DependencyFinding>;
       plan: ModePlan<Data>;
     };
@@ -111,7 +110,7 @@ export async function checkChoices<Data>({
     return { errors: planResult.errors, dependencyFindings };
   }
 
-  return { errors: [], dependencyFindings, plan: planResult.plan };
+  return { dependencyFindings, plan: planResult.plan };
 }
 
 /**

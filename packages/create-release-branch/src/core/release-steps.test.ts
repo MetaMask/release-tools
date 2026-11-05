@@ -182,7 +182,6 @@ describe('release-steps', () => {
       });
 
       expect(result).toStrictEqual({
-        errors: [],
         dependencyFindings: {},
         plan,
       });

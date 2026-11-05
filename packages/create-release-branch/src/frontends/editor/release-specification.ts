@@ -169,7 +169,7 @@ export async function validateReleaseSpecification<Plan>(
   releaseSpecificationPath: string,
   check: (
     choices: ReleaseChoices,
-  ) => Promise<{ errors: ReleaseChoiceError[] } | { errors: []; plan: Plan }>,
+  ) => Promise<{ errors: ReleaseChoiceError[] } | { plan: Plan }>,
 ): Promise<Plan> {
   const releaseSpecificationContents = await readFile(releaseSpecificationPath);
   const indexOfFirstUsableLine = releaseSpecificationContents
@@ -213,15 +213,15 @@ export async function validateReleaseSpecification<Plan>(
   }
 
   const result = await check(unvalidatedReleaseSpecification.packages);
-  const errors = result.errors.map(({ message, entryIndex }) => ({
-    message,
-    lineNumber:
-      entryIndex === undefined
-        ? undefined
-        : indexOfFirstUsableLine + entryIndex + 2,
-  }));
 
   if (!('plan' in result)) {
+    const errors = result.errors.map(({ message, entryIndex }) => ({
+      message,
+      lineNumber:
+        entryIndex === undefined
+          ? undefined
+          : indexOfFirstUsableLine + entryIndex + 2,
+    }));
     const message = [
       'Your release spec could not be processed due to the following issues:',
       errors
