@@ -408,7 +408,7 @@ packages:
             problems: [
               {
                 problem: 'is not valid YAML',
-                hint: 'Fix the syntax: Missing closing "quote at line 1, column 10:',
+                hint: 'Fix the syntax: Missing closing "quote at line 1, column 10',
               },
             ],
             specPath: releaseSpecificationPath,
@@ -2021,7 +2021,7 @@ ${releaseSpecificationPath}
           },
           {
             problem: 'is not valid YAML',
-            hint: 'Fix the syntax: Missing closing "quote at line 1, column 10:',
+            hint: 'Fix the syntax: Missing closing "quote at line 1, column 10',
           },
         ],
         specPath: '/path/to/RELEASE_SPEC.yml',
@@ -2040,7 +2040,7 @@ ${releaseSpecificationPath}
           '',
           'The release spec',
           '         is not valid YAML',
-          '         (Fix the syntax: Missing closing "quote at line 1, column 10:)',
+          '         (Fix the syntax: Missing closing "quote at line 1, column 10)',
           '',
           'Fix the release spec and run the tool again. It was kept at:',
           '(/path/to/RELEASE_SPEC.yml)',
