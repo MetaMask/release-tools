@@ -3,6 +3,12 @@ import openBrowser from 'open';
 import { join } from 'path';
 
 import type { CliOutput } from './core/cli-output.js';
+import {
+  checkReleaseChoices,
+  findWorkspaceDependentNamesOfType,
+  normalizeReleaseChoices,
+} from './core/release-rules.js';
+import type { ReleaseChoices } from './core/release-rules.js';
 import { commitAllChanges } from './core/repo.js';
 import {
   deduplicateDependencies,
@@ -18,15 +24,7 @@ import {
   updateChangelogsForChangedPackages,
 } from './project/project.js';
 import { executeReleasePlan, planRelease } from './release-plan.js';
-import {
-  findWorkspaceDependentNamesOfType,
-  findCandidateDependencies,
-  findCandidateDependentsOfTypeForMajorBump,
-  IncrementableVersionParts,
-  validateAllPackageEntries,
-} from './release-specification.js';
 import { readFile } from './utils/fs.js';
-import { SemVer, semver } from './utils/semver.js';
 import { createReleaseBranch } from './workflow-operations.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
@@ -206,62 +204,17 @@ function createApp({
     '/api/check-packages',
     async (req: express.Request, res: express.Response): Promise<void> => {
       try {
-        const releasedPackages = req.body as Record<string, string | null>;
+        const releasedPackages = req.body as ReleaseChoices;
 
-        const errors = Object.entries(releasedPackages).reduce(
-          (map, [changedPackageName, versionSpecifierOrDirective]) => {
-            const changedPackage =
-              project.workspacePackages[changedPackageName];
-
-            const missingDirectDependentNames =
-              findCandidateDependentsOfTypeForMajorBump(
-                project,
-                changedPackageName,
-                versionSpecifierOrDirective,
-                releasedPackages,
-                'dependencies',
-              );
-
-            const missingPeerDependentNames =
-              findCandidateDependentsOfTypeForMajorBump(
-                project,
-                changedPackageName,
-                versionSpecifierOrDirective,
-                releasedPackages,
-                'peerDependencies',
-              );
-
-            const missingDependencies = findCandidateDependencies(
-              project,
-              changedPackage,
-              versionSpecifierOrDirective,
-              releasedPackages,
-            );
-
-            if (
-              missingDirectDependentNames.length === 0 &&
-              missingPeerDependentNames.length === 0 &&
-              missingDependencies.length === 0
-            ) {
-              return map;
-            }
-
-            return {
-              ...map,
-              [changedPackageName]: {
-                missingDirectDependentNames,
-                missingPeerDependentNames,
-                missingDependencies,
-              },
-            };
-          },
-          {},
+        const { dependencyFindings } = checkReleaseChoices(
+          project,
+          releasedPackages,
         );
 
-        if (Object.keys(errors).length > 0) {
+        if (Object.keys(dependencyFindings).length > 0) {
           res.json({
             status: 'error',
-            errors,
+            errors: dependencyFindings,
           });
           return;
         }
@@ -278,9 +231,16 @@ function createApp({
     '/api/release',
     async (req: express.Request, res: express.Response): Promise<void> => {
       try {
-        const releasedPackages = req.body as Record<string, string | null>;
+        const releasedPackages = req.body as ReleaseChoices;
 
-        const errors = validateAllPackageEntries(project, releasedPackages, 0);
+        const errors = checkReleaseChoices(
+          project,
+          releasedPackages,
+        ).errors.map(({ message, entryIndex }) =>
+          entryIndex === undefined
+            ? { message }
+            : { message, lineNumber: entryIndex + 2 },
+        );
 
         if (errors.length > 0) {
           res.json({
@@ -290,34 +250,8 @@ function createApp({
           return;
         }
 
-        const releaseSpecificationPackages = Object.keys(
-          releasedPackages,
-        ).reduce((obj, packageName) => {
-          const versionSpecifierOrDirective = releasedPackages[packageName];
-
-          if (versionSpecifierOrDirective !== 'intentionally-skip') {
-            if (
-              Object.values(IncrementableVersionParts).includes(
-                versionSpecifierOrDirective as IncrementableVersionParts,
-              )
-            ) {
-              return {
-                ...obj,
-                [packageName]:
-                  versionSpecifierOrDirective as IncrementableVersionParts,
-              };
-            }
-
-            return {
-              ...obj,
-              [packageName]: semver.parse(
-                versionSpecifierOrDirective,
-              ) as SemVer,
-            };
-          }
-
-          return obj;
-        }, {});
+        const releaseSpecificationPackages =
+          normalizeReleaseChoices(releasedPackages);
 
         await restoreChangelogsForSkippedPackages({
           project,

@@ -10,8 +10,8 @@ import {
   buildMockProject,
   createNoopCliOutput,
 } from '../../tests/unit/helpers.js';
+import { IncrementableVersionParts } from '../core/release-rules.js';
 import * as repoModule from '../core/repo.js';
-import { IncrementableVersionParts } from '../release-specification.js';
 import * as fs from '../utils/fs.js';
 import * as miscUtils from '../utils/misc-utils.js';
 import * as packageModule from './package.js';
