@@ -5,19 +5,14 @@ import {
   updateChangelog,
 } from '@metamask/auto-changelog';
 import { assertExhaustive } from '@metamask/utils';
-import fs, { WriteStream } from 'fs';
 import path from 'path';
 import { format } from 'util';
 
+import type { CliOutput } from '../core/cli-output.js';
 import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
 import { Formatter } from '../initial-parameters.js';
 import { PackageReleasePlan } from '../release-plan.js';
-import {
-  WriteStreamLike,
-  readFile,
-  writeFile,
-  writeJsonFile,
-} from '../utils/fs.js';
+import { readFile, writeFile, writeJsonFile } from '../utils/fs.js';
 import { isErrorWithCode } from '../utils/misc-utils.js';
 import { SemVer } from '../utils/semver.js';
 import {
@@ -152,7 +147,7 @@ export async function readMonorepoRootPackage({
  * monorepo to which this package belongs.
  * @param args.projectDirectoryPath - The path to the project directory.
  * @param args.projectTagNames - The tag names across the whole project.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @returns Information about the package.
  */
 export async function readMonorepoWorkspacePackage({
@@ -161,14 +156,14 @@ export async function readMonorepoWorkspacePackage({
   rootPackageVersion,
   projectDirectoryPath,
   projectTagNames,
-  stderr,
+  output,
 }: {
   packageDirectoryPath: string;
   rootPackageName: string;
   rootPackageVersion: SemVer;
   projectDirectoryPath: string;
   projectTagNames: string[];
-  stderr: WriteStreamLike;
+  output: CliOutput;
 }): Promise<Package> {
   const manifestPath = path.join(packageDirectoryPath, MANIFEST_FILE_NAME);
   const changelogPath = path.join(packageDirectoryPath, CHANGELOG_FILE_NAME);
@@ -212,7 +207,7 @@ export async function readMonorepoWorkspacePackage({
     matchingTagNameForWorkspacePackageLatestRelease === undefined &&
     matchingTagNameForRootPackageLatestRelease !== undefined
   ) {
-    stderr.write(
+    output.warn(
       format(
         'WARNING: Could not determine changes for workspace package %s version %s based on Git tag %s; using tag for root package %s version %s, %s, instead.\n',
         validatedManifest.name,
@@ -277,7 +272,7 @@ export function getFormatter(
  * @param args.package - A particular package in the project.
  * @param args.version - The release version to migrate unreleased changes to.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @returns The result of writing to the changelog.
  */
 export async function migrateUnreleasedChangelogChangesToRelease({
@@ -285,13 +280,13 @@ export async function migrateUnreleasedChangelogChangesToRelease({
   package: pkg,
   version,
   formatter,
-  stderr,
+  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   version: string;
   formatter: Formatter;
-  stderr: Pick<WriteStream, 'write'>;
+  output: CliOutput;
 }): Promise<void> {
   let changelogContent;
 
@@ -299,7 +294,7 @@ export async function migrateUnreleasedChangelogChangesToRelease({
     changelogContent = await readFile(pkg.changelogPath);
   } catch (error) {
     if (isErrorWithCode(error) && error.code === 'ENOENT') {
-      stderr.write(
+      output.warn(
         `${pkg.validatedManifest.name} does not seem to have a changelog. Skipping.\n`,
       );
       return;
@@ -330,19 +325,19 @@ export async function migrateUnreleasedChangelogChangesToRelease({
  * @param args.project.repositoryUrl - The URL of the project's repository.
  * @param args.package - A particular package in the project.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @returns The result of writing to the changelog.
  */
 export async function updatePackageChangelog({
   project: { repositoryUrl },
   package: pkg,
   formatter,
-  stderr,
+  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   package: Package;
   formatter: Formatter;
-  stderr: Pick<WriteStream, 'write'>;
+  output: CliOutput;
 }): Promise<void> {
   let changelogContent;
 
@@ -350,7 +345,7 @@ export async function updatePackageChangelog({
     changelogContent = await readFile(pkg.changelogPath);
   } catch (error) {
     if (isErrorWithCode(error) && error.code === 'ENOENT') {
-      stderr.write(
+      output.warn(
         `${pkg.validatedManifest.name} does not seem to have a changelog. Skipping.\n`,
       );
       return;
@@ -374,7 +369,7 @@ export async function updatePackageChangelog({
   if (newChangelogContent) {
     await writeFile(pkg.changelogPath, newChangelogContent);
   } else {
-    stderr.write(
+    output.warn(
       `Changelog for ${pkg.validatedManifest.name} was not updated as there were no updates to make.`,
     );
   }
@@ -391,19 +386,18 @@ export async function updatePackageChangelog({
  * @param args.packageReleasePlan - The release plan for a particular package in the
  * project.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.stderr - A stream that can be used to write to standard error.
- * Defaults to /dev/null.
+ * @param args.output - Where to write user-facing messages.
  */
 export async function updatePackage({
   project,
   packageReleasePlan,
   formatter,
-  stderr = fs.createWriteStream('/dev/null'),
+  output,
 }: {
   project: Pick<Project, 'directoryPath' | 'repositoryUrl'>;
   packageReleasePlan: PackageReleasePlan;
   formatter: Formatter;
-  stderr?: Pick<WriteStream, 'write'>;
+  output: CliOutput;
 }): Promise<void> {
   const { package: pkg, newVersion } = packageReleasePlan;
 
@@ -416,7 +410,7 @@ export async function updatePackage({
     project,
     package: pkg,
     formatter,
-    stderr,
+    output,
     version: newVersion,
   });
 }

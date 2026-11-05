@@ -1,12 +1,12 @@
 import { getWorkspaceLocations } from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
-import { WriteStream } from 'fs';
 import { resolve } from 'path';
 
+import type { CliOutput } from '../core/cli-output.js';
 import { getTagNames, restoreFiles } from '../core/repo.js';
 import { Formatter } from '../initial-parameters.js';
 import { ReleaseSpecification } from '../release-specification.js';
-import { WriteStreamLike, fileExists } from '../utils/fs.js';
+import { fileExists } from '../utils/fs.js';
 import {
   convertToHttpsGitHubRepositoryUrl,
   getStdoutFromCommand,
@@ -83,7 +83,7 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
  *
  * @param projectDirectoryPath - The path to the project.
  * @param args - Additional arguments.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @returns An object that represents information about the project.
  * @throws if the project does not contain a root `package.json` (polyrepo and
  * monorepo) or if any of the workspaces specified in the root `package.json` do
@@ -91,7 +91,7 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
  */
 export async function readProject(
   projectDirectoryPath: string,
-  { stderr }: { stderr: WriteStreamLike },
+  { output }: { output: CliOutput },
 ): Promise<Project> {
   const tagNames = await getTagNames(projectDirectoryPath);
   const rootPackage = await readMonorepoRootPackage({
@@ -122,7 +122,7 @@ export async function readProject(
           rootPackageVersion: rootPackage.validatedManifest.version,
           projectDirectoryPath,
           projectTagNames: tagNames,
-          stderr,
+          output,
         });
       }),
     )
@@ -203,21 +203,21 @@ export async function getValidRepositoryUrl(
  *
  * @param args - The arguments.
  * @param args.project - The project.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  * @param args.formatter - The formatter to use for formatting the changelog.
  * @returns The result of writing to the changelog.
  */
 export async function updateChangelogsForChangedPackages({
   project,
   formatter,
-  stderr,
+  output,
 }: {
   project: Pick<
     Project,
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
   formatter: Formatter;
-  stderr: Pick<WriteStream, 'write'>;
+  output: CliOutput;
 }): Promise<void> {
   await Promise.all(
     Object.values(project.workspacePackages)
@@ -229,7 +229,7 @@ export async function updateChangelogsForChangedPackages({
           project,
           formatter,
           package: pkg,
-          stderr,
+          output,
         }),
       ),
   );

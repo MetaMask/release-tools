@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
-import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
@@ -202,57 +201,6 @@ packages:
         ['--wait', releaseSpecificationPath],
         { stdio: 'inherit' },
       );
-    });
-
-    it('prints a message to standard out, but then removes it, if the editor command succeeds', async () => {
-      const releaseSpecificationPath = '/path/to/release-spec';
-      const editor = { path: '/path/to/editor', args: [] };
-      const stdout = new MockWritable();
-      vi.spyOn(miscUtils, 'runCommand').mockResolvedValue();
-
-      await waitForUserToEditReleaseSpecification(
-        releaseSpecificationPath,
-        editor,
-        stdout,
-      );
-
-      expect(stdout.data()).toStrictEqual([
-        'Waiting for the release spec to be edited...',
-        '\r\u001B[K',
-      ]);
-    });
-
-    it('still removes the message printed to standard out when the editor command fails', async () => {
-      const releaseSpecificationPath = '/path/to/release-spec';
-      const editor = {
-        path: '/path/to/editor',
-        args: ['arg1', 'arg2'],
-      };
-      const stdout = new MockWritable();
-      vi.when(vi.spyOn(miscUtils, 'runCommand'))
-        .calledWith(
-          '/path/to/editor',
-          ['arg1', 'arg2', releaseSpecificationPath],
-          {
-            stdio: 'inherit',
-          },
-        )
-        .thenReject(new Error('oops'));
-
-      try {
-        await waitForUserToEditReleaseSpecification(
-          releaseSpecificationPath,
-          editor,
-          stdout,
-        );
-      } catch {
-        // ignore any error that occurs
-      }
-
-      expect(stdout.data()).toStrictEqual([
-        'Waiting for the release spec to be edited...',
-        '\r\u001B[K',
-      ]);
     });
 
     it('throws if the given editor command fails', async () => {

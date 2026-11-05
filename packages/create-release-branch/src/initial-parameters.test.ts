@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildMockProject,
   buildMockPackage,
-  createNoopWriteStream,
+  createNoopCliOutput,
 } from '../tests/unit/helpers.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import { determineInitialParameters } from './initial-parameters.js';
@@ -28,7 +28,7 @@ describe('initial-parameters', () => {
 
     it('returns an object derived from command-line arguments and environment variables that contains data necessary to run the workflow', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -45,13 +45,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/somewhere',
-        stderr,
+        output,
       });
 
       expect(initialParameters).toStrictEqual({
@@ -70,7 +70,7 @@ describe('initial-parameters', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage(),
       });
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -93,17 +93,17 @@ describe('initial-parameters', () => {
       await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/cwd',
-        stderr,
+        output,
       });
 
       expect(readProjectSpy).toHaveBeenCalledWith('/path/to/cwd/project', {
-        stderr,
+        output,
       });
     });
 
     it('resolves the given temporary directory relative to the current working directory', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -120,13 +120,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/cwd',
-        stderr,
+        output,
       });
 
       expect(initialParameters.tempDirectoryPath).toBe('/path/to/cwd/tmp');
@@ -136,7 +136,7 @@ describe('initial-parameters', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('@foo/bar'),
       });
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -153,13 +153,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/cwd',
-        stderr,
+        output,
       });
 
       expect(initialParameters.tempDirectoryPath).toStrictEqual(
@@ -169,7 +169,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including reset: true, derived from a command-line argument of "--reset true"', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -186,13 +186,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/somewhere',
-        stderr,
+        output,
       });
 
       expect(initialParameters.reset).toBe(true);
@@ -200,7 +200,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including reset: false, derived from a command-line argument of "--reset false"', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -217,13 +217,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/somewhere',
-        stderr,
+        output,
       });
 
       expect(initialParameters.reset).toBe(false);
@@ -231,7 +231,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including a releaseType of "backport", derived from a command-line argument of "--backport true"', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -248,13 +248,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/somewhere',
-        stderr,
+        output,
       });
 
       expect(initialParameters.releaseType).toBe('backport');
@@ -262,7 +262,7 @@ describe('initial-parameters', () => {
 
     it('returns initial parameters including a releaseType of "ordinary", derived from a command-line argument of "--backport false"', async () => {
       const project = buildMockProject();
-      const stderr = createNoopWriteStream();
+      const output = createNoopCliOutput();
       vi.when(vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'))
         .calledWith(['arg1', 'arg2'])
         .thenResolve({
@@ -279,13 +279,13 @@ describe('initial-parameters', () => {
         EDITOR: undefined,
       });
       vi.when(vi.spyOn(projectModule, 'readProject'))
-        .calledWith('/path/to/project', { stderr })
+        .calledWith('/path/to/project', { output })
         .thenResolve(project);
 
       const initialParameters = await determineInitialParameters({
         argv: ['arg1', 'arg2'],
         cwd: '/path/to/somewhere',
-        stderr,
+        output,
       });
 
       expect(initialParameters.releaseType).toBe('ordinary');

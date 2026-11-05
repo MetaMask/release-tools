@@ -1,8 +1,11 @@
-import fs from 'fs';
 import { SemVer } from 'semver';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
+import {
+  buildMockProject,
+  buildMockPackage,
+  createNoopCliOutput,
+} from '../tests/unit/helpers.js';
 import * as packageUtils from './project/package.js';
 import { planRelease, executeReleasePlan } from './release-plan.js';
 import { IncrementableVersionParts } from './release-specification.js';
@@ -180,22 +183,22 @@ describe('release-plan-utils', () => {
           },
         ],
       };
-      const stderr = fs.createWriteStream('/dev/null');
+      const output = createNoopCliOutput();
       const updatePackageSpy = vi.spyOn(packageUtils, 'updatePackage');
 
-      await executeReleasePlan(project, releasePlan, 'prettier', stderr);
+      await executeReleasePlan(project, releasePlan, 'prettier', output);
 
       expect(updatePackageSpy).toHaveBeenNthCalledWith(1, {
         project,
         packageReleasePlan: releasePlan.packages[0],
         formatter: 'prettier',
-        stderr,
+        output,
       });
       expect(updatePackageSpy).toHaveBeenNthCalledWith(2, {
         project,
         packageReleasePlan: releasePlan.packages[1],
         formatter: 'prettier',
-        stderr,
+        output,
       });
     });
   });

@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
 
+import { createCliOutput } from '../../src/core/cli-output.js';
+import type { CliOutput } from '../../src/core/cli-output.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
@@ -163,4 +165,17 @@ export function buildMockManifest(
  */
 export function createNoopWriteStream(): fs.WriteStream {
   return fs.createWriteStream('/dev/null');
+}
+
+/**
+ * Creates an output that discards all messages sent to it. This is useful as a
+ * default value for functions that need to take an `output`.
+ *
+ * @returns The output.
+ */
+export function createNoopCliOutput(): CliOutput {
+  return createCliOutput({
+    stdout: createNoopWriteStream(),
+    stderr: createNoopWriteStream(),
+  });
 }

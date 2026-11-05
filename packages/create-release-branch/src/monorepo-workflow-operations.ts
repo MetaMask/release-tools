@@ -1,6 +1,6 @@
-import type { WriteStream } from 'fs';
 import path from 'path';
 
+import type { CliOutput } from './core/cli-output.js';
 import { commitAllChanges } from './core/repo.js';
 import {
   deduplicateDependencies,
@@ -59,8 +59,7 @@ import { createReleaseBranch } from './workflow-operations.js';
  * which affects how the version is bumped.
  * @param args.defaultBranch - The name of the default branch in the repository.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.stdout - A stream that can be used to write to standard out.
- * @param args.stderr - A stream that can be used to write to standard error.
+ * @param args.output - Where to write user-facing messages.
  */
 export async function followMonorepoWorkflow({
   project,
@@ -69,8 +68,7 @@ export async function followMonorepoWorkflow({
   releaseType,
   defaultBranch,
   formatter,
-  stdout,
-  stderr,
+  output,
 }: {
   project: Project;
   tempDirectoryPath: string;
@@ -78,8 +76,7 @@ export async function followMonorepoWorkflow({
   releaseType: ReleaseType;
   defaultBranch: string;
   formatter: Formatter;
-  stdout: Pick<WriteStream, 'write'>;
-  stderr: Pick<WriteStream, 'write'>;
+  output: CliOutput;
 }): Promise<void> {
   const { version: newReleaseVersion, firstRun } = await createReleaseBranch({
     project,
@@ -87,7 +84,7 @@ export async function followMonorepoWorkflow({
   });
 
   if (firstRun) {
-    await updateChangelogsForChangedPackages({ project, formatter, stderr });
+    await updateChangelogsForChangedPackages({ project, formatter, output });
     await commitAllChanges(
       project.directoryPath,
       `Initialize Release ${newReleaseVersion}`,
@@ -106,7 +103,7 @@ export async function followMonorepoWorkflow({
     !firstRemovingExistingReleaseSpecification &&
     (await fileExists(releaseSpecificationPath))
   ) {
-    stdout.write(
+    output.info(
       'Release spec already exists. Picking back up from previous run.\n',
     );
   } else {
@@ -121,7 +118,7 @@ export async function followMonorepoWorkflow({
     await writeFile(releaseSpecificationPath, releaseSpecificationTemplate);
 
     if (!editor) {
-      stdout.write(
+      output.info(
         `${[
           'A template has been generated that specifies this release. Please open the following file in your editor of choice, then re-run this tool:',
           `${releaseSpecificationPath}`,
@@ -157,7 +154,7 @@ export async function followMonorepoWorkflow({
     releaseSpecificationPackages: packages,
     newReleaseVersion,
   });
-  await executeReleasePlan(project, releasePlan, formatter, stderr);
+  await executeReleasePlan(project, releasePlan, formatter, output);
   await removeFile(releaseSpecificationPath);
   await fixConstraints(project.directoryPath);
   await updateYarnLockfile(project.directoryPath);

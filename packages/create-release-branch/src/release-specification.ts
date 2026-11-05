@@ -1,4 +1,3 @@
-import fs, { WriteStream } from 'fs';
 import { diff } from 'semver';
 import YAML from 'yaml';
 
@@ -125,45 +124,25 @@ ${afterEditingInstructions}
  *
  * @param releaseSpecificationPath - The path to the release spec file.
  * @param editor - Information about the editor.
- * @param stdout - A stream that can be used to write to standard out. Defaults
- * to /dev/null.
  * @returns A promise that resolves when the user has completed editing the
  * file, i.e. when the editor process completes.
  */
 export async function waitForUserToEditReleaseSpecification(
   releaseSpecificationPath: string,
   editor: Editor,
-  stdout: Pick<WriteStream, 'write'> = fs.createWriteStream('/dev/null'),
 ): Promise<void> {
-  let caughtError: unknown;
-
   debug(
     `Opening release spec file ${releaseSpecificationPath} with editor located at ${editor.path}...`,
   );
 
-  const promiseForEditorCommand = runCommand(
-    editor.path,
-    [...editor.args, releaseSpecificationPath],
-    {
-      stdio: 'inherit',
-    },
-  );
-
-  stdout.write('Waiting for the release spec to be edited...');
-
   try {
-    await promiseForEditorCommand;
+    await runCommand(editor.path, [...editor.args, releaseSpecificationPath], {
+      stdio: 'inherit',
+    });
   } catch (error) {
-    caughtError = error;
-  }
-
-  // Clear the previous line
-  stdout.write('\r\u001B[K');
-
-  if (caughtError) {
     throw wrapError(
       'Encountered an error while waiting for the release spec to be edited.',
-      caughtError,
+      error,
     );
   }
 }
