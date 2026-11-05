@@ -401,6 +401,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `);
     });
 
+    it('merges legacy Unreleased changes into a release added by Changesets', async () => {
+      const changelog = new Changelog({
+        repoUrl,
+        removeEmptyUnreleasedSection: true,
+      });
+      changelog.addRelease({ version: '1.0.0' });
+      changelog.addChange({
+        version: '1.0.0',
+        category: ChangeCategory.Added,
+        description: 'Initial release',
+      });
+      changelog.addRelease({ version: '1.1.0' });
+      changelog.addChange({
+        version: '1.1.0',
+        category: ChangeCategory.Changed,
+        description: 'New change',
+      });
+      changelog.addChange({
+        version: '1.1.0',
+        category: ChangeCategory.Added,
+        description: 'New feature',
+      });
+      changelog.addChange({
+        category: ChangeCategory.Fixed,
+        description: 'Legacy fix',
+      });
+      changelog.addChange({
+        category: ChangeCategory.Added,
+        description: 'Legacy feature',
+      });
+
+      changelog.migrateUnreleasedChangesToRelease('1.1.0');
+
+      expect(await changelog.toString()).toStrictEqual(outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [1.1.0]
+        ### Added
+        - Legacy feature
+        - New feature
+
+        ### Changed
+        - New change
+
+        ### Fixed
+        - Legacy fix
+
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [1.1.0]: ${repoUrl}/compare/v1.0.0...v1.1.0
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+    });
+
     it('regenerates links for renamed packages without Unreleased', async () => {
       const changelog = new Changelog({
         repoUrl,

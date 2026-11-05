@@ -1549,6 +1549,25 @@ describe('validateChangelog', () => {
       ).rejects.toThrow(UnreleasedChangesError);
     });
 
+    it('should throw a formatting error for a release without its link reference definition', async () => {
+      const result = validateChangelog({
+        changelogContent: changelogWithoutUnreleased.replace(
+          `[0.0.1]: ${repoUrl}/releases/tag/v0.0.1\n`,
+          '',
+        ),
+        repoUrl,
+        isReleaseCandidate: false,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      await expect(result).rejects.toThrow(ChangelogFormattingError);
+      await expect(result).rejects.toHaveProperty(
+        'data.validChangelog',
+        changelogWithoutUnreleased,
+      );
+    });
+
     it('should throw a formatting error for a changelog without an Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
       const result = validateChangelog({
         changelogContent: changelogWithoutUnreleased,
