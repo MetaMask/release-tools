@@ -117,10 +117,10 @@ async function followEditorWorkflow({
 
     if (!editor) {
       output.info(
-        `${[
+        [
           'A template has been generated that specifies this release. Please open the following file in your editor of choice, then re-run this tool:',
           `${releaseSpecificationPath}`,
-        ].join('\n\n')}\n`,
+        ].join('\n\n'),
       );
       return;
     }

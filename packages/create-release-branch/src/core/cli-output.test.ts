@@ -510,7 +510,7 @@ describe('cli-output', () => {
       );
 
       expect(textOf(plainStdout)).toBe(
-        `${S_BAR_START}  Some title some details\n`,
+        `${S_BAR_START}  Some title  some details\n`,
       );
       expect(textOf(styledStdout)).toContain(
         `${styleText(['inverse', 'cyan'], ' Some title ', { validateStream: false })} ${styleText('dim', 'some details', { validateStream: false })}`,

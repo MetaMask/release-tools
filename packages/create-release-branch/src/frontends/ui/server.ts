@@ -10,7 +10,9 @@ import {
   finishRelease,
   startRelease,
 } from '../../core/release-steps.js';
+import { writeError } from '../../core/user-facing-error.js';
 import { getCurrentDirectoryPath } from '../../dirname.js';
+import { debug, wrapError } from '../../utils/misc-utils.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 
@@ -71,8 +73,9 @@ async function startUI({
 
   return new Promise((resolve, reject) => {
     server.on('error', (error: Error) => {
-      output.error(`Failed to start server: ${error.message}\n`);
-      reject(error);
+      reject(
+        wrapError(`Could not start the release UI on port ${port}`, error),
+      );
     });
 
     server.on('close', () => {
@@ -138,7 +141,7 @@ export function createApp({
 
       res.send(changelogContent);
     } catch (error) {
-      output.error(`Changelog error: ${String(error)}\n`);
+      writeError(output, error, { debug: debug.enabled });
       res.status(500).send('Internal Server Error');
     }
   });
@@ -165,7 +168,7 @@ export function createApp({
 
         res.json({ status: 'success' });
       } catch (error) {
-        output.error(`Release error: ${String(error)}\n`);
+        writeError(output, error, { debug: debug.enabled });
         res.status(400).send('Invalid request');
       }
     },
@@ -219,7 +222,7 @@ export function createApp({
 
         closeServer();
       } catch (error) {
-        output.error(`Release error: ${String(error)}\n`);
+        writeError(output, error, { debug: debug.enabled });
         res.status(400).send('Invalid request');
       }
     },

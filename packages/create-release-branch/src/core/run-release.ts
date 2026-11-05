@@ -33,7 +33,7 @@ export async function runRelease(
     await frontEnd.run(context);
   } else {
     output.info(
-      'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
+      'Project does not appear to have any workspaces. Following polyrepo workflow.',
     );
   }
 }

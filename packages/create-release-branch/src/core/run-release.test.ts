@@ -74,7 +74,7 @@ describe('run-release', () => {
       await runRelease(context, { run: vi.fn() });
 
       expect(stdout.data().join('')).toBe(
-        `${S_BAR_START}  create-release-branch root · monorepo · legacy mode\n`,
+        `${S_BAR_START}  create-release-branch  root · monorepo · legacy mode\n`,
       );
     });
 
