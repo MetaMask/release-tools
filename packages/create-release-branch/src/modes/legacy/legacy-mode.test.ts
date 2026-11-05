@@ -15,8 +15,8 @@ import type { ReleasePlan } from './release-plan.js';
 
 vi.mock('../../project/project');
 vi.mock('../../utils/fs');
-vi.mock('./release-plan', async (importActual) => ({
-  ...(await importActual<typeof releasePlanModule>()),
+vi.mock(import('./release-plan.js'), async (importActual) => ({
+  ...(await importActual()),
   planRelease: vi.fn(),
   executeReleasePlan: vi.fn(),
 }));
