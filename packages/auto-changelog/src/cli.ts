@@ -793,12 +793,6 @@ async function main(): Promise<void> {
         '--removeEmptyUnreleasedSection requires --allowMissingUnreleasedSection.',
       );
     }
-
-    if (argv.allowMissingUnreleasedSection && argv.checkDeps) {
-      return error(
-        '--checkDeps cannot be combined with --allowMissingUnreleasedSection: it adds dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
-      );
-    }
   }
 
   if (all) {

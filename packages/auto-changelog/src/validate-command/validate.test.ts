@@ -534,6 +534,54 @@ describe('validate', () => {
       expect(result).toBeUndefined();
       expect(process.exitCode).toBe(0);
     });
+
+    it('adds an Unreleased section with missing dependency bump entries when checkDeps and fix are true', async () => {
+      await writeChangelog(changelogWithoutUnreleased);
+      getDependencyChangesMock.mockResolvedValue({
+        dependencyChanges: [
+          {
+            dependency: '@scope/b',
+            isBreaking: false,
+            oldVersion: '1.0.0',
+            newVersion: '2.0.0',
+          },
+        ],
+        prNumbers: ['100'],
+        versionChanged: false,
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Do nothing
+      });
+
+      await validate({
+        ...defaultOptions(),
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+        checkDeps: true,
+        fix: true,
+        currentPr: '200',
+      });
+
+      expect(await readChangelog()).toBe(outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Changed
+        - Bump \`@scope/b\` from \`1.0.0\` to \`2.0.0\` ([#100](${repoUrl}/pull/100))
+
+        ## [1.0.0]
+        ### Added
+        - Initial release ([#1](${repoUrl}/pull/1))
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+      logSpy.mockRestore();
+    });
   });
 
   describe('unexpected errors', () => {

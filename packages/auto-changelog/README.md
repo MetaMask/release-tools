@@ -169,7 +169,7 @@ or
 
 `npm run auto-changelog validate --allowMissingUnreleasedSection --removeEmptyUnreleasedSection`
 
-`--removeEmptyUnreleasedSection` requires `--allowMissingUnreleasedSection`. You cannot combine `--allowMissingUnreleasedSection` with `--checkDeps`, because `--checkDeps` adds entries to the "Unreleased" section.
+`--removeEmptyUnreleasedSection` requires `--allowMissingUnreleasedSection`.
 
 ### Check Dependencies
 

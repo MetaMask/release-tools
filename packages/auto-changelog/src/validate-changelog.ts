@@ -147,8 +147,7 @@ type ValidateChangelogOptions = {
   /**
    * Whether the Unreleased section and its link reference definition may be
    * missing. Set this to `true` for changelogs managed with Changesets, which
-   * do not use an Unreleased section. Cannot be combined with
-   * `dependencyCheckResult`. Defaults to `false`.
+   * do not use an Unreleased section. Defaults to `false`.
    */
   allowMissingUnreleasedSection?: boolean;
   /**
@@ -198,8 +197,7 @@ function normalizeLineEndings(value: string): string {
  * Unreleased section.
  * @param options.allowMissingUnreleasedSection - Whether the Unreleased
  * section and its link reference definition may be missing. Set this to `true`
- * for changelogs managed with Changesets. When `true`, `dependencyCheckResult`
- * must not be given. Defaults to `false`.
+ * for changelogs managed with Changesets. Defaults to `false`.
  * @param options.removeEmptyUnreleasedSection - Whether an empty Unreleased
  * section and its link reference definition must be omitted. This is meant
  * for changelogs managed with Changesets, and requires
@@ -219,8 +217,6 @@ function normalizeLineEndings(value: string): string {
  * but the changelog is missing entries for them.
  * @throws `Error` if `removeEmptyUnreleasedSection` is `true` and
  * `allowMissingUnreleasedSection` is not `true`.
- * @throws `Error` if `allowMissingUnreleasedSection` is `true` and
- * `dependencyCheckResult` is given.
  */
 export async function validateChangelog({
   changelogContent,
@@ -238,12 +234,6 @@ export async function validateChangelog({
   if (removeEmptyUnreleasedSection && !allowMissingUnreleasedSection) {
     throw new Error(
       'The removeEmptyUnreleasedSection option requires allowMissingUnreleasedSection: a changelog without an Unreleased section is otherwise invalid.',
-    );
-  }
-
-  if (allowMissingUnreleasedSection && dependencyCheckResult) {
-    throw new Error(
-      'Dependency checks cannot be combined with allowMissingUnreleasedSection: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
     );
   }
 

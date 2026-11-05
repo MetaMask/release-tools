@@ -1549,24 +1549,6 @@ describe('validateChangelog', () => {
       ).rejects.toThrow(UnreleasedChangesError);
     });
 
-    it('should throw when dependencyCheckResult is given', async () => {
-      await expect(
-        validateChangelog({
-          changelogContent: changelogWithoutUnreleased,
-          repoUrl,
-          isReleaseCandidate: false,
-          allowMissingUnreleasedSection: true,
-          dependencyCheckResult: {
-            prNumbers: [],
-            versionChanged: false,
-            dependencyChanges: [],
-          },
-        }),
-      ).rejects.toThrow(
-        'Dependency checks cannot be combined with allowMissingUnreleasedSection: they add dependency bump entries to the Unreleased section, which changelogs managed with Changesets do not use.',
-      );
-    });
-
     it('should throw a formatting error for a changelog without an Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
       const result = validateChangelog({
         changelogContent: changelogWithoutUnreleased,

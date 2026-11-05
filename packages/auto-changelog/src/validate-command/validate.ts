@@ -69,8 +69,7 @@ export type ValidateOptions = {
   currentPr?: string;
   /**
    * Whether the Unreleased section may be missing. Set this to `true` for
-   * changelogs managed with Changesets. Cannot be combined with `checkDeps`.
-   * Defaults to `false`.
+   * changelogs managed with Changesets. Defaults to `false`.
    */
   allowMissingUnreleasedSection?: boolean;
   /**
