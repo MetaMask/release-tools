@@ -1,6 +1,7 @@
 import {
   S_BAR,
   S_BAR_END,
+  S_BAR_START,
   S_ERROR,
   S_INFO,
   S_STEP_SUBMIT,
@@ -492,6 +493,114 @@ describe('cli-output', () => {
           `${S_BAR_END}  The release did not finish.\n\n`,
         ].join(''),
       );
+    });
+
+    it('header writes the intro', () => {
+      const plainStdout = new MockWritable();
+      const styledStdout = buildTerminalStream();
+      const stderr = new MockWritable();
+
+      createCliOutput({ stdout: plainStdout, stderr }).header(
+        'Some title',
+        'some details',
+      );
+      createCliOutput({ stdout: styledStdout, stderr }).header(
+        'Some title',
+        'some details',
+      );
+
+      expect(textOf(plainStdout)).toBe(
+        `${S_BAR_START}  Some title some details\n`,
+      );
+      expect(textOf(styledStdout)).toContain(
+        `${styleText(['inverse', 'cyan'], ' Some title ', { validateStream: false })} ${styleText('dim', 'some details', { validateStream: false })}`,
+      );
+      expect(stderr.data()).toStrictEqual([]);
+    });
+
+    it('done writes a completed step', () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+
+      createCliOutput({ stdout, stderr }).done('Did something');
+
+      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did something'));
+      expect(stderr.data()).toStrictEqual([]);
+    });
+
+    it('summary writes the note and the outro', () => {
+      const plainStdout = new MockWritable();
+      const styledStdout = buildTerminalStream();
+      const stderr = new MockWritable();
+
+      createCliOutput({ stdout: plainStdout, stderr }).summary(
+        'Some title',
+        ['Line 1', '', 'Line 2'],
+        'All done',
+      );
+      createCliOutput({ stdout: styledStdout, stderr }).summary(
+        'Some title',
+        ['Line 1'],
+        'All done',
+      );
+
+      const text = textOf(plainStdout);
+      expect(text).toContain(`${S_STEP_SUBMIT}  Some title `);
+      expect(text).toContain(`${S_BAR}  Line 1 `);
+      expect(text).toContain(`${S_BAR}  Line 2 `);
+      expect(text.endsWith(`${S_BAR}\n${S_BAR_END}  All done\n\n`)).toBe(true);
+      expect(textOf(styledStdout)).toContain(
+        styleText('green', 'All done', { validateStream: false }),
+      );
+      expect(stderr.data()).toStrictEqual([]);
+    });
+
+    it('step ends with the result text', async () => {
+      const stderr = buildTerminalStream();
+      const animated = createCliOutput({ stdout: new MockWritable(), stderr });
+      const stdout = new MockWritable();
+      const plainStderr = new MockWritable();
+      const plain = createCliOutput({ stdout, stderr: plainStderr });
+      const options = { result: (value: number): string => `Did ${value}` };
+
+      for (const output of [animated, plain]) {
+        expect(await output.step('Doing', async () => 42, options)).toBe(42);
+        await expect(
+          output.step(
+            'Failing',
+            async () => {
+              throw new Error('oops');
+            },
+            options,
+          ),
+        ).rejects.toThrow('oops');
+      }
+
+      expect(indicators.spinner.stop).toHaveBeenCalledExactlyOnceWith('Did 42');
+      expect(indicators.spinner.error).toHaveBeenCalledExactlyOnceWith(
+        'Failing',
+      );
+      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did 42'));
+      expect(textOf(plainStderr)).toBe(logLine(S_ERROR, 'Failing'));
+    });
+
+    it('task ends with the result text', async () => {
+      const animated = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: buildTerminalStream(),
+      });
+      const stdout = new MockWritable();
+      const plain = createCliOutput({ stdout, stderr: new MockWritable() });
+      const options = { result: (value: number): string => `Ran ${value}` };
+
+      for (const output of [animated, plain]) {
+        expect(await output.task('Running', async () => 42, options)).toBe(42);
+      }
+
+      expect(indicators.taskLog.success).toHaveBeenCalledExactlyOnceWith(
+        'Ran 42',
+      );
+      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Ran 42'));
     });
 
     it('formats names and dim text for stderr only when stderr is styled', () => {

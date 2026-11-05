@@ -1,4 +1,4 @@
-import { S_BAR, S_WARN } from '@clack/prompts';
+import { S_BAR, S_BAR_START, S_WARN } from '@clack/prompts';
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -56,16 +56,26 @@ function buildContext({
 describe('run-release', () => {
   describe('runRelease', () => {
     it('runs the front end for a monorepo', async () => {
-      const stdout = new MockWritable();
-      const context = buildContext({ isMonorepo: true, stdout });
+      const context = buildContext({
+        isMonorepo: true,
+        stdout: new MockWritable(),
+      });
       const run = vi.fn();
 
       await runRelease(context, { run });
 
-      expect(stdout.data().join('')).toContain(
-        'Project appears to have workspaces. Following monorepo workflow.',
-      );
       expect(run).toHaveBeenCalledWith(context);
+    });
+
+    it('prints the header with the project name, the shape, and the mode', async () => {
+      const stdout = new MockWritable();
+      const context = buildContext({ isMonorepo: true, stdout });
+
+      await runRelease(context, { run: vi.fn() });
+
+      expect(stdout.data().join('')).toBe(
+        `${S_BAR_START}  create-release-branch root · monorepo · legacy mode\n`,
+      );
     });
 
     it.each([
