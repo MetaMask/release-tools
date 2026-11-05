@@ -63,3 +63,21 @@ export function describeError(
 
   return { title, lines };
 }
+
+/**
+ * Describes an error to the user, then writes it as one error message: the
+ * title, then the lines of details.
+ *
+ * @param output - Where to write the error.
+ * @param error - The error.
+ * @param options - The options.
+ * @param options.debug - Whether to include the stack trace.
+ */
+export function writeError(
+  output: Pick<CliOutput, 'error' | 'format'>,
+  error: unknown,
+  options: { debug: boolean },
+): void {
+  const { title, lines } = describeError(error, output.format, options);
+  output.error([title, ...lines].join('\n'));
+}

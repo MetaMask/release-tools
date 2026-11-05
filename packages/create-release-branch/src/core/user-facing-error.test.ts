@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { CliOutput } from './cli-output.js';
-import { describeError, UserFacingError } from './user-facing-error.js';
+import {
+  describeError,
+  UserFacingError,
+  writeError,
+} from './user-facing-error.js';
 
 const format: CliOutput['format'] = {
   name: (text) => `<${text}>`,
@@ -78,6 +82,16 @@ describe('user-facing-error', () => {
         title: 'oops',
         lines: [],
       });
+    });
+  });
+
+  describe('writeError', () => {
+    it('writes the title and the lines of the description as one error', () => {
+      const output = { error: vi.fn(), format };
+
+      writeError(output, new TestError('Some message'), { debug: false });
+
+      expect(output.error).toHaveBeenCalledExactlyOnceWith('Test title\n<a>');
     });
   });
 });

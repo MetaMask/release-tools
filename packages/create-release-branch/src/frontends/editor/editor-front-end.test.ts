@@ -1,3 +1,4 @@
+import { S_BAR, S_STEP_SUBMIT } from '@clack/prompts';
 import fs from 'fs';
 import path from 'path';
 import { MockWritable } from 'stdio-mock';
@@ -630,6 +631,52 @@ describe('editor-front-end', () => {
             projectDirectoryPath,
             `Update Release ${releaseVersion}`,
           );
+        });
+      });
+
+      it('prints the waiting and closed lines around the editor', async () => {
+        await withSandbox(async (sandbox) => {
+          const {
+            project,
+            stdout,
+            output,
+            waitForUserToEditReleaseSpecificationSpy,
+            formatter,
+          } = await setupFollowMonorepoWorkflow({
+            sandbox,
+            doesReleaseSpecFileExist: false,
+            isEditorAvailable: true,
+          });
+          let stdoutWhileEditing = '';
+          waitForUserToEditReleaseSpecificationSpy.mockImplementation(
+            async () => {
+              stdoutWhileEditing = stdout.data().join('');
+            },
+          );
+
+          await followMonorepoWorkflow({
+            project,
+            tempDirectoryPath: sandbox.directoryPath,
+            firstRemovingExistingReleaseSpecification: false,
+            releaseType: 'ordinary',
+            defaultBranch: 'main',
+            formatter,
+            output,
+          });
+
+          const text = stdout.data().join('');
+          expect(
+            stdoutWhileEditing.endsWith(
+              'Waiting for your editor to close RELEASE_SPEC.yml\n',
+            ),
+          ).toBe(true);
+          expect(
+            text
+              .slice(stdoutWhileEditing.length)
+              .startsWith(
+                `${S_BAR}\n${S_STEP_SUBMIT}  Closed RELEASE_SPEC.yml\n`,
+              ),
+          ).toBe(true);
         });
       });
 

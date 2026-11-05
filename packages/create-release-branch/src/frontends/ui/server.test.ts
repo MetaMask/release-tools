@@ -1,3 +1,4 @@
+import { S_BAR, S_ERROR, S_INFO, S_WARN } from '@clack/prompts';
 import { ChildProcess } from 'child_process';
 import { once } from 'events';
 import net from 'net';
@@ -233,7 +234,11 @@ describe('server', () => {
       it('returns 400 on error', async () => {
         const stderr = new MockWritable();
         const mode = buildMockMode({
-          listCandidates: vi.fn().mockRejectedValue(new Error('boom')),
+          listCandidates: vi
+            .fn()
+            .mockRejectedValue(
+              new Error('boom', { cause: new Error('some cause') }),
+            ),
         });
         const context = buildContext(mode, {
           output: createCliOutput({ stdout: new MockWritable(), stderr }),
@@ -249,7 +254,9 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain('Release error: Error: boom');
+        expect(stderr.data().join('')).toBe(
+          `${S_BAR}\n${S_ERROR}  boom\n${S_BAR}  Caused by: some cause\n`,
+        );
       });
     });
 
@@ -432,7 +439,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain('Release error: Error: boom');
+        expect(stderr.data().join('')).toBe(`${S_BAR}\n${S_ERROR}  boom\n`);
         expect(closeServer).not.toHaveBeenCalled();
       });
     });
@@ -477,9 +484,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain(
-          'Changelog error: Error: boom',
-        );
+        expect(stderr.data().join('')).toBe(`${S_BAR}\n${S_ERROR}  boom\n`);
       });
     });
   });
@@ -504,9 +509,7 @@ describe('server', () => {
 
       const running = createUIFrontEnd({ port }).run(context);
       await vi.waitFor(() => {
-        expect(stdout.data().join('')).toContain(
-          `UI server running at http://localhost:${port}`,
-        );
+        expect(openBrowser).toHaveBeenCalled();
       });
       const response = await postChoices(
         `http://localhost:${port}/api/release`,
@@ -516,12 +519,41 @@ describe('server', () => {
 
       expect(await response.json()).toStrictEqual({ status: 'success' });
       expect(openBrowser).toHaveBeenCalledWith(`http://localhost:${port}`);
-      const text = stdout.data().join('');
-      expect(text).toContain('Attempting to open UI in browser...');
-      expect(text).toContain('Release process completed. Server shutdown.');
+      expect(stdout.data().join('')).toContain(
+        'Release 2.0.0 is ready on release/2.0.0',
+      );
     });
 
-    it('asks to open the URL manually if the browser does not open', async () => {
+    it('prints the UI address', async () => {
+      const port = await findFreePort();
+      const stdout = new MockWritable();
+      const mode = buildMockMode({
+        plan: vi.fn().mockResolvedValue({ plan: { releases: [], data: 'x' } }),
+      });
+      const context = buildContext(mode, {
+        output: createCliOutput({ stdout, stderr: new MockWritable() }),
+      });
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+        firstRun: false,
+      });
+      vi.mocked(openBrowser).mockResolvedValue(new ChildProcess());
+
+      const running = createUIFrontEnd({ port }).run(context);
+      await vi.waitFor(() => {
+        expect(openBrowser).toHaveBeenCalled();
+      });
+      await postChoices(`http://localhost:${port}/api/release`, {});
+      await running;
+
+      expect(stdout.data().join('')).toContain(
+        `${S_BAR}\n${S_INFO}  Opening the release UI at http://localhost:${port}\n`,
+      );
+    });
+
+    it('warns when the browser cannot be opened', async () => {
       const port = await findFreePort();
       const stderr = new MockWritable();
       const mode = buildMockMode({
@@ -540,17 +572,14 @@ describe('server', () => {
 
       const running = createUIFrontEnd({ port }).run(context);
       await vi.waitFor(() => {
-        expect(stderr.data()).toHaveLength(5);
+        expect(stderr.data()).toHaveLength(1);
       });
       await postChoices(`http://localhost:${port}/api/release`, {});
       await running;
 
-      const text = stderr.data().join('');
-      expect(text).toContain(
-        'Error automatically opening browser: Error: no browser',
+      expect(stderr.data().join('')).toBe(
+        `${S_BAR}\n${S_WARN}  Could not open your browser (Error: no browser). Open http://localhost:${port} yourself.\n`,
       );
-      expect(text).toContain('Please open the following URL manually:');
-      expect(text).toContain(`http://localhost:${port}`);
     });
 
     it('rejects if the server cannot start', async () => {
@@ -570,15 +599,16 @@ describe('server', () => {
 
       try {
         await expect(createUIFrontEnd({ port }).run(context)).rejects.toThrow(
-          'EADDRINUSE',
+          expect.objectContaining({
+            message: `Could not start the release UI on port ${port}`,
+            cause: expect.objectContaining({ code: 'EADDRINUSE' }) as Error,
+          }),
         );
       } finally {
         blocker.close();
       }
 
-      expect(stderr.data().join('')).toMatch(
-        /Failed to start server: .*EADDRINUSE/u,
-      );
+      expect(stderr.data()).toStrictEqual([]);
     });
   });
 });
