@@ -70,7 +70,7 @@ async function followMonorepoWorkflow({
   formatter: Formatter;
   output: CliOutput;
 }): Promise<void> {
-  const mode = createLegacyMode({ project, defaultBranch, formatter, output });
+  const mode = createLegacyMode({ project, defaultBranch, formatter });
   await createEditorFrontEnd({
     tempDirectoryPath,
     reset: firstRemovingExistingReleaseSpecification,
@@ -364,12 +364,10 @@ async function setupFollowMonorepoWorkflow({
 
   if (errorUponExecutingReleasePlan) {
     vi.when(executeReleasePlanSpy)
-      .calledWith(project, releasePlan, formatter, output)
+      .calledWith(project, releasePlan, formatter)
       .thenReject(errorUponExecutingReleasePlan);
   } else {
-    vi.when(executeReleasePlanSpy)
-      .calledWith(project, releasePlan, formatter, output)
-      .thenResolve(undefined);
+    executeReleasePlanSpy.mockResolvedValue([]);
   }
 
   vi.when(commitAllChangesSpy)
@@ -668,7 +666,6 @@ describe('editor-front-end', () => {
             project,
             releasePlan,
             formatter,
-            output,
           );
         });
       });
@@ -1199,7 +1196,6 @@ describe('editor-front-end', () => {
             project,
             releasePlan,
             formatter,
-            output,
           );
         });
       });
@@ -1438,7 +1434,6 @@ describe('editor-front-end', () => {
             project,
             releasePlan,
             formatter,
-            output,
           );
         });
       });
@@ -1929,7 +1924,6 @@ describe('editor-front-end', () => {
             project,
             releasePlan,
             formatter,
-            output,
           );
         });
       });

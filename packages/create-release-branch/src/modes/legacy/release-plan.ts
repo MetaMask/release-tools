@@ -1,10 +1,10 @@
 import { SemVer } from 'semver';
 
-import type { CliOutput } from '../../core/cli-output.js';
+import type { Notice } from '../../core/notices.js';
 import type { Formatter, VersionSpecifiers } from '../../core/types.js';
 import { updatePackage } from '../../project/package.js';
 import type { PackageReleasePlan } from '../../project/package.js';
-import { Project } from '../../project/project.js';
+import { buildChangelogNotices, Project } from '../../project/project.js';
 import { debug } from '../../utils/misc-utils.js';
 
 /**
@@ -109,25 +109,26 @@ export async function planRelease({
  * @param releasePlan - Compiled instructions on how exactly to update the
  * project in order to prepare a new release.
  * @param formatter - The formatter to use for formatting the changelog.
- * @param output - Where to write user-facing messages.
+ * @returns The packages without a changelog as notices.
  */
 export async function executeReleasePlan(
   project: Project,
   releasePlan: ReleasePlan,
   formatter: Formatter,
-  output: CliOutput,
-): Promise<void> {
-  await Promise.all(
+): Promise<Notice[]> {
+  const results = await Promise.all(
     releasePlan.packages.map(async (workspaceReleasePlan) => {
-      debug(
-        `Updating package ${workspaceReleasePlan.package.validatedManifest.name}...`,
-      );
-      await updatePackage({
-        project,
-        packageReleasePlan: workspaceReleasePlan,
-        formatter,
-        output,
-      });
+      const { name } = workspaceReleasePlan.package.validatedManifest;
+      debug(`Updating package ${name}...`);
+      return {
+        name,
+        result: await updatePackage({
+          project,
+          packageReleasePlan: workspaceReleasePlan,
+          formatter,
+        }),
+      };
     }),
   );
+  return buildChangelogNotices(results);
 }

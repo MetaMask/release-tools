@@ -1,4 +1,3 @@
-import type { CliOutput } from '../../core/cli-output.js';
 import type { Mode } from '../../core/mode.js';
 import { normalizeReleaseChoices } from '../../core/release-rules.js';
 import type { Formatter, VersionSpecifiers } from '../../core/types.js';
@@ -29,25 +28,22 @@ import {
  * @param args.project - Information about the project.
  * @param args.defaultBranch - The name of the default branch in the repository.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @param args.output - Where to write user-facing messages.
  * @returns The legacy mode.
  */
 export function createLegacyMode({
   project,
   defaultBranch,
   formatter,
-  output,
 }: {
   project: Project;
   defaultBranch: string;
   formatter: Formatter;
-  output: CliOutput;
 }): Mode<VersionSpecifiers> {
   return {
     name: 'legacy',
 
     async prepare() {
-      await updateChangelogsForChangedPackages({ project, formatter, output });
+      return await updateChangelogsForChangedPackages({ project, formatter });
     },
 
     async listCandidates(choices) {
@@ -79,7 +75,7 @@ export function createLegacyMode({
         releaseSpecificationPackages,
         newReleaseVersion: newRootVersion,
       });
-      await executeReleasePlan(project, releasePlan, formatter, output);
+      return await executeReleasePlan(project, releasePlan, formatter);
     },
 
     async getReleaseNotes(packageName) {

@@ -2,7 +2,7 @@ import { getWorkspaceLocations } from '@metamask/action-utils';
 import { isPlainObject } from '@metamask/utils';
 import { resolve } from 'path';
 
-import type { CliOutput } from '../core/cli-output.js';
+import type { Notice } from '../core/notices.js';
 import { getTagNames, restoreFiles } from '../core/repo.js';
 import type { Formatter, VersionSpecifiers } from '../core/types.js';
 import { fileExists } from '../utils/fs.js';
@@ -16,6 +16,7 @@ import {
   UnvalidatedPackageManifest,
 } from './package-manifest.js';
 import {
+  ChangelogUpdateResult,
   Package,
   readMonorepoRootPackage,
   readMonorepoWorkspacePackage,
@@ -50,12 +51,16 @@ type ReleaseVersion = {
  * project is a monorepo).
  * @property workspacePackages - Information about packages that are referenced
  * via workspaces (assuming that the project is a monorepo).
+ * @property packagesUsingRootTag - The names of the workspace packages that
+ * have no tag for their current version, so their changes are found from the
+ * tag of the root package, in workspace order.
  */
 export type Project = {
   directoryPath: string;
   repositoryUrl: string;
   rootPackage: Package;
   workspacePackages: Record<string, Package>;
+  packagesUsingRootTag: string[];
   isMonorepo: boolean;
   releaseVersion: ReleaseVersion;
 };
@@ -81,8 +86,6 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
  * packages within workspaces specified via the root `package.json`.
  *
  * @param projectDirectoryPath - The path to the project.
- * @param args - Additional arguments.
- * @param args.output - Where to write user-facing messages.
  * @returns An object that represents information about the project.
  * @throws if the project does not contain a root `package.json` (polyrepo and
  * monorepo) or if any of the workspaces specified in the root `package.json` do
@@ -90,7 +93,6 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
  */
 export async function readProject(
   projectDirectoryPath: string,
-  { output }: { output: CliOutput },
 ): Promise<Project> {
   const tagNames = await getTagNames(projectDirectoryPath);
   const rootPackage = await readMonorepoRootPackage({
@@ -112,22 +114,25 @@ export async function readProject(
     true,
   );
 
-  const workspacePackages = (
-    await Promise.all(
-      workspaceDirectories.map(async (directory) => {
-        return await readMonorepoWorkspacePackage({
-          packageDirectoryPath: resolve(projectDirectoryPath, directory),
-          rootPackageName: rootPackage.validatedManifest.name,
-          rootPackageVersion: rootPackage.validatedManifest.version,
-          projectDirectoryPath,
-          projectTagNames: tagNames,
-          output,
-        });
-      }),
-    )
-  ).reduce<Record<string, Package>>((obj, pkg) => {
+  const workspacePackageReads = await Promise.all(
+    workspaceDirectories.map(async (directory) => {
+      return await readMonorepoWorkspacePackage({
+        packageDirectoryPath: resolve(projectDirectoryPath, directory),
+        rootPackageName: rootPackage.validatedManifest.name,
+        rootPackageVersion: rootPackage.validatedManifest.version,
+        projectDirectoryPath,
+        projectTagNames: tagNames,
+      });
+    }),
+  );
+  const workspacePackages = workspacePackageReads.reduce<
+    Record<string, Package>
+  >((obj, { usesRootTag: _usesRootTag, ...pkg }) => {
     return { ...obj, [pkg.validatedManifest.name]: pkg };
   }, {});
+  const packagesUsingRootTag = workspacePackageReads
+    .filter(({ usesRootTag }) => usesRootTag)
+    .map(({ validatedManifest }) => validatedManifest.name);
 
   const isMonorepo = Object.keys(workspacePackages).length > 0;
 
@@ -136,6 +141,7 @@ export async function readProject(
     repositoryUrl,
     rootPackage,
     workspacePackages,
+    packagesUsingRootTag,
     isMonorepo,
     releaseVersion,
   };
@@ -202,36 +208,68 @@ export async function getValidRepositoryUrl(
  *
  * @param args - The arguments.
  * @param args.project - The project.
- * @param args.output - Where to write user-facing messages.
  * @param args.formatter - The formatter to use for formatting the changelog.
- * @returns The result of writing to the changelog.
+ * @returns The packages without a changelog, and the packages with nothing to
+ * add to their changelog, as notices.
  */
 export async function updateChangelogsForChangedPackages({
   project,
   formatter,
-  output,
 }: {
   project: Pick<
     Project,
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
   formatter: Formatter;
-  output: CliOutput;
-}): Promise<void> {
-  await Promise.all(
+}): Promise<Notice[]> {
+  const results = await Promise.all(
     Object.values(project.workspacePackages)
       .filter(
         ({ hasChangesSinceLatestRelease }) => hasChangesSinceLatestRelease,
       )
-      .map(async (pkg) =>
-        updatePackageChangelog({
+      .map(async (pkg) => ({
+        name: pkg.validatedManifest.name,
+        result: await updatePackageChangelog({
           project,
           formatter,
           package: pkg,
-          output,
         }),
-      ),
+      })),
   );
+  return buildChangelogNotices(results);
+}
+
+/**
+ * Groups the packages without a changelog, and the packages with nothing to
+ * add to their changelog, into one notice each.
+ *
+ * @param results - What happened to the changelog of each package.
+ * @returns The notices, without the groups that have no packages.
+ */
+export function buildChangelogNotices(
+  results: { name: string; result: ChangelogUpdateResult }[],
+): Notice[] {
+  const namesWith = (result: ChangelogUpdateResult): string[] =>
+    results.filter((entry) => entry.result === result).map(({ name }) => name);
+  const withoutChangelog = namesWith('no-changelog');
+  const withoutUpdates = namesWith('no-updates');
+
+  return [
+    {
+      title:
+        withoutChangelog.length === 1
+          ? '1 package has no changelog, so it was not updated:'
+          : `${withoutChangelog.length} packages have no changelog, so it was not updated:`,
+      items: withoutChangelog,
+    },
+    {
+      title:
+        withoutUpdates.length === 1
+          ? '1 changelog has no updates to make:'
+          : `${withoutUpdates.length} changelogs have no updates to make:`,
+      items: withoutUpdates,
+    },
+  ].filter(({ items }) => items.length > 0);
 }
 
 /**

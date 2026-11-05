@@ -39,14 +39,9 @@ export async function main({
     frontEndName,
     port,
     formatter,
-  } = await determineInitialParameters({ argv, cwd, output });
+  } = await determineInitialParameters({ argv, cwd });
 
-  const mode = selectMode(modeName, {
-    project,
-    defaultBranch,
-    formatter,
-    output,
-  });
+  const mode = selectMode(modeName, { project, defaultBranch, formatter });
   const frontEnd = selectFrontEnd(frontEndName, {
     tempDirectoryPath,
     reset,
