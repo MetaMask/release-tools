@@ -692,8 +692,8 @@ packages:
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -739,8 +739,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -786,8 +786,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -833,8 +833,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -881,8 +881,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -929,8 +929,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -977,8 +977,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1025,8 +1025,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its peer dependents are not in the release spec: b
-         Add them so they stay compatible, or set them to intentionally-skip if they can wait.
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1072,8 +1072,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1119,8 +1119,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1166,8 +1166,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1213,8 +1213,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1261,8 +1261,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1309,8 +1309,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1357,8 +1357,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1405,8 +1405,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         has a major bump, but its direct dependents are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip.
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1632,8 +1632,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         depends on packages with unreleased changes that are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip if they can wait.
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1679,8 +1679,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         depends on packages with unreleased changes that are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip if they can wait.
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1727,8 +1727,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         depends on packages with unreleased changes that are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip if they can wait.
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -1775,8 +1775,8 @@ ${releaseSpecificationPath}
 The release spec has 1 problem:
 
 a
-         depends on packages with unreleased changes that are not in the release spec: b
-         Add them to the release spec, or set them to intentionally-skip if they can wait.
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
 Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
@@ -2009,7 +2009,7 @@ ${releaseSpecificationPath}
       const error = new ReleaseSpecificationError({
         problems: [
           {
-            lineNumber: 37,
+            lineNumber: 7,
             packageName: 'a',
             problem: '"foo" is not a valid version specifier',
             hint: 'Use major, minor, patch, or a version like 1.2.3.',
@@ -2030,17 +2030,17 @@ ${releaseSpecificationPath}
       expect(error.describe(format)).toStrictEqual({
         title: 'The release spec has 3 problems:',
         lines: [
-          'Line 37  <a>',
-          '         "foo" is not a valid version specifier',
-          '         (Use major, minor, patch, or a version like 1.2.3.)',
+          'Line 7  <a>',
+          '        "foo" is not a valid version specifier',
+          '        (Use major, minor, patch, or a version like 1.2.3.)',
           '',
           '<b>',
-          '         has a major bump',
-          '         (Add them.)',
+          '  has a major bump',
+          '  (Add them.)',
           '',
           'The release spec',
-          '         is not valid YAML',
-          '         (Fix the syntax: Missing closing "quote at line 1, column 10)',
+          '  is not valid YAML',
+          '  (Fix the syntax: Missing closing "quote at line 1, column 10)',
           '',
           'Fix the release spec and run the tool again. It was kept at:',
           '(/path/to/RELEASE_SPEC.yml)',
@@ -2058,7 +2058,7 @@ ${releaseSpecificationPath}
         title: 'The release spec has 1 problem:',
         lines: [
           '<a>',
-          '         is not a package',
+          '  is not a package',
           '',
           'Fix the release spec and run the tool again. It was kept at:',
           '(/path/to/RELEASE_SPEC.yml)',
@@ -2069,7 +2069,7 @@ ${releaseSpecificationPath}
           'The release spec has 1 problem:',
           '',
           'a',
-          '         is not a package',
+          '  is not a package',
           '',
           'Fix the release spec and run the tool again. It was kept at:',
           '/path/to/RELEASE_SPEC.yml',

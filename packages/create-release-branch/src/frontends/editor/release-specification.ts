@@ -78,12 +78,6 @@ const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
 };
 
 /**
- * The indentation of the problem and the hint below the line and package of a
- * release spec problem.
- */
-const PROBLEM_INDENT = ' '.repeat(9);
-
-/**
  * A problem in the release spec.
  *
  * @property lineNumber - The line of the release spec that has the problem.
@@ -143,12 +137,13 @@ export class ReleaseSpecificationError extends UserFacingError {
           packageName === undefined
             ? 'The release spec'
             : format.name(packageName);
+        const linePrefix =
+          lineNumber === undefined ? '' : `Line ${lineNumber}  `;
+        const indent = ' '.repeat(Math.max(linePrefix.length, 2));
         return [
-          lineNumber === undefined ? subject : `Line ${lineNumber}  ${subject}`,
-          `${PROBLEM_INDENT}${problem}`,
-          ...(hint === undefined
-            ? []
-            : [`${PROBLEM_INDENT}${format.dim(hint)}`]),
+          `${linePrefix}${subject}`,
+          `${indent}${problem}`,
+          ...(hint === undefined ? [] : [`${indent}${format.dim(hint)}`]),
         ];
       },
     );
