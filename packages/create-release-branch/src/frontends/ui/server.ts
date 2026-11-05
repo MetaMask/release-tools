@@ -2,52 +2,46 @@ import express from 'express';
 import openBrowser from 'open';
 import { join } from 'path';
 
-import type { CliOutput } from './core/cli-output.js';
-import type { Mode } from './core/mode.js';
-import type { ReleaseChoices } from './core/release-rules.js';
+import type { FrontEnd, ReleaseContext } from '../../core/front-end.js';
+import type { ReleaseChoices } from '../../core/release-rules.js';
 import {
   applyRelease,
   checkChoices,
   finishRelease,
   startRelease,
-} from './core/release-steps.js';
-import type { Formatter } from './core/types.js';
-import { getCurrentDirectoryPath } from './dirname.js';
-import { listLegacyCandidates } from './modes/legacy/candidates.js';
-import { createLegacyMode } from './modes/legacy/legacy-mode.js';
-import type { Project } from './project/project.js';
+} from '../../core/release-steps.js';
+import { getCurrentDirectoryPath } from '../../dirname.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 
-type UIOptions = {
-  project: Project;
-  releaseType: 'ordinary' | 'backport';
-  defaultBranch: string;
-  port: number;
-  formatter: Formatter;
-  output: CliOutput;
-};
+/**
+ * Creates the front end that collects the release choices through a web UI
+ * that it serves locally and opens in the browser.
+ *
+ * @param args - The arguments.
+ * @param args.port - The port number for the server.
+ * @returns The front end.
+ */
+export function createUIFrontEnd({ port }: { port: number }): FrontEnd {
+  return {
+    async run(context) {
+      await startUI({ ...context, port });
+    },
+  };
+}
 
 /**
  * Starts the UI for the release process.
  *
  * @param options - The options for the UI.
- * @param options.project - The project object.
- * @param options.releaseType - The type of release.
- * @param options.defaultBranch - The default branch name.
  * @param options.port - The port number for the server.
- * @param options.formatter - The formatter to use for formatting the changelog.
- * @param options.output - Where to write user-facing messages.
+ * @returns A promise that resolves when the server closes.
  */
-export async function startUI({
-  project,
-  releaseType,
-  defaultBranch,
+async function startUI({
   port,
-  formatter,
-  output,
-}: UIOptions): Promise<void> {
-  const mode = createLegacyMode({ project, defaultBranch, formatter, output });
+  ...context
+}: ReleaseContext & { port: number }): Promise<void> {
+  const { project, mode, releaseType, output } = context;
   const { newReleaseVersion } = await startRelease({
     project,
     releaseType,
@@ -55,10 +49,8 @@ export async function startUI({
   });
 
   const app = createApp({
-    project,
-    mode,
-    output,
-    version: newReleaseVersion,
+    context,
+    newReleaseVersion,
     closeServer: () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       server.close();
@@ -99,48 +91,49 @@ export async function startUI({
  * Creates an Express application for the UI server.
  *
  * @param options - The options for creating the app.
- * @param options.project - The project object.
- * @param options.mode - The release mode.
- * @param options.output - Where to write user-facing messages.
- * @param options.version - The release version.
+ * @param options.context - What the release needs: the project, the mode, and
+ * where to write user-facing messages.
+ * @param options.newReleaseVersion - The version of the new release.
  * @param options.closeServer - The function to close the server.
  * @returns The Express application.
  */
-function createApp({
-  project,
-  mode,
-  output,
-  version,
+export function createApp({
+  context,
+  newReleaseVersion,
   closeServer,
 }: {
-  project: Project;
-  mode: Mode<unknown>;
-  output: CliOutput;
-  version: string;
+  context: ReleaseContext;
+  newReleaseVersion: string;
   closeServer: () => void;
 }): express.Application {
+  const { project, mode, output } = context;
   const app = express();
 
   app.use(express.static(UI_BUILD_DIR));
   app.use(express.json());
 
-  app.get('/api/packages', (req, res) => {
-    const { majorBumps } = req.query;
+  app.get('/api/packages', async (req, res, next) => {
+    try {
+      const { majorBumps } = req.query;
 
-    const majorBumpsArray =
-      typeof majorBumps === 'string'
-        ? majorBumps.split(',').filter(Boolean)
-        : ((req.query.majorBumps as string[] | undefined) ?? []);
+      const majorBumpsArray =
+        typeof majorBumps === 'string'
+          ? majorBumps.split(',').filter(Boolean)
+          : ((req.query.majorBumps as string[] | undefined) ?? []);
 
-    const majorBumpChoices: ReleaseChoices = Object.fromEntries(
-      majorBumpsArray.map((majorBump) => [majorBump, 'major']),
-    );
+      const majorBumpChoices: ReleaseChoices = Object.fromEntries(
+        majorBumpsArray.map((majorBump) => [majorBump, 'major']),
+      );
 
-    const packages = listLegacyCandidates(project, majorBumpChoices).map(
-      ({ name, currentVersion }) => ({ name, version: currentVersion }),
-    );
+      const packages = (await mode.listCandidates(majorBumpChoices)).map(
+        ({ name, currentVersion }) => ({ name, version: currentVersion }),
+      );
 
-    res.json(packages);
+      res.json(packages);
+    } catch (error) {
+      // Express 4 does not catch errors from async handlers.
+      return next(error);
+    }
   });
 
   app.get('/api/changelog', async (req, res) => {
@@ -211,9 +204,9 @@ function createApp({
         await applyRelease({
           mode,
           plan: result.plan,
-          newReleaseVersion: version,
+          newReleaseVersion,
         });
-        await finishRelease({ project, newReleaseVersion: version });
+        await finishRelease({ project, newReleaseVersion });
 
         res.json({ status: 'success' });
 

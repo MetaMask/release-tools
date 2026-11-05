@@ -6,13 +6,13 @@ import { buildMockProject } from '../tests/unit/helpers.js';
 import type { CliOutput } from './core/cli-output.js';
 import type { Mode } from './core/mode.js';
 import * as editorFrontEndModule from './frontends/editor/editor-front-end.js';
+import * as uiFrontEndModule from './frontends/ui/server.js';
 import * as initialParametersModule from './initial-parameters.js';
 import { main } from './main.js';
-import * as ui from './ui.js';
 
 vi.mock('./initial-parameters');
 vi.mock('./frontends/editor/editor-front-end');
-vi.mock('./ui');
+vi.mock('./frontends/ui/server');
 vi.mock('./dirname', () => ({
   getCurrentDirectoryPath: vi.fn().mockReturnValue('/path/to/somewhere'),
 }));
@@ -84,7 +84,10 @@ describe('main', () => {
       port: 3000,
       formatter: 'prettier',
     });
-    const startUISpy = vi.spyOn(ui, 'startUI').mockResolvedValue();
+    const runSpy = vi.fn();
+    const createUIFrontEndSpy = vi
+      .spyOn(uiFrontEndModule, 'createUIFrontEnd')
+      .mockReturnValue({ run: runSpy });
 
     await main({
       argv: [],
@@ -93,12 +96,11 @@ describe('main', () => {
       stderr,
     });
 
-    expect(startUISpy).toHaveBeenCalledWith({
+    expect(createUIFrontEndSpy).toHaveBeenCalledWith({ port: 3000 });
+    expect(runSpy).toHaveBeenCalledWith({
       project,
+      mode: expect.objectContaining({ name: 'legacy' }) as Mode<unknown>,
       releaseType: 'backport',
-      defaultBranch: 'main',
-      port: 3000,
-      formatter: 'prettier',
       output: expect.any(Object) as CliOutput,
     });
   });

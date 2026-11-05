@@ -2,9 +2,9 @@ import type { WriteStream } from 'fs';
 
 import { createCliOutput } from './core/cli-output.js';
 import { createEditorFrontEnd } from './frontends/editor/editor-front-end.js';
+import { createUIFrontEnd } from './frontends/ui/server.js';
 import { determineInitialParameters } from './initial-parameters.js';
 import { createLegacyMode } from './modes/legacy/legacy-mode.js';
-import { startUI } from './ui.js';
 
 /**
  * The main function for this tool. Designed to not access `process.argv`,
@@ -46,29 +46,16 @@ export async function main({
       'Project appears to have workspaces. Following monorepo workflow.\n',
     );
 
-    if (interactive) {
-      await startUI({
-        project,
-        releaseType,
-        defaultBranch,
-        port,
-        formatter,
-        output,
-      });
-    } else {
-      const mode = createLegacyMode({
-        project,
-        defaultBranch,
-        formatter,
-        output,
-      });
-      await createEditorFrontEnd({ tempDirectoryPath, reset }).run({
-        project,
-        mode,
-        releaseType,
-        output,
-      });
-    }
+    const mode = createLegacyMode({
+      project,
+      defaultBranch,
+      formatter,
+      output,
+    });
+    const frontEnd = interactive
+      ? createUIFrontEnd({ port })
+      : createEditorFrontEnd({ tempDirectoryPath, reset });
+    await frontEnd.run({ project, mode, releaseType, output });
   } else {
     output.info(
       'Project does not appear to have any workspaces. Following polyrepo workflow.\n',

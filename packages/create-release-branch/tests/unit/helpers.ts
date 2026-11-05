@@ -2,9 +2,11 @@ import { isPlainObject } from '@metamask/utils';
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
+import { vi } from 'vitest';
 
 import { createCliOutput } from '../../src/core/cli-output.js';
 import type { CliOutput } from '../../src/core/cli-output.js';
+import type { Mode } from '../../src/core/mode.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
@@ -179,4 +181,24 @@ export function createNoopCliOutput(): CliOutput {
     stdout: createNoopWriteStream(),
     stderr: createNoopWriteStream(),
   });
+}
+
+/**
+ * Builds a mode for use in tests. All methods are mock functions.
+ *
+ * @param overrides - The properties to override in the mode.
+ * @returns The mock mode.
+ */
+export function buildMockMode(
+  overrides: Partial<Mode<string>> = {},
+): Mode<string> {
+  return {
+    name: 'legacy',
+    prepare: vi.fn(),
+    listCandidates: vi.fn().mockResolvedValue([]),
+    plan: vi.fn(),
+    apply: vi.fn(),
+    getReleaseNotes: vi.fn(),
+    ...overrides,
+  };
 }
