@@ -406,7 +406,10 @@ packages:
         ).rejects.toThrow(
           expect.objectContaining({
             problems: [
-              { problem: 'is not valid YAML', hint: 'Fix the syntax.' },
+              {
+                problem: 'is not valid YAML',
+                hint: 'Fix the syntax: Missing closing "quote at line 1, column 10:',
+              },
             ],
             specPath: releaseSpecificationPath,
             cause: expect.objectContaining({
@@ -2016,7 +2019,10 @@ ${releaseSpecificationPath}
             problem: 'has a major bump',
             hint: 'Add them.',
           },
-          { problem: 'is not valid YAML', hint: 'Fix the syntax.' },
+          {
+            problem: 'is not valid YAML',
+            hint: 'Fix the syntax: Missing closing "quote at line 1, column 10:',
+          },
         ],
         specPath: '/path/to/RELEASE_SPEC.yml',
       });
@@ -2034,7 +2040,7 @@ ${releaseSpecificationPath}
           '',
           'The release spec',
           '         is not valid YAML',
-          '         (Fix the syntax.)',
+          '         (Fix the syntax: Missing closing "quote at line 1, column 10:)',
           '',
           'Fix the release spec and run the tool again. It was kept at:',
           '(/path/to/RELEASE_SPEC.yml)',

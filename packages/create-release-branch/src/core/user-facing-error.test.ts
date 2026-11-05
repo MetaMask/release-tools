@@ -62,6 +62,17 @@ describe('user-facing-error', () => {
       });
     });
 
+    it('stops at a cause that is already in the chain', () => {
+      const error = new Error('Something failed');
+      const cause = new Error('Some cause', { cause: error });
+      error.cause = cause;
+
+      expect(describeError(error, format, { debug: false })).toStrictEqual({
+        title: 'Something failed',
+        lines: ['Caused by: Some cause'],
+      });
+    });
+
     it('describes a value that is not an error', () => {
       expect(describeError('oops', format, { debug: true })).toStrictEqual({
         title: 'oops',

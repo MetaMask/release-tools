@@ -201,7 +201,7 @@ describe('release-steps', () => {
       const project = buildMockProject({
         workspacePackages: { a: buildMockPackage('a', '1.0.0') },
       });
-      const planErrors = [{ message: 'Nothing to release' }];
+      const planErrors = [{ problem: 'Nothing to release' }];
       const plan = vi.fn().mockResolvedValue({ errors: planErrors });
       const mode = buildMockMode({ plan });
 
