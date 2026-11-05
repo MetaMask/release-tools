@@ -6,6 +6,7 @@ import YAML from 'yaml';
 
 import { withSandbox } from '../tests/helpers.js';
 import { buildMockProject, buildMockPackage } from '../tests/unit/helpers.js';
+import { listLegacyCandidates } from './modes/legacy/candidates.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
   waitForUserToEditReleaseSpecification,
@@ -39,7 +40,7 @@ describe('release-specification', () => {
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
-        project,
+        candidates: listLegacyCandidates(project),
         isEditorAvailable: true,
       });
 
@@ -95,7 +96,7 @@ packages:
 
       await expect(
         generateReleaseSpecificationTemplateForMonorepo({
-          project,
+          candidates: listLegacyCandidates(project),
           isEditorAvailable: false,
         }),
       ).rejects.toThrow(
@@ -117,7 +118,7 @@ packages:
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
-        project,
+        candidates: listLegacyCandidates(project),
         isEditorAvailable: false,
       });
 

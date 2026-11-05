@@ -247,7 +247,7 @@ async function setupFollowMonorepoWorkflow({
   const output = createCliOutput({ stdout, stderr: new MockWritable() });
   determineEditorSpy.mockResolvedValue(isEditorAvailable ? editor : null);
   vi.when(generateReleaseSpecificationTemplateForMonorepoSpy)
-    .calledWith({ project, isEditorAvailable })
+    .calledWith({ candidates: [], isEditorAvailable })
     .thenResolve('');
 
   if (errorUponEditingReleaseSpec) {
@@ -1696,7 +1696,7 @@ describe('monorepo-workflow-operations', () => {
           expect(
             generateReleaseSpecificationTemplateForMonorepoSpy,
           ).toHaveBeenCalledWith({
-            project,
+            candidates: [],
             isEditorAvailable: true,
           });
         });
@@ -2082,7 +2082,7 @@ describe('monorepo-workflow-operations', () => {
           expect(
             generateReleaseSpecificationTemplateForMonorepoSpy,
           ).toHaveBeenCalledWith({
-            project,
+            candidates: [],
             isEditorAvailable: false,
           });
         });

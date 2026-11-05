@@ -5,7 +5,6 @@ import { join } from 'path';
 import type { CliOutput } from './core/cli-output.js';
 import {
   checkReleaseChoices,
-  findWorkspaceDependentNamesOfType,
   normalizeReleaseChoices,
 } from './core/release-rules.js';
 import type { ReleaseChoices } from './core/release-rules.js';
@@ -17,6 +16,7 @@ import {
 } from './core/yarn-commands.js';
 import { getCurrentDirectoryPath } from './dirname.js';
 import { Formatter } from './initial-parameters.js';
+import { listLegacyCandidates } from './modes/legacy/candidates.js';
 import { Package } from './project/package.js';
 import type { Project } from './project/project.js';
 import {
@@ -152,33 +152,13 @@ function createApp({
         ? majorBumps.split(',').filter(Boolean)
         : ((req.query.majorBumps as string[] | undefined) ?? []);
 
-    const requiredDirectDependentNames = new Set(
-      majorBumpsArray.flatMap((majorBump) =>
-        findWorkspaceDependentNamesOfType(project, majorBump, 'dependencies'),
-      ),
+    const majorBumpChoices: ReleaseChoices = Object.fromEntries(
+      majorBumpsArray.map((majorBump) => [majorBump, 'major']),
     );
 
-    const requiredPeerDependentNames = new Set(
-      majorBumpsArray.flatMap((majorBump) =>
-        findWorkspaceDependentNamesOfType(
-          project,
-          majorBump,
-          'peerDependencies',
-        ),
-      ),
+    const packages = listLegacyCandidates(project, majorBumpChoices).map(
+      ({ name, currentVersion }) => ({ name, version: currentVersion }),
     );
-
-    const pkgs = Object.values(project.workspacePackages).filter(
-      (pkg) =>
-        pkg.hasChangesSinceLatestRelease ||
-        requiredDirectDependentNames.has(pkg.validatedManifest.name) ||
-        requiredPeerDependentNames.has(pkg.validatedManifest.name),
-    );
-
-    const packages = pkgs.map((pkg) => ({
-      name: pkg.validatedManifest.name,
-      version: pkg.validatedManifest.version.version,
-    }));
 
     res.json(packages);
   });
