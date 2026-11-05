@@ -1,4 +1,4 @@
-import { S_BAR, S_INFO, S_WARN } from '@clack/prompts';
+import { S_BAR, S_ERROR, S_INFO, S_WARN } from '@clack/prompts';
 import { ChildProcess } from 'child_process';
 import { once } from 'events';
 import net from 'net';
@@ -235,7 +235,11 @@ describe('server', () => {
       it('returns 400 on error', async () => {
         const stderr = new MockWritable();
         const mode = buildMockMode({
-          listCandidates: vi.fn().mockRejectedValue(new Error('boom')),
+          listCandidates: vi
+            .fn()
+            .mockRejectedValue(
+              new Error('boom', { cause: new Error('some cause') }),
+            ),
         });
         const context = buildContext(mode, {
           output: createCliOutput({ stdout: new MockWritable(), stderr }),
@@ -251,7 +255,9 @@ describe('server', () => {
           },
         );
 
-        expect(writtenText(stderr)).toContain('Release error: Error: boom');
+        expect(writtenText(stderr)).toBe(
+          `${S_BAR}\n${S_ERROR}  boom\n${S_BAR}  Caused by: some cause\n`,
+        );
       });
     });
 
@@ -434,7 +440,7 @@ describe('server', () => {
           },
         );
 
-        expect(writtenText(stderr)).toContain('Release error: Error: boom');
+        expect(writtenText(stderr)).toBe(`${S_BAR}\n${S_ERROR}  boom\n`);
         expect(closeServer).not.toHaveBeenCalled();
       });
     });
@@ -479,9 +485,7 @@ describe('server', () => {
           },
         );
 
-        expect(writtenText(stderr)).toContain(
-          'Changelog error: Error: boom',
-        );
+        expect(writtenText(stderr)).toBe(`${S_BAR}\n${S_ERROR}  boom\n`);
       });
     });
   });
@@ -596,15 +600,16 @@ describe('server', () => {
 
       try {
         await expect(createUIFrontEnd({ port }).run(context)).rejects.toThrow(
-          'EADDRINUSE',
+          expect.objectContaining({
+            message: `Could not start the release UI on port ${port}`,
+            cause: expect.objectContaining({ code: 'EADDRINUSE' }) as Error,
+          }),
         );
       } finally {
         blocker.close();
       }
 
-      expect(writtenText(stderr)).toMatch(
-        /Failed to start server: .*EADDRINUSE/u,
-      );
+      expect(stderr.data()).toStrictEqual([]);
     });
   });
 });

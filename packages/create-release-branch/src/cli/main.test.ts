@@ -64,7 +64,7 @@ describe('main', () => {
       output: expect.any(Object) as CliOutput,
     });
     expect(writtenText(stdout)).toContain(
-      'create-release-branch root · monorepo · legacy mode',
+      'create-release-branch  root · monorepo · legacy mode',
     );
   });
 

@@ -182,7 +182,7 @@ export function createCliOutput({
       intro(
         styled.stdout
           ? `${styleStdout(['inverse', 'cyan'], ` ${title} `)} ${styleStdout('dim', details)}`
-          : `${title} ${details}`,
+          : `${title}  ${details}`,
         toStdout,
       );
     },
