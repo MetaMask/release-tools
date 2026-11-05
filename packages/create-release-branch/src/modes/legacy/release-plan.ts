@@ -30,6 +30,40 @@ export type ReleasePlan = {
 };
 
 /**
+ * Uses the release specification to calculate the final versions of the
+ * workspace packages that we want to update.
+ *
+ * @param args - The arguments.
+ * @param args.project - Information about the whole project (e.g., names of
+ * packages and where they can found).
+ * @param args.releaseSpecificationPackages - A parsed version of the release spec
+ * entered by the user.
+ * @returns Information about the workspace packages in the new release.
+ */
+export function planWorkspacePackageReleases({
+  project,
+  releaseSpecificationPackages,
+}: {
+  project: Project;
+  releaseSpecificationPackages: VersionSpecifiers;
+}): PackageReleasePlan[] {
+  return Object.keys(releaseSpecificationPackages).map((packageName) => {
+    const pkg = project.workspacePackages[packageName];
+    const versionSpecifier = releaseSpecificationPackages[packageName];
+    const currentVersion = pkg.validatedManifest.version;
+    const newVersion =
+      versionSpecifier instanceof SemVer
+        ? versionSpecifier
+        : new SemVer(currentVersion.toString()).inc(versionSpecifier);
+
+    return {
+      package: pkg,
+      newVersion: newVersion.toString(),
+    };
+  });
+}
+
+/**
  * Uses the release specification to calculate the final versions of all of the
  * packages that we want to update.
  *
@@ -55,26 +89,15 @@ export async function planRelease({
     newVersion: newReleaseVersion,
   };
 
-  const workspaceReleasePlans: PackageReleasePlan[] = Object.keys(
-    releaseSpecificationPackages,
-  ).map((packageName) => {
-    const pkg = project.workspacePackages[packageName];
-    const versionSpecifier = releaseSpecificationPackages[packageName];
-    const currentVersion = pkg.validatedManifest.version;
-    const newVersion =
-      versionSpecifier instanceof SemVer
-        ? versionSpecifier
-        : new SemVer(currentVersion.toString()).inc(versionSpecifier);
-
-    return {
-      package: pkg,
-      newVersion: newVersion.toString(),
-    };
-  });
-
   return {
     newVersion: newReleaseVersion,
-    packages: [rootReleasePlan, ...workspaceReleasePlans],
+    packages: [
+      rootReleasePlan,
+      ...planWorkspacePackageReleases({
+        project,
+        releaseSpecificationPackages,
+      }),
+    ],
   };
 }
 
