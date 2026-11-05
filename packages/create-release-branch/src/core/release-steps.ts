@@ -1,4 +1,5 @@
 import type { Project } from '../project/project.js';
+import type { CliOutput } from './cli-output.js';
 import type { Mode, ModePlan } from './mode.js';
 import {
   determineReleaseVersion,
@@ -27,22 +28,28 @@ import {
  * @param args.releaseType - The type of release ("ordinary" or "backport"),
  * which affects how the version is bumped.
  * @param args.mode - The release mode.
+ * @param args.output - Where to write user-facing messages.
  * @returns The version of the new release.
  */
 export async function startRelease<Data>({
   project,
   releaseType,
   mode,
+  output,
 }: {
   project: Project;
   releaseType: ReleaseType;
   mode: Mode<Data>;
+  output: CliOutput;
 }): Promise<{ newReleaseVersion: string }> {
   const newReleaseVersion = determineReleaseVersion(project, releaseType);
-  const { firstRun } = await ensureReleaseBranch(project, newReleaseVersion);
+  const { firstRun } = await output.step(
+    'Creating the release branch',
+    async () => await ensureReleaseBranch(project, newReleaseVersion),
+  );
 
   if (firstRun) {
-    await mode.prepare();
+    await output.step('Updating changelogs', async () => await mode.prepare());
     // `prepare` may change nothing, and the release branch still needs this
     // commit.
     await commitAllChanges(
@@ -121,17 +128,23 @@ export async function checkChoices<Data>({
  * @param args.mode - The release mode.
  * @param args.plan - The plan from `checkChoices`.
  * @param args.newReleaseVersion - The version of the new release.
+ * @param args.output - Where to write user-facing messages.
  */
 export async function applyRelease<Data>({
   mode,
   plan,
   newReleaseVersion,
+  output,
 }: {
   mode: Mode<Data>;
   plan: ModePlan<Data>;
   newReleaseVersion: string;
+  output: CliOutput;
 }): Promise<void> {
-  await mode.apply(plan, newReleaseVersion);
+  await output.step(
+    'Applying the release',
+    async () => await mode.apply(plan, newReleaseVersion),
+  );
 }
 
 /**
@@ -141,17 +154,31 @@ export async function applyRelease<Data>({
  * @param args - The arguments.
  * @param args.project - Information about the project.
  * @param args.newReleaseVersion - The version of the new release.
+ * @param args.output - Where to write user-facing messages.
  */
 export async function finishRelease({
   project,
   newReleaseVersion,
+  output,
 }: {
   project: Project;
   newReleaseVersion: string;
+  output: CliOutput;
 }): Promise<void> {
-  await fixConstraints(project.directoryPath);
-  await updateYarnLockfile(project.directoryPath);
-  await deduplicateDependencies(project.directoryPath);
+  await output.step(
+    'Fixing Yarn constraints',
+    async () => await fixConstraints(project.directoryPath),
+  );
+  await output.step(
+    'Installing dependencies',
+    async () => await updateYarnLockfile(project.directoryPath),
+  );
+  await output.step(
+    'Deduplicating dependencies',
+    async () => await deduplicateDependencies(project.directoryPath),
+  );
+  // Not run in a step: a spinner would draw over a GPG pinentry in the
+  // terminal.
   await commitAllChanges(
     project.directoryPath,
     `Update Release ${newReleaseVersion}`,

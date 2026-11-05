@@ -4,8 +4,10 @@ import {
   buildMockMode,
   buildMockPackage,
   buildMockProject,
+  createNoopCliOutput,
 } from '../../tests/unit/helpers.js';
 import type { Candidate } from './candidates.js';
+import type { CliOutput } from './cli-output.js';
 import type { ModePlan } from './mode.js';
 import * as releaseBranchModule from './release-branch.js';
 import {
@@ -20,6 +22,24 @@ import * as yarnCommandsModule from './yarn-commands.js';
 vi.mock('./release-branch');
 vi.mock('./repo');
 vi.mock('./yarn-commands');
+
+/**
+ * Builds an output that records when each step starts and ends.
+ *
+ * @param calls - The list to which the start and end of each step are added.
+ * @returns The output.
+ */
+function buildRecordingOutput(calls: string[]): CliOutput {
+  return {
+    ...createNoopCliOutput(),
+    async step(label, run) {
+      calls.push(`start ${label}`);
+      const result = await run();
+      calls.push(`end ${label}`);
+      return result;
+    },
+  };
+}
 
 describe('release-steps', () => {
   describe('startRelease', () => {
@@ -42,11 +62,13 @@ describe('release-steps', () => {
         project,
         releaseType: 'ordinary',
         mode,
+        output: createNoopCliOutput(),
       });
       const secondResult = await startRelease({
         project,
         releaseType: 'ordinary',
         mode,
+        output: createNoopCliOutput(),
       });
 
       expect(firstResult).toStrictEqual({ newReleaseVersion: '2.0.0' });
@@ -65,7 +87,7 @@ describe('release-steps', () => {
       );
     });
 
-    it('prepares before the Initialize commit', async () => {
+    it('prepares in a step before the Initialize commit', async () => {
       const project = buildMockProject();
       const calls: string[] = [];
       const mode = buildMockMode({
@@ -73,23 +95,64 @@ describe('release-steps', () => {
           calls.push('prepare');
         }),
       });
-      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
-        '2.0.0',
-      );
-      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
-        firstRun: true,
+      vi.spyOn(
+        releaseBranchModule,
+        'determineReleaseVersion',
+      ).mockImplementation(() => {
+        calls.push('determineReleaseVersion');
+        return '2.0.0';
       });
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockImplementation(
+        async () => {
+          calls.push('ensureReleaseBranch');
+          return { firstRun: true };
+        },
+      );
       vi.spyOn(repoModule, 'commitAllChanges').mockImplementation(
         async (directoryPath, commitMessage) => {
           calls.push(`commitAllChanges ${directoryPath} ${commitMessage}`);
         },
       );
 
-      await startRelease({ project, releaseType: 'ordinary', mode });
+      await startRelease({
+        project,
+        releaseType: 'ordinary',
+        mode,
+        output: buildRecordingOutput(calls),
+      });
 
       expect(calls).toStrictEqual([
+        'determineReleaseVersion',
+        'start Creating the release branch',
+        'ensureReleaseBranch',
+        'end Creating the release branch',
+        'start Updating changelogs',
         'prepare',
+        'end Updating changelogs',
         'commitAllChanges /path/to/project Initialize Release 2.0.0',
+      ]);
+    });
+
+    it('only creates the release branch after the first run', async () => {
+      const project = buildMockProject();
+      const calls: string[] = [];
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+        firstRun: false,
+      });
+
+      await startRelease({
+        project,
+        releaseType: 'ordinary',
+        mode: buildMockMode(),
+        output: buildRecordingOutput(calls),
+      });
+
+      expect(calls).toStrictEqual([
+        'start Creating the release branch',
+        'end Creating the release branch',
       ]);
     });
   });
@@ -215,19 +278,32 @@ describe('release-steps', () => {
   });
 
   describe('applyRelease', () => {
-    it('applies the plan with the new release version', async () => {
-      const apply = vi.fn();
+    it('applies the plan with the new release version in a step', async () => {
+      const calls: string[] = [];
+      const apply = vi.fn().mockImplementation(async () => {
+        calls.push('apply');
+      });
       const mode = buildMockMode({ apply });
       const plan: ModePlan<string> = { releases: [], data: 'data' };
 
-      await applyRelease({ mode, plan, newReleaseVersion: '2.0.0' });
+      await applyRelease({
+        mode,
+        plan,
+        newReleaseVersion: '2.0.0',
+        output: buildRecordingOutput(calls),
+      });
 
       expect(apply).toHaveBeenCalledWith(plan, '2.0.0');
+      expect(calls).toStrictEqual([
+        'start Applying the release',
+        'apply',
+        'end Applying the release',
+      ]);
     });
   });
 
   describe('finishRelease', () => {
-    it('runs the Yarn steps then commits', async () => {
+    it('runs each Yarn command in a step, then commits outside any step', async () => {
       const project = buildMockProject();
       const calls: string[] = [];
       vi.spyOn(yarnCommandsModule, 'fixConstraints').mockImplementation(
@@ -252,12 +328,22 @@ describe('release-steps', () => {
         },
       );
 
-      await finishRelease({ project, newReleaseVersion: '2.0.0' });
+      await finishRelease({
+        project,
+        newReleaseVersion: '2.0.0',
+        output: buildRecordingOutput(calls),
+      });
 
       expect(calls).toStrictEqual([
+        'start Fixing Yarn constraints',
         'fixConstraints /path/to/project',
+        'end Fixing Yarn constraints',
+        'start Installing dependencies',
         'updateYarnLockfile /path/to/project',
+        'end Installing dependencies',
+        'start Deduplicating dependencies',
         'deduplicateDependencies /path/to/project',
+        'end Deduplicating dependencies',
         'commitAllChanges /path/to/project Update Release 2.0.0',
       ]);
     });
