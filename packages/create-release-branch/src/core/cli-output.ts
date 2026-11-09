@@ -1,5 +1,6 @@
 import { log, spinner, taskLog } from '@clack/prompts';
 import { Writable } from 'node:stream';
+import type { WriteStream } from 'node:tty';
 import { stripVTControlCharacters, styleText } from 'node:util';
 
 /**
@@ -33,11 +34,8 @@ export type CliOutput = {
 /**
  * A stream that the output can write to, such as `process.stdout`.
  */
-export type OutputStream = Writable & {
-  isTTY?: boolean;
-  columns?: number;
-  hasColors?: () => boolean;
-};
+export type OutputStream = Writable &
+  Partial<Pick<WriteStream, 'isTTY' | 'columns' | 'hasColors'>>;
 
 /**
  * A key that `readline` reports in a `keypress` event.
