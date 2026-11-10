@@ -8,6 +8,7 @@ import {
   buildMockPackage,
   buildMockProject,
   createNoopCliOutput,
+  writtenText,
 } from '../../tests/unit/helpers.js';
 import type { Candidate } from './candidates.js';
 import { createCliOutput } from './cli-output.js';
@@ -74,7 +75,7 @@ function buildOutputWithStepLines(): {
   const stdout = new MockWritable();
   const output = createCliOutput({ stdout, stderr: new MockWritable() });
   const stepLines = (): string[] =>
-    stripVTControlCharacters(stdout.data().join(''))
+    stripVTControlCharacters(writtenText(stdout))
       .split('\n')
       .filter((line) => line.startsWith(`${S_STEP_SUBMIT}  `))
       .map((line) => line.slice(`${S_STEP_SUBMIT}  `.length));
@@ -589,7 +590,7 @@ describe('release-steps', () => {
         output,
       });
 
-      const text = stripVTControlCharacters(stdout.data().join(''));
+      const text = stripVTControlCharacters(writtenText(stdout));
       const summary = text.slice(text.indexOf('2 packages released'));
       expect(text.indexOf('Next: review the changelogs')).toBeLessThan(
         text.indexOf('2 packages released'),
@@ -613,7 +614,7 @@ describe('release-steps', () => {
         output,
       });
 
-      expect(stdout.data().join('')).toContain('1 package released');
+      expect(writtenText(stdout)).toContain('1 package released');
     });
   });
 });

@@ -654,7 +654,7 @@ describe('editor-front-end', () => {
           let stdoutWhileEditing = '';
           waitForUserToEditReleaseSpecificationSpy.mockImplementation(
             async () => {
-              stdoutWhileEditing = stdout.data().join('');
+              stdoutWhileEditing = writtenText(stdout);
             },
           );
 
@@ -668,7 +668,7 @@ describe('editor-front-end', () => {
             output,
           });
 
-          const text = stdout.data().join('');
+          const text = writtenText(stdout);
           expect(
             stdoutWhileEditing.endsWith(
               'Waiting for your editor to close RELEASE_SPEC.yml\n',

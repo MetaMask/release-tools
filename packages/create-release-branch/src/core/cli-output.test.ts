@@ -492,10 +492,10 @@ describe('cli-output', () => {
         'some details',
       );
 
-      expect(textOf(plainStdout)).toBe(
+      expect(writtenText(plainStdout)).toBe(
         `${S_BAR_START}  Some title  some details\n`,
       );
-      expect(textOf(styledStdout)).toContain(
+      expect(writtenText(styledStdout)).toContain(
         `${styleText(['inverse', 'cyan'], ' Some title ', { validateStream: false })} ${styleText('dim', 'some details', { validateStream: false })}`,
       );
       expect(stderr.data()).toStrictEqual([]);
@@ -507,7 +507,7 @@ describe('cli-output', () => {
 
       createCliOutput({ stdout, stderr }).done('Did something');
 
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did something'));
+      expect(writtenText(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did something'));
       expect(stderr.data()).toStrictEqual([]);
     });
 
@@ -527,12 +527,12 @@ describe('cli-output', () => {
         'All done',
       );
 
-      const text = textOf(plainStdout);
+      const text = writtenText(plainStdout);
       expect(text).toContain(`${S_STEP_SUBMIT}  Some title `);
       expect(text).toContain(`${S_BAR}  Line 1 `);
       expect(text).toContain(`${S_BAR}  Line 2 `);
       expect(text.endsWith(`${S_BAR}\n${S_BAR_END}  All done\n\n`)).toBe(true);
-      expect(textOf(styledStdout)).toContain(
+      expect(writtenText(styledStdout)).toContain(
         styleText('green', 'All done', { validateStream: false }),
       );
       expect(stderr.data()).toStrictEqual([]);
@@ -563,8 +563,8 @@ describe('cli-output', () => {
       expect(indicators.spinner.error).toHaveBeenCalledExactlyOnceWith(
         'Failing',
       );
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did 42'));
-      expect(textOf(plainStderr)).toBe(logLine(S_ERROR, 'Failing'));
+      expect(writtenText(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Did 42'));
+      expect(writtenText(plainStderr)).toBe(logLine(S_ERROR, 'Failing'));
     });
 
     it('task ends with the result text', async () => {
@@ -583,7 +583,7 @@ describe('cli-output', () => {
       expect(indicators.taskLog.success).toHaveBeenCalledExactlyOnceWith(
         'Ran 42',
       );
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Ran 42'));
+      expect(writtenText(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Ran 42'));
     });
 
     it('formats names and dim text for stderr only when stderr is styled', () => {
