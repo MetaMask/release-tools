@@ -147,10 +147,10 @@ describe('cli-output', () => {
         ['a'],
       );
 
-      expect(textOf(plainStderr)).toBe(
+      expect(writtenText(plainStderr)).toBe(
         `${logLine(S_WARN, 'Some title:')}${S_BAR}    a\n${S_BAR}    b\n`,
       );
-      expect(textOf(styledStderr)).toContain(
+      expect(writtenText(styledStderr)).toContain(
         `  ${styleText('dim', 'a', { validateStream: false })}`,
       );
       expect(stdout.data()).toStrictEqual([]);
@@ -164,7 +164,7 @@ describe('cli-output', () => {
         'Line 1\nLine 2',
       ]);
 
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stderr)).toBe(
         `${logLine(S_WARN, 'Some title:')}${S_BAR}    Line 1\n${S_BAR}    Line 2\n`,
       );
     });
