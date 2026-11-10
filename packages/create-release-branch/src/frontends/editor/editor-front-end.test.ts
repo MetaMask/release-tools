@@ -9,7 +9,11 @@ import {
   Sandbox,
   isErrorWithCode,
 } from '../../../tests/helpers.js';
-import { buildMockProject, Require } from '../../../tests/unit/helpers.js';
+import {
+  buildMockProject,
+  Require,
+  writtenText,
+} from '../../../tests/unit/helpers.js';
 import { createCliOutput } from '../../core/cli-output.js';
 import type { CliOutput } from '../../core/cli-output.js';
 import * as releaseBranchModule from '../../core/release-branch.js';
@@ -1003,7 +1007,7 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data().join('')).toContain(
+          expect(writtenText(stdout)).toContain(
             'A template has been generated that specifies this release',
           );
         });
@@ -1766,7 +1770,7 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data().join('')).toContain(
+          expect(writtenText(stdout)).toContain(
             'A template has been generated that specifies this release',
           );
         });
@@ -2290,7 +2294,7 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data().join('')).toContain(
+          expect(writtenText(stdout)).toContain(
             'A template has been generated that specifies this release',
           );
         });

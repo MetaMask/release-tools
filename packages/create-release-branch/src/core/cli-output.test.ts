@@ -12,6 +12,7 @@ import { stripVTControlCharacters } from 'node:util';
 import { MockWritable } from 'stdio-mock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { writtenText } from '../../tests/unit/helpers.js';
 import type { CliOutput } from './cli-output.js';
 import { createCliOutput } from './cli-output.js';
 
@@ -56,16 +57,6 @@ function logLine(symbol: string, message: string): string {
 }
 
 /**
- * Gets everything that was written to a stream, as one string.
- *
- * @param stream - The stream.
- * @returns The text.
- */
-function textOf(stream: MockWritable): string {
-  return stream.data().join('');
-}
-
-/**
  * Sends one message through each method of the output, runs one step, and
  * runs one task that fails after printing a line.
  *
@@ -107,7 +98,7 @@ describe('cli-output', () => {
       output.info('Some info\n');
       output.success('Some success');
 
-      expect(textOf(stdout)).toBe(
+      expect(writtenText(stdout)).toBe(
         `${logLine(S_INFO, 'Some info')}${logLine(S_SUCCESS, 'Some success')}`,
       );
       expect(stderr.data()).toStrictEqual([]);
@@ -121,7 +112,7 @@ describe('cli-output', () => {
       output.warn('Some warning\n\n');
       output.error('Some error');
 
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stderr)).toBe(
         `${logLine(S_WARN, 'Some warning')}${logLine(S_ERROR, 'Some error')}`,
       );
       expect(stdout.data()).toStrictEqual([]);
@@ -135,11 +126,13 @@ describe('cli-output', () => {
       output.success('Some success');
       output.error('Some error');
 
-      expect(textOf(stdout)).not.toBe(stripVTControlCharacters(textOf(stdout)));
-      expect(stripVTControlCharacters(textOf(stdout))).toBe(
+      expect(writtenText(stdout)).not.toBe(
+        stripVTControlCharacters(writtenText(stdout)),
+      );
+      expect(stripVTControlCharacters(writtenText(stdout))).toBe(
         logLine(S_SUCCESS, 'Some success'),
       );
-      expect(textOf(stderr)).toBe(logLine(S_ERROR, 'Some error'));
+      expect(writtenText(stderr)).toBe(logLine(S_ERROR, 'Some error'));
     });
 
     it.each([
@@ -192,14 +185,14 @@ describe('cli-output', () => {
 
         await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
 
-        expect(textOf(stdout)).toBe(
+        expect(writtenText(stdout)).toBe(
           [
             logLine(S_INFO, 'Some info'),
             logLine(S_SUCCESS, 'Some success'),
             logLine(S_STEP_SUBMIT, 'Doing something'),
           ].join(''),
         );
-        expect(textOf(stderr)).toBe(
+        expect(writtenText(stderr)).toBe(
           [
             logLine(S_WARN, 'Some warning'),
             logLine(S_ERROR, 'Some error'),
@@ -243,8 +236,10 @@ describe('cli-output', () => {
         'Doing something else',
       );
       expect(stderr.data()).toStrictEqual([]);
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Doing something'));
-      expect(textOf(plainStderr)).toBe(
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Doing something'),
+      );
+      expect(writtenText(plainStderr)).toBe(
         logLine(S_ERROR, 'Doing something else'),
       );
     });
@@ -271,7 +266,9 @@ describe('cli-output', () => {
       await output.step('Doing something', async () => undefined);
 
       expect(spinner).not.toHaveBeenCalled();
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Doing something'));
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Doing something'),
+      );
     });
 
     it.each(['', '0', 'false'])(
@@ -398,8 +395,10 @@ describe('cli-output', () => {
       ).rejects.toThrow('oops');
 
       expect(result).toBe(42);
-      expect(textOf(stdout)).toBe(logLine(S_STEP_SUBMIT, 'Running something'));
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Running something'),
+      );
+      expect(writtenText(stderr)).toBe(
         [
           logLine(S_ERROR, 'Running something else'),
           `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}  Line 2\n`,

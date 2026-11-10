@@ -17,6 +17,7 @@ import {
   buildMockManifest,
   createNoopCliOutput,
   createNoopWriteStream,
+  writtenText,
 } from '../../tests/unit/helpers.js';
 import { createCliOutput } from '../core/cli-output.js';
 import * as repoModule from '../core/repo.js';
@@ -398,7 +399,7 @@ describe('package', () => {
         output,
       });
 
-      expect(stderr.data().join('')).toContain(
+      expect(writtenText(stderr)).toContain(
         'WARNING: Could not determine changes for workspace package @scope/workspace-package version 1.0.0 based on Git tag "@scope/workspace-package@1.0.0"; using tag for root package root-package version 5.0.0, "v5.0.0", instead.',
       );
     });

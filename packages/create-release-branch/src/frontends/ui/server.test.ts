@@ -11,6 +11,7 @@ import {
   buildMockPackage,
   buildMockProject,
   createNoopCliOutput,
+  writtenText,
 } from '../../../tests/unit/helpers.js';
 import { createCliOutput } from '../../core/cli-output.js';
 import type { ReleaseContext } from '../../core/front-end.js';
@@ -249,7 +250,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain('Release error: Error: boom');
+        expect(writtenText(stderr)).toContain('Release error: Error: boom');
       });
     });
 
@@ -399,7 +400,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain('Release error: Error: boom');
+        expect(writtenText(stderr)).toContain('Release error: Error: boom');
         expect(closeServer).not.toHaveBeenCalled();
       });
     });
@@ -444,9 +445,7 @@ describe('server', () => {
           },
         );
 
-        expect(stderr.data().join('')).toContain(
-          'Changelog error: Error: boom',
-        );
+        expect(writtenText(stderr)).toContain('Changelog error: Error: boom');
       });
     });
   });
@@ -471,7 +470,7 @@ describe('server', () => {
 
       const running = createUIFrontEnd({ port }).run(context);
       await vi.waitFor(() => {
-        expect(stdout.data().join('')).toContain(
+        expect(writtenText(stdout)).toContain(
           `UI server running at http://localhost:${port}`,
         );
       });
@@ -483,7 +482,7 @@ describe('server', () => {
 
       expect(await response.json()).toStrictEqual({ status: 'success' });
       expect(openBrowser).toHaveBeenCalledWith(`http://localhost:${port}`);
-      const text = stdout.data().join('');
+      const text = writtenText(stdout);
       expect(text).toContain('Attempting to open UI in browser...');
       expect(text).toContain('Release process completed. Server shutdown.');
     });
@@ -512,7 +511,7 @@ describe('server', () => {
       await postChoices(`http://localhost:${port}/api/release`, {});
       await running;
 
-      const text = stderr.data().join('');
+      const text = writtenText(stderr);
       expect(text).toContain(
         'Error automatically opening browser: Error: no browser',
       );
@@ -543,7 +542,7 @@ describe('server', () => {
         blocker.close();
       }
 
-      expect(stderr.data().join('')).toMatch(
+      expect(writtenText(stderr)).toMatch(
         /Failed to start server: .*EADDRINUSE/u,
       );
     });

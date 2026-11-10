@@ -1,7 +1,7 @@
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildMockProject } from '../../tests/unit/helpers.js';
+import { buildMockProject, writtenText } from '../../tests/unit/helpers.js';
 import { createCliOutput } from './cli-output.js';
 import type { ReleaseContext } from './front-end.js';
 import type { Mode } from './mode.js';
@@ -48,7 +48,7 @@ describe('run-release', () => {
 
       await runRelease(context, { run });
 
-      expect(stdout.data().join('')).toContain(
+      expect(writtenText(stdout)).toContain(
         'Project appears to have workspaces. Following monorepo workflow.',
       );
       expect(run).toHaveBeenCalledWith(context);
@@ -61,7 +61,7 @@ describe('run-release', () => {
 
       await runRelease(context, { run });
 
-      expect(stdout.data().join('')).toContain(
+      expect(writtenText(stdout)).toContain(
         'Project does not appear to have any workspaces. Following polyrepo workflow.',
       );
       expect(run).not.toHaveBeenCalled();
