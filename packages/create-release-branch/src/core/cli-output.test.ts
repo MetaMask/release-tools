@@ -399,7 +399,7 @@ describe('cli-output', () => {
 
       output.failure('Something failed', ['Line 1', '', 'Line 2']);
 
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stderr)).toBe(
         [
           logLine(S_ERROR, 'Something failed'),
           `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}\n${S_BAR}  Line 2\n${S_BAR}\n`,
@@ -416,7 +416,7 @@ describe('cli-output', () => {
 
       output.failure('Something failed', []);
 
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stderr)).toBe(
         [
           logLine(S_ERROR, 'Something failed'),
           `${S_BAR}\n`,
@@ -432,7 +432,7 @@ describe('cli-output', () => {
 
       output.failure('Something failed', ['Line 1\nLine 2']);
 
-      expect(textOf(stderr)).toBe(
+      expect(writtenText(stderr)).toBe(
         [
           logLine(S_ERROR, 'Something failed'),
           `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}  Line 2\n${S_BAR}\n`,
