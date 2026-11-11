@@ -3,7 +3,11 @@ import { outdent as outdentFactory } from 'outdent';
 import { describe, expect, it } from 'vitest';
 
 import { format } from './changelog.js';
-import { validateChangelog } from './validate-changelog.js';
+import {
+  ChangelogFormattingError,
+  UnreleasedChangesError,
+  validateChangelog,
+} from './validate-changelog.js';
 
 const outdent = outdentFactory({ trimTrailingNewline: false });
 
@@ -1407,6 +1411,192 @@ describe('validateChangelog', () => {
           isReleaseCandidate: false,
         }),
       ).resolves.not.toThrow();
+    });
+  });
+
+  describe('when allowMissingUnreleasedSection is true', () => {
+    const repoUrl =
+      'https://github.com/ExampleUsernameOrOrganization/ExampleRepository';
+
+    const changelogWithoutUnreleased = outdent`
+      # Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+      ## [1.0.0]
+      ### Changed
+      - Something else
+
+      ## [0.0.1]
+      ### Changed
+      - Something
+
+      [1.0.0]: ${repoUrl}/compare/v0.0.1...v1.0.0
+      [0.0.1]: ${repoUrl}/releases/tag/v0.0.1
+    `;
+
+    it('should not throw for a changelog without an Unreleased section', async () => {
+      await expect(
+        validateChangelog({
+          changelogContent: changelogWithoutUnreleased,
+          repoUrl,
+          isReleaseCandidate: false,
+          allowMissingUnreleasedSection: true,
+          removeEmptyUnreleasedSection: true,
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    it('should not throw for a release candidate without an Unreleased section', async () => {
+      await expect(
+        validateChangelog({
+          changelogContent: changelogWithoutUnreleased,
+          currentVersion: '1.0.0',
+          repoUrl,
+          isReleaseCandidate: true,
+          allowMissingUnreleasedSection: true,
+          removeEmptyUnreleasedSection: true,
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    it('should not throw for a CRLF changelog without an Unreleased section', async () => {
+      await expect(
+        validateChangelog({
+          changelogContent: changelogWithoutUnreleased.replace(/\n/gu, '\r\n'),
+          repoUrl,
+          isReleaseCandidate: false,
+          allowMissingUnreleasedSection: true,
+          removeEmptyUnreleasedSection: true,
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw a formatting error for an empty Unreleased section', async () => {
+      const changelogWithEmptyUnreleased = outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+
+        ## [1.0.0]
+        ### Changed
+        - Something else
+
+        ## [0.0.1]
+        ### Changed
+        - Something
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/compare/v0.0.1...v1.0.0
+        [0.0.1]: ${repoUrl}/releases/tag/v0.0.1
+      `;
+
+      const result = validateChangelog({
+        changelogContent: changelogWithEmptyUnreleased,
+        repoUrl,
+        isReleaseCandidate: false,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      await expect(result).rejects.toThrow(ChangelogFormattingError);
+      await expect(result).rejects.toHaveProperty(
+        'data.validChangelog',
+        changelogWithoutUnreleased,
+      );
+    });
+
+    it('should throw for a release candidate with unreleased changes', async () => {
+      const changelogWithUnreleasedChanges = outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Fixed
+        - Fix something
+
+        ## [1.0.0]
+        ### Changed
+        - Something else
+
+        ## [0.0.1]
+        ### Changed
+        - Something
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/compare/v0.0.1...v1.0.0
+        [0.0.1]: ${repoUrl}/releases/tag/v0.0.1
+      `;
+
+      await expect(
+        validateChangelog({
+          changelogContent: changelogWithUnreleasedChanges,
+          currentVersion: '1.0.0',
+          repoUrl,
+          isReleaseCandidate: true,
+          allowMissingUnreleasedSection: true,
+          removeEmptyUnreleasedSection: true,
+        }),
+      ).rejects.toThrow(UnreleasedChangesError);
+    });
+
+    it('should throw a formatting error for a release without its link reference definition', async () => {
+      const result = validateChangelog({
+        changelogContent: changelogWithoutUnreleased.replace(
+          `[0.0.1]: ${repoUrl}/releases/tag/v0.0.1\n`,
+          '',
+        ),
+        repoUrl,
+        isReleaseCandidate: false,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      await expect(result).rejects.toThrow(ChangelogFormattingError);
+      await expect(result).rejects.toHaveProperty(
+        'data.validChangelog',
+        changelogWithoutUnreleased,
+      );
+    });
+
+    it('should throw a formatting error for a changelog without an Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
+      const result = validateChangelog({
+        changelogContent: changelogWithoutUnreleased,
+        repoUrl,
+        isReleaseCandidate: false,
+        allowMissingUnreleasedSection: true,
+      });
+
+      await expect(result).rejects.toThrow(ChangelogFormattingError);
+      await expect(result).rejects.toHaveProperty(
+        'data.validChangelog',
+        expect.stringContaining('## [Unreleased]'),
+      );
+    });
+  });
+
+  describe('when removeEmptyUnreleasedSection is true', () => {
+    it('should throw when allowMissingUnreleasedSection is not true', async () => {
+      await expect(
+        validateChangelog({
+          changelogContent: emptyChangelog,
+          repoUrl:
+            'https://github.com/ExampleUsernameOrOrganization/ExampleRepository',
+          isReleaseCandidate: false,
+          removeEmptyUnreleasedSection: true,
+        }),
+      ).rejects.toThrow(
+        'The removeEmptyUnreleasedSection option requires allowMissingUnreleasedSection: a changelog without an Unreleased section is otherwise invalid.',
+      );
     });
   });
 });

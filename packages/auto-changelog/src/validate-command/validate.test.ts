@@ -217,7 +217,9 @@ describe('validate', () => {
 
       expect(process.exitCode).toBe(1);
       expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Changelog not well-formatted'),
+        expect.stringContaining(
+          `Changelog "${path.relative(process.cwd(), changelogPath)}" not well-formatted`,
+        ),
       );
       errorSpy.mockRestore();
       process.exitCode = 0;
@@ -436,6 +438,149 @@ describe('validate', () => {
       );
       errorSpy.mockRestore();
       process.exitCode = 0;
+    });
+  });
+
+  describe('when allowMissingUnreleasedSection and removeEmptyUnreleasedSection are true', () => {
+    const changelogWithoutUnreleased = outdent`
+      # Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+      ## [1.0.0]
+      ### Added
+      - Initial release ([#1](${repoUrl}/pull/1))
+
+      [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+    `;
+
+    const changelogWithEmptyUnreleased = outdent`
+      # Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+      ## [Unreleased]
+
+      ## [1.0.0]
+      ### Added
+      - Initial release ([#1](${repoUrl}/pull/1))
+
+      [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+      [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+    `;
+
+    it('removes an empty Unreleased section when fix=true', async () => {
+      await writeChangelog(changelogWithEmptyUnreleased);
+      process.exitCode = 0;
+
+      await validate({
+        ...defaultOptions(),
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+        fix: true,
+      });
+
+      expect(await readChangelog()).toBe(changelogWithoutUnreleased);
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('keeps a non-empty Unreleased section when fix=true', async () => {
+      const changelogWithUnreleasedChanges = outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Added
+        - New feature ([#2](${repoUrl}/pull/2))
+
+        ## [1.0.0]
+        ### Added
+        - Initial release ([#1](${repoUrl}/pull/1))
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+      await writeChangelog(changelogWithUnreleasedChanges);
+      process.exitCode = 0;
+
+      await validate({
+        ...defaultOptions(),
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+        fix: true,
+      });
+
+      expect(await readChangelog()).toBe(changelogWithUnreleasedChanges);
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('passes for a changelog without an Unreleased section', async () => {
+      await writeChangelog(changelogWithoutUnreleased);
+      process.exitCode = 0;
+
+      const result = await validate({
+        ...defaultOptions(),
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(result).toBeUndefined();
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('adds an Unreleased section with missing dependency bump entries when checkDeps and fix are true', async () => {
+      await writeChangelog(changelogWithoutUnreleased);
+      getDependencyChangesMock.mockResolvedValue({
+        dependencyChanges: [
+          {
+            dependency: '@scope/b',
+            isBreaking: false,
+            oldVersion: '1.0.0',
+            newVersion: '2.0.0',
+          },
+        ],
+        prNumbers: ['100'],
+        versionChanged: false,
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Do nothing
+      });
+
+      await validate({
+        ...defaultOptions(),
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+        checkDeps: true,
+        fix: true,
+        currentPr: '200',
+      });
+
+      expect(await readChangelog()).toBe(outdent`
+        # Changelog
+        All notable changes to this project will be documented in this file.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+        and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        ## [Unreleased]
+        ### Changed
+        - Bump \`@scope/b\` from \`1.0.0\` to \`2.0.0\` ([#100](${repoUrl}/pull/100))
+
+        ## [1.0.0]
+        ### Added
+        - Initial release ([#1](${repoUrl}/pull/1))
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+      logSpy.mockRestore();
     });
   });
 

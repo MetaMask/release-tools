@@ -2,17 +2,21 @@ import { isPlainObject } from '@metamask/utils';
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
+import { vi } from 'vitest';
 
+import { createCliOutput } from '../../src/core/cli-output.js';
+import type { CliOutput } from '../../src/core/cli-output.js';
+import type { Mode } from '../../src/core/mode.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
-} from '../../src/package-manifest.js';
+} from '../../src/project/package-manifest.js';
 import type {
   UnvalidatedPackageManifest,
   ValidatedPackageManifest,
-} from '../../src/package-manifest.js';
-import type { Package } from '../../src/package.js';
-import type { Project } from '../../src/project.js';
+} from '../../src/project/package-manifest.js';
+import type { Package } from '../../src/project/package.js';
+import type { Project } from '../../src/project/project.js';
 
 /**
  * Returns a version of the given record type where optionality is removed from
@@ -42,7 +46,8 @@ type MockPackageOverrides = Omit<
 > & {
   validatedManifest?: Omit<
     Partial<ValidatedPackageManifest>,
-    PackageManifestFieldNames.Name | PackageManifestFieldNames.Version
+    | typeof PackageManifestFieldNames.Name
+    | typeof PackageManifestFieldNames.Version
   >;
   unvalidatedManifest?: UnvalidatedPackageManifest;
 };
@@ -163,4 +168,37 @@ export function buildMockManifest(
  */
 export function createNoopWriteStream(): fs.WriteStream {
   return fs.createWriteStream('/dev/null');
+}
+
+/**
+ * Creates an output that discards all messages sent to it. This is useful as a
+ * default value for functions that need to take an `output`.
+ *
+ * @returns The output.
+ */
+export function createNoopCliOutput(): CliOutput {
+  return createCliOutput({
+    stdout: createNoopWriteStream(),
+    stderr: createNoopWriteStream(),
+  });
+}
+
+/**
+ * Builds a mode for use in tests. All methods are mock functions.
+ *
+ * @param overrides - The properties to override in the mode.
+ * @returns The mock mode.
+ */
+export function buildMockMode(
+  overrides: Partial<Mode<string>> = {},
+): Mode<string> {
+  return {
+    name: 'legacy',
+    prepare: vi.fn(),
+    listCandidates: vi.fn().mockResolvedValue([]),
+    plan: vi.fn(),
+    apply: vi.fn(),
+    getReleaseNotes: vi.fn(),
+    ...overrides,
+  };
 }

@@ -943,7 +943,7 @@ __metadata:
     "@changesets/should-skip-package": "npm:^1.0.0"
     "@changesets/types": "npm:^7.0.0"
     "@manypkg/get-packages": "npm:^3.1.0"
-    "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/auto-changelog": "npm:^7.1.0"
     "@types/node": "npm:^22.13.14"
     "@types/semver": "npm:^7"
     "@typescript/native": "npm:typescript@^7.0.2"
@@ -961,7 +961,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@metamask/auto-changelog@npm:^7.0.1, @metamask/auto-changelog@workspace:packages/auto-changelog":
+"@metamask/auto-changelog@npm:^7.1.0, @metamask/auto-changelog@workspace:packages/auto-changelog":
   version: 0.0.0-use.local
   resolution: "@metamask/auto-changelog@workspace:packages/auto-changelog"
   dependencies:
@@ -973,6 +973,8 @@ __metadata:
     "@types/yargs": "npm:^17.0.33"
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
+    "@yarnpkg/core": "npm:4.9.1"
+    "@yarnpkg/fslib": "npm:^3.1.5"
     diff: "npm:^5.0.0"
     execa: "npm:^8.0.1"
     nock: "npm:^14.0.17"
@@ -1003,7 +1005,7 @@ __metadata:
   resolution: "@metamask/changesets-changelog@workspace:packages/changesets-changelog"
   dependencies:
     "@changesets/types": "npm:^7.0.0"
-    "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/auto-changelog": "npm:^7.1.0"
     "@metamask/changesets-utils": "npm:^0.0.0"
     "@metamask/utils": "npm:^11.12.0"
     "@types/node": "npm:^22.13.14"
@@ -1024,7 +1026,7 @@ __metadata:
   dependencies:
     "@changesets/parse": "npm:^1.0.0"
     "@changesets/types": "npm:^7.0.0"
-    "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/auto-changelog": "npm:^7.1.0"
     "@metamask/changesets-utils": "npm:^0.0.0"
     "@types/node": "npm:^22.13.14"
     "@types/yargs": "npm:^17.0.33"
@@ -1051,7 +1053,7 @@ __metadata:
   resolution: "@metamask/changesets-utils@workspace:packages/changesets-utils"
   dependencies:
     "@changesets/types": "npm:^7.0.0"
-    "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/auto-changelog": "npm:^7.1.0"
     "@types/node": "npm:^22.13.14"
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
@@ -1063,12 +1065,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@metamask/create-release-branch@npm:^4.2.3, @metamask/create-release-branch@workspace:packages/create-release-branch":
+"@metamask/create-release-branch@npm:^4.2.4, @metamask/create-release-branch@workspace:packages/create-release-branch":
   version: 0.0.0-use.local
   resolution: "@metamask/create-release-branch@workspace:packages/create-release-branch"
   dependencies:
     "@metamask/action-utils": "npm:^2.0.0"
-    "@metamask/auto-changelog": "npm:^7.0.1"
+    "@metamask/auto-changelog": "npm:^7.1.0"
     "@metamask/utils": "npm:^11.12.0"
     "@tailwindcss/vite": "npm:^4.0.9"
     "@types/debug": "npm:^4.1.7"
@@ -1083,12 +1085,14 @@ __metadata:
     "@typescript/native": "npm:typescript@^7.0.2"
     "@vitejs/plugin-react": "npm:^6.1.2"
     "@vitest/coverage-istanbul": "npm:^5.0.1"
+    chalk: "npm:^5.6.2"
     debug: "npm:^4.3.4"
     deepmerge: "npm:^4.2.2"
     execa: "npm:^8.0.1"
     express: "npm:^4.21.2"
     nanoid: "npm:^3.3.4"
     open: "npm:^10.1.0"
+    ora: "npm:^9.4.1"
     oxfmt: "npm:^0.45.0"
     pony-cause: "npm:^2.1.9"
     prettier: "npm:^3.3.3"
@@ -1097,6 +1101,7 @@ __metadata:
     react-markdown: "npm:^9.0.3"
     rimraf: "npm:^5.0.5"
     semver: "npm:^7.8.5"
+    shell-quote: "npm:^1.8.4"
     stdio-mock: "npm:^1.2.0"
     tailwindcss: "npm:^4.0.9"
     tsx: "npm:^4.20.5"
@@ -1189,7 +1194,7 @@ __metadata:
   dependencies:
     "@lavamoat/allow-scripts": "npm:^5.1.0"
     "@lavamoat/preinstall-always-fail": "npm:^2.1.0"
-    "@metamask/create-release-branch": "npm:^4.2.3"
+    "@metamask/create-release-branch": "npm:^4.2.4"
     "@metamask/oxlint-config": "npm:^0.1.1"
     "@metamask/oxlint-config-browser": "npm:^0.1.1"
     "@metamask/oxlint-config-commonjs": "npm:^0.1.1"

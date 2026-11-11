@@ -159,6 +159,18 @@ or
 
 `npm run auto-changelog validate --pr-links`
 
+#### Validate a changelog managed with Changesets
+
+Changesets writes release sections directly, so the changelog does not need an "Unreleased" section. Use `--allowMissingUnreleasedSection` to make the "Unreleased" section optional. Add `--removeEmptyUnreleasedSection` so that an empty "Unreleased" section and its link are removed with `--fix`. A non-empty "Unreleased" section is kept.
+
+`yarn run auto-changelog validate --allowMissingUnreleasedSection --removeEmptyUnreleasedSection`
+
+or
+
+`npm run auto-changelog validate --allowMissingUnreleasedSection --removeEmptyUnreleasedSection`
+
+`--removeEmptyUnreleasedSection` requires `--allowMissingUnreleasedSection`.
+
 ### Check Dependencies
 
 #### Check and validate dependency bump changelog entries
@@ -240,6 +252,8 @@ try {
       'https://github.com/ExampleUsernameOrOrganization/ExampleRepository',
     isReleaseCandidate: false,
     ensureValidPrLinksPresent: true,
+    allowMissingUnreleasedSection: false, // Optional: set to true to make the "Unreleased" section optional for changelogs managed with Changesets
+    removeEmptyUnreleasedSection: false, // Optional: set to true to require that an empty "Unreleased" section is omitted (needs allowMissingUnreleasedSection: true)
   });
   // changelog is valid!
 } catch (error) {

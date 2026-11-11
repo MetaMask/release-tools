@@ -1727,4 +1727,267 @@ describe('parseChangelog', () => {
       });
     });
   });
+
+  describe('when allowMissingUnreleasedSection is true', () => {
+    const CHANGELOG_HEADER = outdent`# Changelog
+      All notable changes to this project will be documented in this file.
+
+      The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+      and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+    `;
+
+    it('parses a changelog without Unreleased and with two releases', async () => {
+      const changelogContent = outdent`
+        ${CHANGELOG_HEADER}
+        ## [1.0.0]
+        ### Changed
+        - Something
+
+        ## [0.1.0]
+        ### Added
+        - Initial release
+
+        [1.0.0]: ${repoUrl}/compare/v0.1.0...v1.0.0
+        [0.1.0]: ${repoUrl}/releases/tag/v0.1.0
+      `;
+
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(changelog.getReleases()).toStrictEqual([
+        { version: '1.0.0' },
+        { version: '0.1.0' },
+      ]);
+      expect(changelog.getUnreleasedChanges()).toStrictEqual({});
+      expect(await changelog.toString()).toBe(changelogContent);
+    });
+
+    it('parses a changelog without Unreleased whose first release has a date and status', async () => {
+      const changelogContent = outdent`
+        ${CHANGELOG_HEADER}
+        ## [1.0.0] - 2026-01-01 [DEPRECATED]
+        ### Added
+        - Initial release
+
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(changelog.getReleases()).toStrictEqual([
+        { date: '2026-01-01', status: 'DEPRECATED', version: '1.0.0' },
+      ]);
+      expect(await changelog.toString()).toBe(changelogContent);
+    });
+
+    it('parses a changelog with only a title and description', async () => {
+      const changelog = parseChangelog({
+        changelogContent: CHANGELOG_HEADER,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(changelog.getReleases()).toStrictEqual([]);
+      expect(changelog.getUnreleasedChanges()).toStrictEqual({});
+      expect(await changelog.toString()).toBe(CHANGELOG_HEADER);
+    });
+
+    it('treats the rest of the file as content when there are no link reference definitions', () => {
+      const changelog = parseChangelog({
+        changelogContent: outdent`
+          ${CHANGELOG_HEADER}
+          ## [1.0.0]
+          ### Added
+          - Initial release
+        `,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+      });
+
+      expect(changelog.getReleases()).toStrictEqual([{ version: '1.0.0' }]);
+      expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
+        Added: [{ description: 'Initial release', prNumbers: [] }],
+      });
+    });
+
+    it('parses a non-empty Unreleased section like the default mode', async () => {
+      const changelogContent = outdent`
+        ${CHANGELOG_HEADER}
+        ## [Unreleased]
+        ### Added
+        - New feature
+
+        ## [1.0.0]
+        ### Changed
+        - Something
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+      const defaultChangelog = parseChangelog({ changelogContent, repoUrl });
+
+      expect(changelog.getReleases()).toStrictEqual(
+        defaultChangelog.getReleases(),
+      );
+      expect(changelog.getUnreleasedChanges()).toStrictEqual(
+        defaultChangelog.getUnreleasedChanges(),
+      );
+      expect(changelog.getUnreleasedChanges()).toStrictEqual({
+        Added: [{ description: 'New feature', prNumbers: [] }],
+      });
+      expect(await changelog.toString()).toBe(changelogContent);
+    });
+
+    it('drops an empty Unreleased section when stringified', async () => {
+      const changelog = parseChangelog({
+        changelogContent: outdent`
+          ${CHANGELOG_HEADER}
+          ## [Unreleased]
+
+          ## [1.0.0]
+          ### Added
+          - Initial release
+
+          [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+          [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+        `,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+        removeEmptyUnreleasedSection: true,
+      });
+
+      expect(changelog.getUnreleasedChanges()).toStrictEqual({});
+      expect(await changelog.toString()).toBe(outdent`
+        ${CHANGELOG_HEADER}
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `);
+    });
+
+    it('keeps an empty Unreleased section when removeEmptyUnreleasedSection is not set', async () => {
+      const changelogContent = outdent`
+        ${CHANGELOG_HEADER}
+        ## [Unreleased]
+
+        ## [1.0.0]
+        ### Added
+        - Initial release
+
+        [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+        [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+      `;
+
+      const changelog = parseChangelog({
+        changelogContent,
+        repoUrl,
+        allowMissingUnreleasedSection: true,
+      });
+
+      expect(await changelog.toString()).toBe(changelogContent);
+    });
+
+    it('throws when a release header follows the Unreleased link reference definition', () => {
+      expect(() =>
+        parseChangelog({
+          changelogContent: outdent`
+            ${CHANGELOG_HEADER}
+            ## [Unreleased]
+
+            [Unreleased]: ${repoUrl}/compare/v1.0.0...HEAD
+
+            ## [1.0.0]
+            ### Added
+            - Initial release
+          `,
+          repoUrl,
+          allowMissingUnreleasedSection: true,
+        }),
+      ).toThrow(
+        "Release header found outside the changelog content: '## [1.0.0]'",
+      );
+    });
+
+    it('throws when a release header follows the first link reference definition', () => {
+      expect(() =>
+        parseChangelog({
+          changelogContent: outdent`
+            ${CHANGELOG_HEADER}
+            ## [1.0.0]
+            ### Added
+            - Initial release
+
+            [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+
+            ## [0.9.0]
+            ### Added
+            - Something
+          `,
+          repoUrl,
+          allowMissingUnreleasedSection: true,
+        }),
+      ).toThrow(
+        "Release header found outside the changelog content: '## [0.9.0]'",
+      );
+    });
+
+    it('throws when a release header precedes the first bracketed release header', () => {
+      expect(() =>
+        parseChangelog({
+          changelogContent: outdent`
+            ${CHANGELOG_HEADER}
+            ## 1.2.0
+            ### Added
+            - Something
+
+            ## [1.0.0]
+            ### Added
+            - Initial release
+
+            [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+          `,
+          repoUrl,
+          allowMissingUnreleasedSection: true,
+        }),
+      ).toThrow(
+        "Release header found outside the changelog content: '## 1.2.0'",
+      );
+    });
+
+    it('does not treat a wrongly cased Unreleased header as the Unreleased section', () => {
+      expect(() =>
+        parseChangelog({
+          changelogContent: outdent`
+            ${CHANGELOG_HEADER}
+            ## [unreleased]
+            ### Added
+            - Something
+
+            [1.0.0]: ${repoUrl}/releases/tag/v1.0.0
+          `,
+          repoUrl,
+          allowMissingUnreleasedSection: true,
+        }),
+      ).toThrow("Invalid SemVer version in release header: '## [unreleased]'");
+    });
+  });
 });
