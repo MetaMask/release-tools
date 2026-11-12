@@ -8,20 +8,14 @@ const MERGE_COMMIT_PR_PATTERN = /Merge pull request #(\d+) from/iu;
  * Extracts a pull request number from a Git commit subject.
  *
  * @param subject - The Git commit subject.
- * @returns The pull request number.
+ * @returns The pull request number, or undefined if the subject has none.
  */
-export function extractPullRequestNumber(subject: string): string {
+export function extractPullRequestNumber(subject: string): string | undefined {
   const match =
     subject.match(SQUASH_MERGE_PR_PATTERN) ??
     subject.match(MERGE_COMMIT_PR_PATTERN);
 
-  if (!match) {
-    throw new Error(
-      `Commit subject does not contain a pull request number: ${subject}`,
-    );
-  }
-
-  return match[1];
+  return match?.[1];
 }
 
 /**
@@ -29,12 +23,13 @@ export function extractPullRequestNumber(subject: string): string {
  *
  * @param changeset - The changeset whose commit should be inspected.
  * @param repository - The GitHub repository in `owner/repo` form.
- * @returns The Markdown pull request link.
+ * @returns The Markdown pull request link, or undefined if the commit subject
+ * has no pull request number.
  */
 export async function getPullRequestLink(
   changeset: NewChangesetWithCommit,
   repository: string,
-): Promise<string> {
+): Promise<string | undefined> {
   if (!changeset.commit) {
     throw new Error(`Changeset ${changeset.id} has no commit`);
   }
@@ -61,5 +56,7 @@ export async function getPullRequestLink(
   }
 
   const pullRequestNumber = extractPullRequestNumber(subject.trim());
-  return `[#${pullRequestNumber}](https://github.com/${repository}/pull/${pullRequestNumber})`;
+  return pullRequestNumber === undefined
+    ? undefined
+    : `[#${pullRequestNumber}](https://github.com/${repository}/pull/${pullRequestNumber})`;
 }

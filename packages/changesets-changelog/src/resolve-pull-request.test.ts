@@ -31,10 +31,8 @@ describe('extractPullRequestNumber', () => {
     ).toBe('1234');
   });
 
-  it('throws when a subject has no pull request number', () => {
-    expect(() => extractPullRequestNumber('Add a feature')).toThrow(
-      'does not contain a pull request number',
-    );
+  it('returns undefined when a subject has no pull request number', () => {
+    expect(extractPullRequestNumber('Add a feature')).toBeUndefined();
   });
 });
 
@@ -55,6 +53,14 @@ describe('getPullRequestLink', () => {
       '--format=%s',
       'abc1234',
     ]);
+  });
+
+  it('returns undefined when the commit subject has no pull request number', async () => {
+    mockedExeca.mockResolvedValue({ stdout: 'Add a feature' } as never);
+
+    expect(
+      await getPullRequestLink(changeset, 'MetaMask/core'),
+    ).toBeUndefined();
   });
 
   it('throws when the changeset has no commit', async () => {
