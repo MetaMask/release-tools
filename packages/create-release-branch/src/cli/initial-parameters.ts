@@ -28,6 +28,7 @@ type InitialParameters = {
  * @param args.argv - The arguments to this executable.
  * @param args.cwd - The directory in which this executable was run.
  * @returns The initial parameters.
+ * @throws If the interactive UI is asked for in Changesets mode.
  */
 export async function determineInitialParameters({
   argv,
@@ -40,7 +41,17 @@ export async function determineInitialParameters({
 
   const projectDirectoryPath = path.resolve(cwd, args.projectDirectory);
   const project = await readProject(projectDirectoryPath);
-  const { mode: modeName } = await readReleaseConfig(projectDirectoryPath);
+  const modeName: ModeName = args.changesets
+    ? 'changesets'
+    : (await readReleaseConfig(projectDirectoryPath)).mode;
+  if (modeName === 'changesets' && args.interactive) {
+    throw new Error(
+      [
+        'The interactive UI does not support Changesets mode yet.',
+        'Run this tool without --interactive to edit the release spec in your editor.',
+      ].join('\n'),
+    );
+  }
   const tempDirectoryPath =
     args.tempDirectory === undefined
       ? path.join(

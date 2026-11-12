@@ -5,6 +5,7 @@ import type { Mode, ModeName } from '../core/mode.js';
 import type { Formatter } from '../core/types.js';
 import { createEditorFrontEnd } from '../frontends/editor/editor-front-end.js';
 import { createUIFrontEnd } from '../frontends/ui/server.js';
+import { createChangesetsMode } from '../modes/changesets/changesets-mode.js';
 import { createLegacyMode } from '../modes/legacy/legacy-mode.js';
 import type { Project } from '../project/project.js';
 
@@ -29,6 +30,9 @@ export function selectMode(
   switch (name) {
     case 'legacy':
       return createLegacyMode(options);
+
+    case 'changesets':
+      return createChangesetsMode(options);
 
     default:
       return assertExhaustive(name);

@@ -195,6 +195,129 @@ packages:
     });
   });
 
+  describe('generateReleaseSpecificationTemplateForMonorepo in Changesets mode', () => {
+    const CHANGESETS_INSTRUCTIONS = `
+# This file (called the "release spec") allows you to specify which packages you
+# want to include in this release along with the new versions they should
+# receive.
+#
+# The packages below have pending Changesets, or are bumped because a package
+# they depend on is released. The value after each package is the version
+# specifier that the Changesets give, and the comment after it shows the new
+# version. Do not change the value. In Changesets mode, the Changesets set the
+# version of each package.
+#
+# To leave a package out of this release, remove it from this list. Its
+# Changesets are kept for a later release.
+#`.trim();
+
+    it('sets each package to the bump that the Changesets give, and describes it in a comment', async () => {
+      const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'changesets',
+        candidates: [
+          {
+            name: '@scope/a',
+            currentVersion: '1.4.0',
+            plannedVersion: '2.0.0',
+            kind: 'changes',
+            changeCount: 3,
+          },
+          {
+            name: '@scope/b',
+            currentVersion: '0.1.0',
+            plannedVersion: '0.2.0',
+            kind: 'changes',
+            changeCount: 1,
+          },
+          {
+            name: '@scope/c',
+            currentVersion: '1.4.0',
+            plannedVersion: '1.4.1',
+            kind: 'dependency',
+          },
+        ],
+        isEditorAvailable: true,
+      });
+
+      expect(template).toBe(
+        `${CHANGESETS_INSTRUCTIONS}
+# When you're finished, save this file and close it. The tool will update the
+# versions of the packages you've listed, write their changelogs from the
+# Changesets, and delete the Changesets that the release uses.
+
+packages:
+  "@scope/a": major # 1.4.0 -> 2.0.0, 3 changesets
+  "@scope/b": minor # 0.1.0 -> 0.2.0, 1 changeset
+  "@scope/c": patch # 1.4.0 -> 1.4.1
+`,
+      );
+      expect(YAML.parse(template)).toStrictEqual({
+        packages: {
+          '@scope/a': 'major',
+          '@scope/b': 'minor',
+          '@scope/c': 'patch',
+        },
+      });
+    });
+
+    it('sets a package to its planned version if no bump type gives it', async () => {
+      const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'changesets',
+        candidates: [
+          {
+            name: '@scope/a',
+            currentVersion: '1.0.0',
+            plannedVersion: '2.5.0',
+            kind: 'dependency',
+          },
+        ],
+        isEditorAvailable: true,
+      });
+
+      expect(template).toContain('  "@scope/a": 2.5.0 # 1.0.0 -> 2.5.0\n');
+    });
+
+    it('adjusts the instructions slightly if an editor is not available', async () => {
+      const template = await generateReleaseSpecificationTemplateForMonorepo({
+        modeName: 'changesets',
+        candidates: [
+          {
+            name: '@scope/a',
+            currentVersion: '1.0.0',
+            plannedVersion: '1.1.0',
+            kind: 'changes',
+            changeCount: 2,
+          },
+        ],
+        isEditorAvailable: false,
+      });
+
+      expect(template).toBe(
+        `${CHANGESETS_INSTRUCTIONS}
+# When you're finished, save this file and then run create-release-branch again.
+# The tool will update the versions of the packages you've listed, write their
+# changelogs from the Changesets, and delete the Changesets that the release
+# uses.
+
+packages:
+  "@scope/a": minor # 1.0.0 -> 1.1.0, 2 changesets
+`,
+      );
+    });
+
+    it('throws if there is no package to release', async () => {
+      await expect(
+        generateReleaseSpecificationTemplateForMonorepo({
+          modeName: 'changesets',
+          candidates: [],
+          isEditorAvailable: true,
+        }),
+      ).rejects.toThrow(
+        'Could not generate release specification: There are no pending Changesets.',
+      );
+    });
+  });
+
   describe('waitForUserToEditReleaseSpecification', () => {
     it('waits for the given editor command to complete successfully', async () => {
       const releaseSpecificationPath = '/path/to/release-spec';

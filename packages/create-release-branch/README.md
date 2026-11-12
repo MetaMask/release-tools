@@ -23,6 +23,8 @@ npm install @metamask/create-release-branch --save-dev
 
 For more on how to use this tool, please see the [documentation](./docs).
 
+The tool can also release a monorepo with [Changesets](https://github.com/changesets/changesets). See [Changesets mode](./docs/setup.md#changesets-mode).
+
 ## Contributing
 
 This package is part of a monorepo. Instructions for contributing can be found in the [monorepo README](https://github.com/MetaMask/release-tools#readme).

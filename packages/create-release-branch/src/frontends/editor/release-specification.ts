@@ -1,4 +1,4 @@
-import YAML, { YAMLParseError } from 'yaml';
+import YAML, { YAMLMap, YAMLParseError } from 'yaml';
 
 import type { Candidate } from '../../core/candidates.js';
 import type { CliOutput } from '../../core/cli-output.js';
@@ -17,6 +17,7 @@ import {
   isObject,
   runCommand,
 } from '../../utils/misc-utils.js';
+import { semver, SemVer } from '../../utils/semver.js';
 import { Editor } from './editor.js';
 
 /**
@@ -76,7 +77,71 @@ const TEMPLATE_TEXT_BY_MODE: Record<ModeName, TemplateText> = {
     noCandidatesMessage:
       'Could not generate release specification: There are no packages that have changed since their latest release.',
   },
+  changesets: {
+    instructions: `
+# This file (called the "release spec") allows you to specify which packages you
+# want to include in this release along with the new versions they should
+# receive.
+#
+# The packages below have pending Changesets, or are bumped because a package
+# they depend on is released. The value after each package is the version
+# specifier that the Changesets give, and the comment after it shows the new
+# version. Do not change the value. In Changesets mode, the Changesets set the
+# version of each package.
+#
+# To leave a package out of this release, remove it from this list. Its
+# Changesets are kept for a later release.
+#`.trim(),
+    afterEditingWithEditor: `
+# When you're finished, save this file and close it. The tool will update the
+# versions of the packages you've listed, write their changelogs from the
+# Changesets, and delete the Changesets that the release uses.`.trim(),
+    afterEditingWithoutEditor: `
+# When you're finished, save this file and then run create-release-branch again.
+# The tool will update the versions of the packages you've listed, write their
+# changelogs from the Changesets, and delete the Changesets that the release
+# uses.`.trim(),
+    noCandidatesMessage:
+      'Could not generate release specification: There are no pending Changesets.',
+  },
 };
+
+/**
+ * Proposes the version specifier of a candidate: the bump type that gives its
+ * planned version, or else the planned version.
+ *
+ * @param candidate - The candidate.
+ * @returns The version specifier, or `null` if no version is planned.
+ */
+function proposeVersionSpecifier(candidate: Candidate): string | null {
+  const { currentVersion, plannedVersion } = candidate;
+  if (plannedVersion === undefined) {
+    return SKIP_PACKAGE_DIRECTIVE;
+  }
+  const bump = semver.diff(currentVersion, plannedVersion);
+  return (bump === 'major' || bump === 'minor' || bump === 'patch') &&
+    new SemVer(currentVersion).inc(bump).version === plannedVersion
+    ? bump
+    : plannedVersion;
+}
+
+/**
+ * Describes a candidate in the comment after its line in the release spec.
+ *
+ * @param candidate - The candidate.
+ * @returns The comment, or undefined if there is nothing to say.
+ */
+function describeCandidate(candidate: Candidate): string | undefined {
+  const { currentVersion, plannedVersion, changeCount } = candidate;
+  if (plannedVersion === undefined) {
+    return undefined;
+  }
+  const versions = `${currentVersion} -> ${plannedVersion}`;
+  if (changeCount === undefined) {
+    return versions;
+  }
+  return `${versions}, ${changeCount} ${changeCount === 1 ? 'changeset' : 'changesets'}`;
+}
 
 /**
  * A problem in the release spec.
@@ -167,7 +232,8 @@ export class ReleaseSpecificationError extends UserFacingError {
  * @param args - The set of arguments to this function.
  * @param args.modeName - The name of the release mode, which picks the
  * instructions and the error message when there are no packages.
- * @param args.candidates - The packages to list in the release spec.
+ * @param args.candidates - The packages to list in the release spec, with
+ * their proposed version specifiers.
  * @param args.isEditorAvailable - Whether or not an executable can be found on
  * the user's computer to edit the release spec once it is generated.
  * @returns The release specification template.
@@ -194,11 +260,19 @@ export async function generateReleaseSpecificationTemplateForMonorepo({
     throw new Error(templateText.noCandidatesMessage);
   }
 
-  const packages = candidates.reduce((obj, candidate) => {
-    return { ...obj, [candidate.name]: SKIP_PACKAGE_DIRECTIVE };
-  }, {});
+  const document = new YAML.Document({});
+  const packages = new YAMLMap();
+  for (const candidate of candidates) {
+    const value = document.createNode(proposeVersionSpecifier(candidate));
+    const comment = describeCandidate(candidate);
+    if (comment !== undefined) {
+      value.comment = ` ${comment}`;
+    }
+    packages.add(document.createPair(candidate.name, value));
+  }
+  document.set('packages', packages);
 
-  return [instructions, YAML.stringify({ packages })].join('\n\n');
+  return [instructions, document.toString()].join('\n\n');
 }
 
 /**

@@ -1,8 +1,31 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 import { PackageSpecification } from './environment.js';
 import LocalRepo, { LocalRepoOptions } from './local-repo.js';
 import { knownKeysOf } from './utils.js';
+
+/**
+ * A Changeset file.
+ *
+ * @property id - The name of the file, without `.md`.
+ * @property releases - The bump type for each package that it releases.
+ * @property summary - The text after the front matter.
+ */
+export type ChangesetSpecification = {
+  id: string;
+  releases: Record<string, string>;
+  summary: string;
+};
+
+/**
+ * The source of `@metamask/changesets-changelog`, which `tsx` can load
+ * without a build.
+ */
+const CHANGELOG_MODULE_SOURCE_PATH = path.resolve(
+  import.meta.dirname,
+  '../../../../changesets-changelog/src/index.ts',
+);
 
 /**
  * A set of configuration options for a {@link LocalMonorepo}. In addition
@@ -11,10 +34,14 @@ import { knownKeysOf } from './utils.js';
  * @property packages - The known packages within this repo (including the
  * root).
  * @property workspaces - The known workspaces within this repo.
+ * @property changesets - If given, the repo uses Changesets: it gets a
+ * `.changeset/config.json` that uses `@metamask/changesets-changelog`, and
+ * these Changeset files.
  */
 export type LocalMonorepoOptions<WorkspacePackageNickname extends string> = {
   packages: Record<WorkspacePackageNickname, PackageSpecification>;
   workspaces: Record<string, string[]>;
+  changesets?: ChangesetSpecification[] | undefined;
 } & LocalRepoOptions;
 
 /**
@@ -37,12 +64,19 @@ export default class LocalMonorepo<
    */
   readonly #workspaces: LocalMonorepoOptions<WorkspacePackageNickname>['workspaces'];
 
+  /**
+   * The Changeset files within this repo, if it uses Changesets.
+   */
+  readonly #changesets: LocalMonorepoOptions<WorkspacePackageNickname>['changesets'];
+
   constructor({
     packages,
     workspaces,
+    changesets,
     ...rest
   }: LocalMonorepoOptions<WorkspacePackageNickname>) {
     super(rest);
+    this.#changesets = changesets;
     this.#packages = {
       $root$: {
         name: 'monorepo',
@@ -158,7 +192,8 @@ export default class LocalMonorepo<
 
   /**
    * Writes an initial package.json for the root package as well as any
-   * workspace packages (if specified).
+   * workspace packages (if specified), and the Changesets files (if
+   * specified).
    */
   protected async afterCreate(): Promise<void> {
     await super.afterCreate();
@@ -187,7 +222,61 @@ export default class LocalMonorepo<
       }),
     );
 
+    if (this.#changesets !== undefined) {
+      await this.#writeChangesetsFiles(this.#changesets);
+    }
+
     await this.runCommand('yarn', ['plugin', 'import', 'constraints']);
+  }
+
+  /**
+   * Writes the Changesets configuration, the Changeset files, and a package
+   * that points `@metamask/changesets-changelog` to its source. Formatting is
+   * disabled so that the result does not depend on formatters found above
+   * the repo.
+   *
+   * @param changesets - The Changeset files.
+   */
+  async #writeChangesetsFiles(
+    changesets: ChangesetSpecification[],
+  ): Promise<void> {
+    await this.writeJsonFile('.changeset/config.json', {
+      changelog: [
+        '@metamask/changesets-changelog',
+        { repository: 'example-org/example-repo' },
+      ],
+      commit: false,
+      fixed: [],
+      linked: [],
+      access: 'restricted',
+      baseBranch: 'main',
+      updateInternalDependencies: 'patch',
+      ignore: [],
+      format: false,
+    });
+    for (const { id, releases, summary } of changesets) {
+      const frontMatter = Object.entries(releases)
+        .map(([name, type]) => `${JSON.stringify(name)}: ${type}`)
+        .join('\n');
+      await this.writeFile(
+        `.changeset/${id}.md`,
+        `---\n${frontMatter}\n---\n\n${summary}\n`,
+      );
+    }
+
+    await this.writeFile('.gitignore', 'node_modules/\n');
+    await this.writeJsonFile(
+      'node_modules/@metamask/changesets-changelog/package.json',
+      {
+        name: '@metamask/changesets-changelog',
+        type: 'module',
+        exports: './index.js',
+      },
+    );
+    await this.writeFile(
+      'node_modules/@metamask/changesets-changelog/index.js',
+      `export { default } from '${pathToFileURL(CHANGELOG_MODULE_SOURCE_PATH).href}';\n`,
+    );
   }
 
   /**

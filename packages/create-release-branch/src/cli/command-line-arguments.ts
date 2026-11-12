@@ -8,6 +8,7 @@ export type CommandLineArguments = {
   backport: boolean;
   defaultBranch: string;
   interactive: boolean;
+  changesets: boolean;
   port: number;
   formatter: string;
 };
@@ -58,6 +59,12 @@ export async function readCommandLineArguments(
       alias: 'i',
       describe:
         'Start an interactive web UI for selecting package versions to release',
+      type: 'boolean',
+      default: false,
+    })
+    .option('changesets', {
+      describe:
+        'Release with Changesets: the pending Changesets set the packages and versions, and write the changelogs. Overrides the "mode" in release.config.json.',
       type: 'boolean',
       default: false,
     })

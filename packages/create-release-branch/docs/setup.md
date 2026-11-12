@@ -49,3 +49,42 @@ Combined with the changes above, this might look like:
   "versioningStrategy": "independent"
 }
 ```
+
+## Changesets mode
+
+By default, the tool reads the Git history to write the changelogs. A monorepo with independent versions can use [Changesets](https://github.com/changesets/changesets) instead. In Changesets mode:
+
+- The pending Changesets in the `.changeset` directory set the packages to release and their new versions.
+- The release spec lists these packages, with their version specifiers already filled in. Do not change a specifier. If a specifier gives another version than the Changesets, the tool stops with an error. To keep the Changesets of a package for a later release, remove the package from the release spec.
+- The tool writes the changelogs from the Changesets. Then it deletes the Changesets that the release uses.
+- The tool does not release the entries in the "Unreleased" section of a changelog. A package without Changesets is not released, even if it has such entries. If a package in the release has such entries, the tool stops with an error. Move the entries into Changesets and commit them, or remove the entries. You can also release them in legacy mode before you use Changesets mode.
+
+To use Changesets mode, set `mode` to `"changesets"` in `release.config.json`:
+
+```
+# release.config.json
+{
+  "versioningStrategy": "independent",
+  "mode": "changesets"
+}
+```
+
+You can also run the tool with the `--changesets` flag. The flag selects Changesets mode for one run, whatever `mode` is set to.
+
+Changesets mode has these requirements:
+
+- The project must have a `.changeset/config.json` file that uses the `@metamask/changesets-changelog` changelog module. Give the module the GitHub repository of the project:
+
+  ```json
+  {
+    "changelog": [
+      "@metamask/changesets-changelog",
+      { "repository": "<owner>/<repo>" }
+    ]
+  }
+  ```
+
+- Each Changeset summary must have one category heading and one entry, such as `## Added` followed by `- Add a feature`. If the subject of the commit that adds a Changeset ends with a pull request number, such as `Add a feature (#123)`, the changelog entry links to this pull request. If the subject has no pull request number, for example for a Changeset that you commit on the release branch, the entry has no link. Add the link by hand.
+- Changesets pre mode must be off. To exit pre mode, run `changeset pre exit`.
+- The `.changeset` directory must not have uncommitted changes. The tool checks this before it makes the first commit of the release, and again before it writes the release.
+- The interactive UI (`--interactive`) does not support Changesets mode yet. Edit the release spec in your editor instead.
