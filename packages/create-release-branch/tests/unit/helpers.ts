@@ -1,3 +1,4 @@
+import { defaultConfig } from '@changesets/config';
 import { isPlainObject } from '@metamask/utils';
 import fs from 'fs';
 import path from 'path';
@@ -8,6 +9,7 @@ import { vi } from 'vitest';
 import { createCliOutput } from '../../src/core/cli-output.js';
 import type { CliOutput } from '../../src/core/cli-output.js';
 import type { Mode, ModePrepareStep } from '../../src/core/mode.js';
+import type { ChangesetsState } from '../../src/modes/changesets/load.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
@@ -138,6 +140,28 @@ export function buildMockPackage(
     manifestPath,
     changelogPath,
     hasChangesSinceLatestRelease,
+  };
+}
+
+/**
+ * Builds a Changesets state for use in tests. All properties have default
+ * values, so you can specify only the properties you care about.
+ *
+ * @param overrides - The properties that will go into the object.
+ * @returns The mock ChangesetsState.
+ */
+export function buildMockChangesetsState(
+  overrides: Partial<ChangesetsState> = {},
+): ChangesetsState {
+  return {
+    packages: {
+      rootDir: '/path/to/project',
+      packages: [],
+      tool: { type: 'yarn' },
+    },
+    config: defaultConfig,
+    fullPlan: { changesets: [], releases: [], preState: undefined },
+    ...overrides,
   };
 }
 
