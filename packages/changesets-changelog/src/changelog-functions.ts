@@ -6,11 +6,13 @@ import type {
 } from '@changesets/types';
 import { parseChangesetSummary } from '@metamask/changesets-utils';
 
-import { getGitHubRepository } from './options.js';
+import { getChangelogOptions } from './options.js';
 import { getPullRequestLink } from './resolve-pull-request.js';
 
 /**
- * Formats one categorized changeset as a Markdown changelog line.
+ * Formats one categorized changeset as a Markdown changelog line. The line
+ * has no pull request link if the commit of the changeset has no pull request
+ * number in its subject.
  *
  * @param changeset - The changeset to format.
  * @param type - The release's version bump type.
@@ -23,15 +25,15 @@ export const getReleaseLine: GetReleaseLine = async (
   changelogOpts,
 ) => {
   const { description } = parseChangesetSummary(changeset.summary);
-  const pullRequestLink = await getPullRequestLink(
-    changeset,
-    getGitHubRepository(changelogOpts),
-  );
+  const { repository, cwd } = getChangelogOptions(changelogOpts);
+  const pullRequestLink = await getPullRequestLink(changeset, repository, cwd);
   const [firstLine, ...remainingLines] = description.split('\n');
   const breakingPrefix = type === 'major' ? '**BREAKING:** ' : '';
+  const linkSuffix =
+    pullRequestLink === undefined ? '' : ` (${pullRequestLink})`;
 
   return [
-    `- ${breakingPrefix}${firstLine} (${pullRequestLink})`,
+    `- ${breakingPrefix}${firstLine}${linkSuffix}`,
     ...remainingLines,
   ].join('\n');
 };

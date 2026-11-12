@@ -46,6 +46,27 @@ describe('getReleaseLine', () => {
       '- **BREAKING:** Add a feature ([#1234](https://github.com/MetaMask/core/pull/1234))\n  - Preserve this detail',
     );
   });
+
+  it('forwards cwd from options when resolving the pull request link', async () => {
+    await getReleaseLine(changeset, 'minor', {
+      ...options,
+      cwd: '/path/to/repo',
+    });
+
+    expect(mockedGetPullRequestLink).toHaveBeenCalledWith(
+      changeset,
+      'MetaMask/core',
+      '/path/to/repo',
+    );
+  });
+
+  it('leaves out the pull request link if the commit has no pull request number', async () => {
+    mockedGetPullRequestLink.mockResolvedValue(undefined);
+
+    expect(await getReleaseLine(changeset, 'minor', options)).toBe(
+      '- Add a feature\n  - Preserve this detail',
+    );
+  });
 });
 
 describe('categorizeReleaseLine', () => {
