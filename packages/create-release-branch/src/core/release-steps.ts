@@ -80,11 +80,10 @@ export async function startRelease<Data>({
   );
 
   if (firstRun) {
-    const notices = await output.step(
-      'Updating changelogs',
-      async () => await mode.prepare(),
-      { result: () => 'Updated changelogs' },
-    );
+    const { title, run } = mode.prepare;
+    const { notices } = await output.step(title, run, {
+      result: ({ result }) => result,
+    });
     printNotices(output, notices);
     const commitMessage = `Initialize Release ${newReleaseVersion}`;
     // `prepare` may change nothing, and the release branch still needs this

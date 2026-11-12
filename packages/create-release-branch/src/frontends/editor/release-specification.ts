@@ -122,11 +122,7 @@ export class ReleaseSpecificationError extends UserFacingError {
     super(undefined, options);
     this.problems = problems;
     this.specPath = specPath;
-    const { title, lines } = this.describe({
-      name: (text) => text,
-      dim: (text) => text,
-    });
-    this.message = [title, '', ...lines].join('\n');
+    this.message = this.buildPlainMessage({ blankLineBeforeDetails: true });
   }
 
   describe(format: CliOutput['format']): ErrorDescription {

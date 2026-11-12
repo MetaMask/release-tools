@@ -13,6 +13,11 @@ const format: CliOutput['format'] = {
 };
 
 class TestError extends UserFacingError {
+  constructor(blankLineBeforeDetails = false) {
+    super();
+    this.message = this.buildPlainMessage({ blankLineBeforeDetails });
+  }
+
   describe(
     errorFormat: CliOutput['format'],
   ): ReturnType<UserFacingError['describe']> {
@@ -21,11 +26,20 @@ class TestError extends UserFacingError {
 }
 
 describe('user-facing-error', () => {
+  describe('UserFacingError.buildPlainMessage', () => {
+    it('joins the title and lines without styling', () => {
+      expect(new TestError().message).toBe('Test title\na');
+    });
+
+    it('puts a blank line after the title when asked', () => {
+      expect(new TestError(true).message).toBe('Test title\n\na');
+    });
+  });
+
   describe('describeError', () => {
     it('uses the description of a user-facing error', () => {
-      const error = new TestError('Some message', {
-        cause: new Error('Some cause'),
-      });
+      const error = new TestError();
+      error.cause = new Error('Some cause');
 
       expect(describeError(error, format, { debug: true })).toStrictEqual({
         title: 'Test title',
@@ -89,7 +103,7 @@ describe('user-facing-error', () => {
     it('writes the title and the lines of the description as one error', () => {
       const output = { error: vi.fn(), format };
 
-      writeError(output, new TestError('Some message'), { debug: false });
+      writeError(output, new TestError(), { debug: false });
 
       expect(output.error).toHaveBeenCalledExactlyOnceWith('Test title\n<a>');
     });

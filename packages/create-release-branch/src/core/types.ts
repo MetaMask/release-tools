@@ -21,7 +21,7 @@ export type Formatter = 'oxfmt' | 'prettier';
  * Describes how to update the version for a package, either by bumping a part
  * of the version or by setting that version exactly.
  */
-type VersionSpecifier = IncrementableVersionPart | SemVer;
+export type VersionSpecifier = IncrementableVersionPart | SemVer;
 
 /**
  * The version specifier for each package to release.

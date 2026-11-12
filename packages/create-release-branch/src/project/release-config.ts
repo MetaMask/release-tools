@@ -41,11 +41,7 @@ export class ReleaseConfigModeError extends UserFacingError {
     super();
     this.mode = mode;
     this.configPath = configPath;
-    const { title, lines } = this.describe({
-      name: (text) => text,
-      dim: (text) => text,
-    });
-    this.message = [title, ...lines].join('\n');
+    this.message = this.buildPlainMessage();
   }
 
   describe(format: CliOutput['format']): ErrorDescription {

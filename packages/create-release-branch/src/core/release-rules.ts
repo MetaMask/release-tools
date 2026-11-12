@@ -4,7 +4,7 @@ import type { Package } from '../project/package.js';
 import type { Project } from '../project/project.js';
 import { hasProperty } from '../utils/misc-utils.js';
 import { isValidSemver, semver, SemVer } from '../utils/semver.js';
-import type { VersionSpecifiers } from './types.js';
+import type { VersionSpecifier, VersionSpecifiers } from './types.js';
 
 /**
  * The SemVer-compatible parts of a version string that can be bumped by this
@@ -413,4 +413,40 @@ export function normalizeReleaseChoices(
 
     return obj;
   }, {});
+}
+
+/**
+ * Gives the version that a version specifier sets from a current version.
+ *
+ * @param currentVersion - The current version of the package.
+ * @param specifier - The version specifier.
+ * @returns The new version.
+ */
+export function resolveVersionSpecifier(
+  currentVersion: string | SemVer,
+  specifier: VersionSpecifier,
+): string {
+  return specifier instanceof SemVer
+    ? specifier.version
+    : new SemVer(currentVersion.toString()).inc(specifier).version;
+}
+
+/**
+ * Proposes the version specifier that moves from the current version to the
+ * target version: the bump type if one gives the target version, or else the
+ * target version itself.
+ *
+ * @param currentVersion - The current version of the package.
+ * @param targetVersion - The target version.
+ * @returns The bump type or exact version.
+ */
+export function suggestVersionSpecifier(
+  currentVersion: string | SemVer,
+  targetVersion: string,
+): string {
+  const bump = semver.diff(currentVersion, targetVersion);
+  return (bump === 'major' || bump === 'minor' || bump === 'patch') &&
+    resolveVersionSpecifier(currentVersion, bump) === targetVersion
+    ? bump
+    : targetVersion;
 }

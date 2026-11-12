@@ -9,6 +9,8 @@ import {
   checkReleaseChoices,
   IncrementableVersionParts,
   normalizeReleaseChoices,
+  resolveVersionSpecifier,
+  suggestVersionSpecifier,
 } from './release-rules.js';
 import type { ReleaseChoices } from './release-rules.js';
 
@@ -290,6 +292,39 @@ describe('release-rules', () => {
         a: IncrementableVersionParts.major,
         d: new SemVer('1.2.3'),
       });
+    });
+  });
+
+  describe('resolveVersionSpecifier', () => {
+    it('bumps the current version when given a bump part', () => {
+      expect(resolveVersionSpecifier('1.2.3', 'minor')).toBe('1.3.0');
+      expect(resolveVersionSpecifier(new SemVer('0.2.3'), 'minor')).toBe(
+        '0.3.0',
+      );
+    });
+
+    it('returns the exact version when given a SemVer', () => {
+      expect(resolveVersionSpecifier('1.2.3', new SemVer('2.5.0'))).toBe(
+        '2.5.0',
+      );
+    });
+  });
+
+  describe('suggestVersionSpecifier', () => {
+    it('returns the bump part when it reproduces the target version', () => {
+      expect(suggestVersionSpecifier('1.2.3', '2.0.0')).toBe('major');
+      expect(suggestVersionSpecifier(new SemVer('0.2.3'), '0.3.0')).toBe(
+        'minor',
+      );
+      expect(suggestVersionSpecifier('1.2.3', '1.2.4')).toBe('patch');
+    });
+
+    it('returns the exact target version when no single bump reproduces it', () => {
+      expect(suggestVersionSpecifier('1.2.3', '1.4.0')).toBe('1.4.0');
+      expect(suggestVersionSpecifier('1.2.3', '1.2.3')).toBe('1.2.3');
+      expect(suggestVersionSpecifier('1.2.3', '2.0.0-alpha.0')).toBe(
+        '2.0.0-alpha.0',
+      );
     });
   });
 });

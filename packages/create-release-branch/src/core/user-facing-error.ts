@@ -8,6 +8,11 @@ import type { CliOutput } from './cli-output.js';
  */
 export type ErrorDescription = { title: string; lines: string[] };
 
+const PLAIN_FORMAT: CliOutput['format'] = {
+  name: (text) => text,
+  dim: (text) => text,
+};
+
 /**
  * An error that describes itself to the user, with a title and lines of
  * details, instead of being printed with its message, causes, and stack.
@@ -20,6 +25,27 @@ export abstract class UserFacingError extends Error {
    * @returns The title and the lines of details.
    */
   abstract describe(format: CliOutput['format']): ErrorDescription;
+
+  /**
+   * Formats `describe` without terminal styling, for `this.message`.
+   *
+   * @param options - The options.
+   * @param options.blankLineBeforeDetails - Whether to put an empty line
+   * between the title and the lines of details.
+   * @returns The plain message.
+   */
+  protected buildPlainMessage({
+    blankLineBeforeDetails = false,
+  }: {
+    blankLineBeforeDetails?: boolean;
+  } = {}): string {
+    const { title, lines } = this.describe(PLAIN_FORMAT);
+    return (
+      blankLineBeforeDetails && lines.length > 0
+        ? [title, '', ...lines]
+        : [title, ...lines]
+    ).join('\n');
+  }
 }
 
 /**
