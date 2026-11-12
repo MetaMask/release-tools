@@ -17,12 +17,25 @@ import type { CliOutput } from './cli-output.js';
 import { createCliOutput } from './cli-output.js';
 
 const indicators = vi.hoisted(() => ({
-  spinner: { start: vi.fn(), stop: vi.fn(), error: vi.fn() },
-  taskLog: { message: vi.fn(), success: vi.fn(), error: vi.fn() },
+  spinner: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    cancel: vi.fn(),
+    error: vi.fn(),
+    message: vi.fn(),
+    clear: vi.fn(),
+    isCancelled: false,
+  },
+  taskLog: {
+    message: vi.fn(),
+    group: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
-vi.mock('@clack/prompts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@clack/prompts')>()),
+vi.mock(import('@clack/prompts'), async (importOriginal) => ({
+  ...(await importOriginal()),
   spinner: vi.fn(() => indicators.spinner),
   taskLog: vi.fn(() => indicators.taskLog),
 }));
