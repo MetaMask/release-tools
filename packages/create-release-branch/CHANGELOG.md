@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add Changesets mode ([#170](https://github.com/MetaMask/release-tools/pull/170))
+  - Use pending changesets to populate released packages and their new versions in the release spec and update changelogs automatically.
+  - Choose it by setting `"mode": "changesets"` in a project's `release.config.json`.
+  - For more, read `docs/setup.md`.
 - Read the release mode from an optional `mode` property in `release.config.json` ([#165](https://github.com/MetaMask/release-tools/pull/165))
 
 ### Changed

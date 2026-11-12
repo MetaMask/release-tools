@@ -335,5 +335,66 @@ describe('initial-parameters', () => {
 
       expect(initialParameters.frontEndName).toBe('editor');
     });
+
+    describe('when choosing the mode', () => {
+      /**
+       * Mocks the command-line arguments and the project.
+       *
+       * @param overrides - The arguments that differ from the defaults.
+       * @param overrides.interactive - Whether `--interactive` is given.
+       */
+      function mockInputs(overrides: { interactive: boolean }): void {
+        vi.when(
+          vi.spyOn(commandLineArgumentsModule, 'readCommandLineArguments'),
+        )
+          .calledWith(['arg1', 'arg2'])
+          .thenResolve({
+            projectDirectory: '/path/to/project',
+            tempDirectory: '/path/to/temp',
+            reset: false,
+            backport: false,
+            defaultBranch: 'main',
+            port: 3000,
+            formatter: 'prettier',
+            ...overrides,
+          });
+        vi.spyOn(envModule, 'getEnvironmentVariables').mockReturnValue({
+          EDITOR: undefined,
+        });
+        vi.spyOn(projectModule, 'readProject').mockResolvedValue(
+          buildMockProject(),
+        );
+      }
+
+      it('uses the mode of the release config', async () => {
+        mockInputs({ interactive: false });
+        vi.when(vi.spyOn(releaseConfigModule, 'readReleaseConfig'))
+          .calledWith('/path/to/project')
+          .thenResolve({ mode: 'changesets' });
+
+        const initialParameters = await determineInitialParameters({
+          argv: ['arg1', 'arg2'],
+          cwd: '/path/to/somewhere',
+        });
+
+        expect(initialParameters.modeName).toBe('changesets');
+      });
+
+      it('throws if --interactive is given and the release config uses Changesets mode', async () => {
+        mockInputs({ interactive: true });
+        vi.spyOn(releaseConfigModule, 'readReleaseConfig').mockResolvedValue({
+          mode: 'changesets',
+        });
+
+        await expect(
+          determineInitialParameters({
+            argv: ['arg1', 'arg2'],
+            cwd: '/path/to/somewhere',
+          }),
+        ).rejects.toThrow(
+          'The interactive UI does not support Changesets mode yet.\nRun this tool without --interactive to edit the release spec in your editor.',
+        );
+      });
+    });
   });
 });
