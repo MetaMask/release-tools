@@ -151,13 +151,8 @@ export function createCliOutput({
         }
       }
 
-      // clack calls `onCancel` when a signal stops the spinner. But the spinner
-      // reads standard in in raw mode, so Ctrl+C arrives as a keypress, and
-      // on Ctrl+C or Escape clack exits with code 0. The listener here is
-      // added before the spinner starts, so it runs first and cancels the
-      // spinner through its abort signal. By then clack has restored the
-      // terminal, so `onCancel` ends the process the way Ctrl+C normally
-      // does.
+      // clack exits with code 0 on Ctrl+C or Escape. This listener runs first
+      // and cancels the spinner, so that `onCancel` interrupts the process.
       const cancellation = new AbortController();
       const onKeypress = (_input: unknown, key: Key | undefined): void => {
         if ((key?.ctrl && key.name === 'c') || key?.name === 'escape') {
