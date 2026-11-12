@@ -11,11 +11,12 @@ export async function runRelease(
   context: ReleaseContext,
   frontEnd: FrontEnd,
 ): Promise<void> {
-  const { project, output } = context;
+  const { project, mode, output } = context;
 
   if (project.isMonorepo) {
-    output.info(
-      'Project appears to have workspaces. Following monorepo workflow.\n',
+    output.header(
+      'create-release-branch',
+      `${project.rootPackage.validatedManifest.name} · monorepo · ${mode.name} mode`,
     );
 
     const { packagesUsingRootTag } = project;
@@ -32,7 +33,7 @@ export async function runRelease(
     await frontEnd.run(context);
   } else {
     output.info(
-      'Project does not appear to have any workspaces. Following polyrepo workflow.\n',
+      'Project does not appear to have any workspaces. Following polyrepo workflow.',
     );
   }
 }

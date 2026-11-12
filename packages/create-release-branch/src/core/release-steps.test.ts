@@ -1,3 +1,6 @@
+import { S_STEP_SUBMIT } from '@clack/prompts';
+import { stripVTControlCharacters } from 'node:util';
+import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -5,8 +8,10 @@ import {
   buildMockPackage,
   buildMockProject,
   createNoopCliOutput,
+  writtenText,
 } from '../../tests/unit/helpers.js';
 import type { Candidate } from './candidates.js';
+import { createCliOutput } from './cli-output.js';
 import type { CliOutput } from './cli-output.js';
 import type { ModePlan } from './mode.js';
 import * as releaseBranchModule from './release-branch.js';
@@ -51,7 +56,30 @@ function buildRecordingOutput(calls: string[]): CliOutput {
     warnList(title, items) {
       calls.push(`warnList ${title} ${items.join(', ')}`);
     },
+    done(text) {
+      calls.push(`done ${text}`);
+    },
   };
+}
+
+/**
+ * Builds an output that writes plain text to a mock standard out.
+ *
+ * @returns The output, and the lines of the completed steps that it wrote.
+ */
+function buildOutputWithStepLines(): {
+  output: CliOutput;
+  stdout: MockWritable;
+  stepLines: () => string[];
+} {
+  const stdout = new MockWritable();
+  const output = createCliOutput({ stdout, stderr: new MockWritable() });
+  const stepLines = (): string[] =>
+    stripVTControlCharacters(writtenText(stdout))
+      .split('\n')
+      .filter((line) => line.startsWith(`${S_STEP_SUBMIT}  `))
+      .map((line) => line.slice(`${S_STEP_SUBMIT}  `.length));
+  return { output, stdout, stepLines };
 }
 
 const notices = [
@@ -60,6 +88,32 @@ const notices = [
 ];
 
 describe('release-steps', () => {
+  it('prints the commit lines', async () => {
+    const { output, stepLines } = buildOutputWithStepLines();
+    vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+      '2.0.0',
+    );
+    vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+      firstRun: true,
+    });
+
+    await startRelease({
+      project: buildMockProject(),
+      releaseType: 'ordinary',
+      mode: buildMockMode(),
+      output,
+    });
+    await finishRelease({
+      project: buildMockProject(),
+      newReleaseVersion: '2.0.0',
+      releases: [],
+      output,
+    });
+
+    expect(stepLines()).toContain('Committed "Initialize Release 2.0.0"');
+    expect(stepLines()).toContain('Committed "Update Release 2.0.0"');
+  });
+
   describe('startRelease', () => {
     it('prepares and commits only on the first run', async () => {
       const project = buildMockProject();
@@ -149,7 +203,53 @@ describe('release-steps', () => {
         'prepare',
         'end Updating changelogs',
         'commitAllChanges /path/to/project Initialize Release 2.0.0',
+        'done Committed "Initialize Release 2.0.0"',
       ]);
+    });
+
+    it.each([
+      { firstRun: true, result: 'Created branch release/2.0.0' },
+      { firstRun: false, result: 'Switched to branch release/2.0.0' },
+    ])(
+      'ends the "Creating the release branch" step with "$result"',
+      async ({ firstRun, result }) => {
+        const { output, stepLines } = buildOutputWithStepLines();
+        vi.spyOn(
+          releaseBranchModule,
+          'determineReleaseVersion',
+        ).mockReturnValue('2.0.0');
+        vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+          firstRun,
+        });
+
+        await startRelease({
+          project: buildMockProject(),
+          releaseType: 'ordinary',
+          mode: buildMockMode(),
+          output,
+        });
+
+        expect(stepLines()[0]).toBe(result);
+      },
+    );
+
+    it('ends the "Updating changelogs" step with "Updated changelogs"', async () => {
+      const { output, stepLines } = buildOutputWithStepLines();
+      vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
+        '2.0.0',
+      );
+      vi.spyOn(releaseBranchModule, 'ensureReleaseBranch').mockResolvedValue({
+        firstRun: true,
+      });
+
+      await startRelease({
+        project: buildMockProject(),
+        releaseType: 'ordinary',
+        mode: buildMockMode(),
+        output,
+      });
+
+      expect(stepLines()[1]).toBe('Updated changelogs');
     });
 
     it('prints the notices from prepare after the step', async () => {
@@ -181,6 +281,7 @@ describe('release-steps', () => {
         'warnList Title 1: a, b',
         'warnList Title 2: c',
         'commitAllChanges',
+        'done Committed "Initialize Release 2.0.0"',
       ]);
     });
 
@@ -369,6 +470,28 @@ describe('release-steps', () => {
         'warnList Title 2: c',
       ]);
     });
+
+    it.each([
+      { names: ['a', 'b'], result: 'Bumped 2 packages' },
+      { names: ['a'], result: 'Bumped 1 package' },
+    ])(
+      'ends the "Applying the release" step with "$result"',
+      async ({ names, result }) => {
+        const { output, stepLines } = buildOutputWithStepLines();
+
+        await applyRelease({
+          mode: buildMockMode(),
+          plan: {
+            releases: names.map((name) => ({ name, newVersion: '1.0.0' })),
+            data: 'data',
+          },
+          newReleaseVersion: '2.0.0',
+          output,
+        });
+
+        expect(stepLines()).toStrictEqual([result]);
+      },
+    );
   });
 
   describe('finishRelease', () => {
@@ -403,6 +526,7 @@ describe('release-steps', () => {
       await finishRelease({
         project,
         newReleaseVersion: '2.0.0',
+        releases: [],
         output: buildRecordingOutput(calls),
       });
 
@@ -420,7 +544,77 @@ describe('release-steps', () => {
         'log dedupe output',
         'end task Deduplicating dependencies',
         'commitAllChanges /path/to/project Update Release 2.0.0',
+        'done Committed "Update Release 2.0.0"',
       ]);
+    });
+
+    it.each([
+      {
+        index: 0,
+        label: 'Fixing Yarn constraints',
+        result: 'Fixed Yarn constraints',
+      },
+      {
+        index: 1,
+        label: 'Installing dependencies',
+        result: 'Installed dependencies',
+      },
+      {
+        index: 2,
+        label: 'Deduplicating dependencies',
+        result: 'Deduplicated dependencies',
+      },
+    ])('ends the "$label" task with "$result"', async ({ index, result }) => {
+      const { output, stepLines } = buildOutputWithStepLines();
+
+      await finishRelease({
+        project: buildMockProject(),
+        newReleaseVersion: '2.0.0',
+        releases: [],
+        output,
+      });
+
+      expect(stepLines()[index]).toBe(result);
+    });
+
+    it('prints the summary with every released package', async () => {
+      const { output, stdout } = buildOutputWithStepLines();
+
+      await finishRelease({
+        project: buildMockProject(),
+        newReleaseVersion: '2.0.0',
+        releases: [
+          { name: '@metamask/a', newVersion: '1.0.0' },
+          { name: '@metamask/longer-name', newVersion: '12.0.0' },
+        ],
+        output,
+      });
+
+      const text = stripVTControlCharacters(writtenText(stdout));
+      const summary = text.slice(text.indexOf('2 packages released'));
+      expect(text.indexOf('Next: Review the changelogs')).toBeLessThan(
+        text.indexOf('2 packages released'),
+      );
+      expect(text).toContain(
+        'Next: Review the changelogs, then push the branch and open the release PR.',
+      );
+      expect(summary).toContain('Branch  release/2.0.0');
+      expect(summary).toContain('@metamask/a            1.0.0');
+      expect(summary).toContain('@metamask/longer-name  12.0.0');
+      expect(summary).toContain('Release 2.0.0 is ready on release/2.0.0');
+    });
+
+    it('says "1 package released" for one package', async () => {
+      const { output, stdout } = buildOutputWithStepLines();
+
+      await finishRelease({
+        project: buildMockProject(),
+        newReleaseVersion: '2.0.0',
+        releases: [{ name: 'a', newVersion: '1.0.0' }],
+        output,
+      });
+
+      expect(writtenText(stdout)).toContain('1 package released');
     });
   });
 });

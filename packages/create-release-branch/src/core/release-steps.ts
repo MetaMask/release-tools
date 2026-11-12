@@ -33,6 +33,16 @@ function printNotices(output: CliOutput, notices: Notice[]): void {
 }
 
 /**
+ * Describes a number of packages, such as "1 package" or "2 packages".
+ *
+ * @param count - The number of packages.
+ * @returns The description.
+ */
+function describePackageCount(count: number): string {
+  return count === 1 ? '1 package' : `${count} packages`;
+}
+
+/**
  * Creates (or switches to) the release branch. On the first run, prepares the
  * project with the mode, prints the notices of the mode, and commits the
  * result.
@@ -57,24 +67,32 @@ export async function startRelease<Data>({
   output: CliOutput;
 }): Promise<{ newReleaseVersion: string }> {
   const newReleaseVersion = determineReleaseVersion(project, releaseType);
+  const releaseBranchName = `release/${newReleaseVersion}`;
   const { firstRun } = await output.step(
     'Creating the release branch',
     async () => await ensureReleaseBranch(project, newReleaseVersion),
+    {
+      result: (value) =>
+        value.firstRun
+          ? `Created branch ${releaseBranchName}`
+          : `Switched to branch ${releaseBranchName}`,
+    },
   );
 
   if (firstRun) {
     const notices = await output.step(
       'Updating changelogs',
       async () => await mode.prepare(),
+      { result: () => 'Updated changelogs' },
     );
     printNotices(output, notices);
+    const commitMessage = `Initialize Release ${newReleaseVersion}`;
     // `prepare` may change nothing, and the release branch still needs this
     // commit.
-    await commitAllChanges(
-      project.directoryPath,
-      `Initialize Release ${newReleaseVersion}`,
-      { allowEmpty: true },
-    );
+    await commitAllChanges(project.directoryPath, commitMessage, {
+      allowEmpty: true,
+    });
+    output.done(`Committed "${commitMessage}"`);
   }
 
   return { newReleaseVersion };
@@ -163,44 +181,68 @@ export async function applyRelease<Data>({
   const notices = await output.step(
     'Applying the release',
     async () => await mode.apply(plan, newReleaseVersion),
+    { result: () => `Bumped ${describePackageCount(plan.releases.length)}` },
   );
   printNotices(output, notices);
 }
 
 /**
- * Fixes constraints, updates the lockfile, deduplicates dependencies, and then
- * commits all changes for the release.
+ * Fixes constraints, updates the lockfile, deduplicates dependencies, commits
+ * all changes for the release, and then prints a summary of the release.
  *
  * @param args - The arguments.
  * @param args.project - Information about the project.
  * @param args.newReleaseVersion - The version of the new release.
+ * @param args.releases - The new version of every released package, from the
+ * plan.
  * @param args.output - Where to write user-facing messages.
  */
 export async function finishRelease({
   project,
   newReleaseVersion,
+  releases,
   output,
 }: {
   project: Project;
   newReleaseVersion: string;
+  releases: ModePlan<unknown>['releases'];
   output: CliOutput;
 }): Promise<void> {
   await output.task(
     'Fixing Yarn constraints',
     async (log) => await fixConstraints(project.directoryPath, log),
+    { result: () => 'Fixed Yarn constraints' },
   );
   await output.task(
     'Installing dependencies',
     async (log) => await updateYarnLockfile(project.directoryPath, log),
+    { result: () => 'Installed dependencies' },
   );
   await output.task(
     'Deduplicating dependencies',
     async (log) => await deduplicateDependencies(project.directoryPath, log),
+    { result: () => 'Deduplicated dependencies' },
   );
+  const commitMessage = `Update Release ${newReleaseVersion}`;
   // Not run in a step: a spinner would draw over a GPG pinentry in the
   // terminal.
-  await commitAllChanges(
-    project.directoryPath,
-    `Update Release ${newReleaseVersion}`,
+  await commitAllChanges(project.directoryPath, commitMessage);
+  output.done(`Committed "${commitMessage}"`);
+
+  const releaseBranchName = `release/${newReleaseVersion}`;
+  const nameWidth = Math.max(...releases.map(({ name }) => name.length));
+  output.info(
+    'Next: Review the changelogs, then push the branch and open the release PR.',
+  );
+  output.summary(
+    `${describePackageCount(releases.length)} released`,
+    [
+      `Branch  ${releaseBranchName}`,
+      '',
+      ...releases.map(
+        ({ name, newVersion }) => `${name.padEnd(nameWidth)}  ${newVersion}`,
+      ),
+    ],
+    `Release ${newReleaseVersion} is ready on ${releaseBranchName}`,
   );
 }

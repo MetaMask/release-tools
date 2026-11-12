@@ -10,7 +10,9 @@ import {
   finishRelease,
   startRelease,
 } from '../../core/release-steps.js';
+import { writeError } from '../../core/user-facing-error.js';
 import { getCurrentDirectoryPath } from '../../dirname.js';
+import { debug, wrapError } from '../../utils/misc-utils.js';
 
 const UI_BUILD_DIR = join(getCurrentDirectoryPath(), 'ui');
 
@@ -55,31 +57,25 @@ async function startUI({
     closeServer: () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       server.close();
-      output.success('Release process completed. Server shutdown.\n');
     },
   });
 
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
 
-    output.info(`\nAttempting to open UI in browser...`);
-    openBrowser(url)
-      .then(() => {
-        output.info(`\nUI server running at ${url}\n`);
-      })
-      .catch((error: unknown) => {
-        output.error(`\n---------------------------------------------------\n`);
-        output.error(`Error automatically opening browser: ${String(error)}\n`);
-        output.error(`Please open the following URL manually:\n`);
-        output.error(`${url}\n`);
-        output.error(`---------------------------------------------------\n\n`);
-      });
+    output.info(`Opening the release UI at ${url}`);
+    openBrowser(url).catch((error: unknown) => {
+      output.warn(
+        `Could not open your browser (${String(error)}). Open ${url} yourself.`,
+      );
+    });
   });
 
   return new Promise((resolve, reject) => {
     server.on('error', (error: Error) => {
-      output.error(`Failed to start server: ${error.message}\n`);
-      reject(error);
+      reject(
+        wrapError(`Could not start the release UI on port ${port}`, error),
+      );
     });
 
     server.on('close', () => {
@@ -145,7 +141,7 @@ export function createApp({
 
       res.send(changelogContent);
     } catch (error) {
-      output.error(`Changelog error: ${String(error)}\n`);
+      writeError(output, error, { debug: debug.enabled });
       res.status(500).send('Internal Server Error');
     }
   });
@@ -172,7 +168,7 @@ export function createApp({
 
         res.json({ status: 'success' });
       } catch (error) {
-        output.error(`Release error: ${String(error)}\n`);
+        writeError(output, error, { debug: debug.enabled });
         res.status(400).send('Invalid request');
       }
     },
@@ -215,13 +211,18 @@ export function createApp({
           newReleaseVersion,
           output,
         });
-        await finishRelease({ project, newReleaseVersion, output });
+        await finishRelease({
+          project,
+          newReleaseVersion,
+          releases: result.plan.releases,
+          output,
+        });
 
         res.json({ status: 'success' });
 
         closeServer();
       } catch (error) {
-        output.error(`Release error: ${String(error)}\n`);
+        writeError(output, error, { debug: debug.enabled });
         res.status(400).send('Invalid request');
       }
     },
