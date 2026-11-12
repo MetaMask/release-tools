@@ -3,9 +3,14 @@ import type { Notice } from './notices.js';
 import type { ReleaseChoiceError, ReleaseChoices } from './release-rules.js';
 
 /**
+ * The names of the release modes.
+ */
+export const MODE_NAMES = ['legacy'] as const;
+
+/**
  * The name of a release mode.
  */
-export type ModeName = 'legacy';
+export type ModeName = (typeof MODE_NAMES)[number];
 
 /**
  * The release that a mode plans from the release choices.

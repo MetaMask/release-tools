@@ -5,6 +5,7 @@ import type { FrontEndName } from '../core/front-end.js';
 import type { ModeName } from '../core/mode.js';
 import type { Formatter, ReleaseType } from '../core/types.js';
 import { readProject, Project } from '../project/project.js';
+import { readReleaseConfig } from '../project/release-config.js';
 import { readCommandLineArguments } from './command-line-arguments.js';
 
 type InitialParameters = {
@@ -39,6 +40,7 @@ export async function determineInitialParameters({
 
   const projectDirectoryPath = path.resolve(cwd, args.projectDirectory);
   const project = await readProject(projectDirectoryPath);
+  const { mode: modeName } = await readReleaseConfig(projectDirectoryPath);
   const tempDirectoryPath =
     args.tempDirectory === undefined
       ? path.join(
@@ -54,7 +56,7 @@ export async function determineInitialParameters({
     reset: args.reset,
     defaultBranch: args.defaultBranch,
     releaseType: args.backport ? 'backport' : 'ordinary',
-    modeName: 'legacy',
+    modeName,
     frontEndName: args.interactive ? 'ui' : 'editor',
     port: args.port,
     formatter: args.formatter as Formatter,
