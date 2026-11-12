@@ -20,7 +20,7 @@ export type IncrementableVersionPart =
   (typeof IncrementableVersionParts)[keyof typeof IncrementableVersionParts];
 
 export const SKIP_PACKAGE_DIRECTIVE = null;
-const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
+export const INTENTIONALLY_SKIP_PACKAGE_DIRECTIVE = 'intentionally-skip';
 
 /**
  * The maintainer's choice for each package, as given: a bump type, an exact
