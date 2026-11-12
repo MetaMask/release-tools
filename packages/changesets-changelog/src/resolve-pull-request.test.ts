@@ -31,10 +31,8 @@ describe('extractPullRequestNumber', () => {
     ).toBe('1234');
   });
 
-  it('throws when a subject has no pull request number', () => {
-    expect(() => extractPullRequestNumber('Add a feature')).toThrow(
-      'does not contain a pull request number',
-    );
+  it('returns undefined when a subject has no pull request number', () => {
+    expect(extractPullRequestNumber('Add a feature')).toBeUndefined();
   });
 });
 
@@ -49,12 +47,32 @@ describe('getPullRequestLink', () => {
     expect(await getPullRequestLink(changeset, 'MetaMask/core')).toBe(
       '[#1234](https://github.com/MetaMask/core/pull/1234)',
     );
-    expect(mockedExeca).toHaveBeenCalledWith('git', [
-      'show',
-      '-s',
-      '--format=%s',
-      'abc1234',
-    ]);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'git',
+      ['show', '-s', '--format=%s', 'abc1234'],
+      undefined,
+    );
+  });
+
+  it('passes cwd to git when provided', async () => {
+    mockedExeca.mockResolvedValue({ stdout: 'Add a feature (#1234)' } as never);
+
+    expect(
+      await getPullRequestLink(changeset, 'MetaMask/core', '/path/to/repo'),
+    ).toBe('[#1234](https://github.com/MetaMask/core/pull/1234)');
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'git',
+      ['show', '-s', '--format=%s', 'abc1234'],
+      { cwd: '/path/to/repo' },
+    );
+  });
+
+  it('returns undefined when the commit subject has no pull request number', async () => {
+    mockedExeca.mockResolvedValue({ stdout: 'Add a feature' } as never);
+
+    expect(
+      await getPullRequestLink(changeset, 'MetaMask/core'),
+    ).toBeUndefined();
   });
 
   it('throws when the changeset has no commit', async () => {
