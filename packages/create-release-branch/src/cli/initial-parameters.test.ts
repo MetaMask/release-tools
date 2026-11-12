@@ -7,6 +7,7 @@ import {
   buildMockPackage,
 } from '../../tests/unit/helpers.js';
 import * as projectModule from '../project/project.js';
+import * as releaseConfigModule from '../project/release-config.js';
 import * as envModule from '../utils/env.js';
 import * as commandLineArgumentsModule from './command-line-arguments.js';
 import { determineInitialParameters } from './initial-parameters.js';
@@ -14,11 +15,15 @@ import { determineInitialParameters } from './initial-parameters.js';
 vi.mock('./command-line-arguments');
 vi.mock('../utils/env');
 vi.mock('../project/project');
+vi.mock('../project/release-config');
 
 describe('initial-parameters', () => {
   describe('determineInitialParameters', () => {
     beforeEach(() => {
       vi.useFakeTimers();
+      vi.spyOn(releaseConfigModule, 'readReleaseConfig').mockResolvedValue({
+        mode: 'legacy',
+      });
     });
 
     afterEach(() => {
