@@ -81,7 +81,6 @@ describe('cli-output', () => {
     // Make clack color its symbols, whatever the terminal running the tests.
     vi.stubEnv('FORCE_COLOR', '1');
     vi.stubEnv('NO_COLOR', undefined);
-    vi.stubEnv('CI', undefined);
     vi.stubEnv('TERM', 'xterm-256color');
   });
 
@@ -161,21 +160,6 @@ describe('cli-output', () => {
           Object.assign(new MockWritable(), { isTTY: true, columns: 80 }),
         arrange: (): void => undefined,
       },
-      {
-        condition: 'the tool runs in GitHub Actions',
-        buildStream: buildTerminalStream,
-        arrange: (): void => {
-          vi.stubEnv('CI', 'true');
-          vi.stubEnv('GITHUB_ACTIONS', 'true');
-        },
-      },
-      {
-        condition: 'CI is 1',
-        buildStream: buildTerminalStream,
-        arrange: (): void => {
-          vi.stubEnv('CI', '1');
-        },
-      },
     ])(
       'writes no ANSI codes when no stream is styled because $condition',
       async ({ buildStream, arrange }) => {
@@ -221,9 +205,17 @@ describe('cli-output', () => {
         ).rejects.toThrow('oops');
       }
 
-      expect(vi.mocked(spinner).mock.calls).toStrictEqual([
-        [{ output: stderr, errorMessage: 'Doing something' }],
-        [{ output: stderr, errorMessage: 'Doing something else' }],
+      expect(
+        vi
+          .mocked(spinner)
+          .mock.calls.map(([options]) => [
+            options?.output,
+            options?.cancelMessage,
+            options?.errorMessage,
+          ]),
+      ).toStrictEqual([
+        [stderr, 'Doing something', 'Doing something'],
+        [stderr, 'Doing something else', 'Doing something else'],
       ]);
       expect(indicators.spinner.start.mock.calls).toStrictEqual([
         ['Doing something'],
@@ -270,21 +262,6 @@ describe('cli-output', () => {
         logLine(S_STEP_SUBMIT, 'Doing something'),
       );
     });
-
-    it.each(['', '0', 'false'])(
-      'shows a spinner when CI is "%s"',
-      async (value) => {
-        vi.stubEnv('CI', value);
-        const output = createCliOutput({
-          stdout: new MockWritable(),
-          stderr: buildTerminalStream(),
-        });
-
-        await output.step('Doing something', async () => undefined);
-
-        expect(spinner).toHaveBeenCalledTimes(1);
-      },
-    );
 
     it('streams task output and clears it when the task succeeds', async () => {
       const stdout = new MockWritable();
@@ -414,10 +391,7 @@ describe('cli-output', () => {
         input: '\u001b',
         key: { ctrl: false, name: 'escape' },
       },
-    ])('exits with 130 on $keyName during a step', async ({ input, key }) => {
-      const exit = vi
-        .spyOn(process, 'exit')
-        .mockImplementation(() => undefined as never);
+    ])('cancels a step on $keyName', async ({ input, key }) => {
       const output = createCliOutput({
         stdout: new MockWritable(),
         stderr: buildTerminalStream(),
@@ -427,13 +401,28 @@ describe('cli-output', () => {
       };
 
       await output.step('Doing something', async () => {
+        const signal = vi.mocked(spinner).mock.calls[0][0]?.signal;
         process.stdin.emit('keypress', 'c', { ctrl: false, name: 'c' });
-        expect(exit).not.toHaveBeenCalled();
+        expect(signal?.aborted).toBe(false);
         press();
+        expect(signal?.aborted).toBe(true);
       });
-      press();
 
-      expect(exit).toHaveBeenCalledExactlyOnceWith(130);
+      expect(process.stdin.listenerCount('keypress')).toBe(0);
+    });
+
+    it('interrupts the process when a step is cancelled', async () => {
+      const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+      const output = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: buildTerminalStream(),
+      });
+
+      await output.step('Doing something', async () => {
+        vi.mocked(spinner).mock.calls[0][0]?.onCancel?.();
+      });
+
+      expect(kill).toHaveBeenCalledExactlyOnceWith(process.pid, 'SIGINT');
     });
   });
 });

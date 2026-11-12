@@ -43,68 +43,12 @@ export type OutputStream = Writable &
 type Key = { ctrl?: boolean; name?: string };
 
 /**
- * The exit code that shells use for a process stopped with Ctrl+C.
- */
-const INTERRUPTED_EXIT_CODE = 130;
-
-/**
  * The number of lines of output that a running task shows.
  */
 const TASK_LOG_LIMIT = 10;
 
-let isExitingOnInterrupt = false;
-
 /**
- * Runs an action and exits with code 130 if the user presses Ctrl+C or
- * Escape meanwhile.
- *
- * A clack spinner reads standard in in raw mode, so Ctrl+C arrives as a
- * keypress. On Ctrl+C or Escape, clack exits with code 0. The spinner also
- * listens to SIGINT, and then only stops itself. The listeners here are added
- * before any spinner starts, so they run first: Ctrl+C and Escape become a
- * SIGINT, and a SIGINT exits with code 130. The SIGINT listener is added once and stays, so a
- * later SIGINT also exits with code 130, the code a shell reports by default.
- *
- * @param run - The action.
- * @returns The result of the action.
- */
-async function exitOnInterrupt<Result>(
-  run: () => Promise<Result>,
-): Promise<Result> {
-  if (!isExitingOnInterrupt) {
-    isExitingOnInterrupt = true;
-    process.on('SIGINT', () => {
-      process.exit(INTERRUPTED_EXIT_CODE);
-    });
-  }
-
-  const onKeypress = (_input: unknown, key: Key | undefined): void => {
-    if ((key?.ctrl && key.name === 'c') || key?.name === 'escape') {
-      process.emit('SIGINT', 'SIGINT');
-    }
-  };
-  process.stdin.on('keypress', onKeypress);
-
-  try {
-    return await run();
-  } finally {
-    process.stdin.off('keypress', onKeypress);
-  }
-}
-
-/**
- * Determines whether the tool runs in CI. Unlike clack's `isCI`, this accepts
- * any value of `CI` other than empty, `0`, or `false`.
- *
- * @returns Whether `CI` is set to a value that means true.
- */
-function isRunningInCI(): boolean {
-  const { CI } = process.env;
-  return CI !== undefined && !['', '0', 'false'].includes(CI);
-}
-
-/**
- * Determines whether a stream is a terminal that shows colors, outside of CI.
+ * Determines whether a stream is a terminal that shows colors.
  *
  * @param stream - The stream.
  * @returns Whether to style what is written to the stream.
@@ -113,8 +57,7 @@ function isColorTerminal(stream: OutputStream): boolean {
   return (
     Boolean(stream.isTTY) &&
     (stream.hasColors?.() ?? false) &&
-    process.env.NO_COLOR === undefined &&
-    !isRunningInCI()
+    process.env.NO_COLOR === undefined
   );
 }
 
@@ -158,8 +101,7 @@ function trimTrailingNewlines(text: string): string {
  * @param args.stdout - A stream that can be used to write to standard out.
  * @param args.stderr - A stream that can be used to write to standard error.
  * @param args.styled - Whether to style each stream. By default, a stream is
- * styled when it is a terminal that has colors, `NO_COLOR` is not set, and the
- * tool does not run in CI.
+ * styled when it is a terminal that has colors and `NO_COLOR` is not set.
  * @param args.animate - Whether to show spinners and live task output on
  * standard error. By default, this is the case when standard error is styled
  * and reports a width, and when `TERM` is not `dumb`.
@@ -209,19 +151,39 @@ export function createCliOutput({
         }
       }
 
-      // clack shows `errorMessage` if the process exits during the step.
-      const indicator = spinner({ ...toStderr, errorMessage: label });
-      return await exitOnInterrupt(async () => {
-        indicator.start(label);
-        try {
-          const result = await run();
-          indicator.stop(label);
-          return result;
-        } catch (error) {
-          indicator.error(label);
-          throw error;
+      // clack calls `onCancel` when a signal stops the spinner. But the spinner
+      // reads standard in in raw mode, so Ctrl+C arrives as a keypress, and
+      // on Ctrl+C or Escape clack exits with code 0. The listener here is
+      // added before the spinner starts, so it runs first and cancels the
+      // spinner through its abort signal. By then clack has restored the
+      // terminal, so `onCancel` ends the process the way Ctrl+C normally
+      // does.
+      const cancellation = new AbortController();
+      const onKeypress = (_input: unknown, key: Key | undefined): void => {
+        if ((key?.ctrl && key.name === 'c') || key?.name === 'escape') {
+          cancellation.abort();
         }
+      };
+      const indicator = spinner({
+        ...toStderr,
+        cancelMessage: label,
+        errorMessage: label,
+        signal: cancellation.signal,
+        onCancel: () => process.kill(process.pid, 'SIGINT'),
       });
+
+      process.stdin.on('keypress', onKeypress);
+      indicator.start(label);
+      try {
+        const result = await run();
+        indicator.stop(label);
+        return result;
+      } catch (error) {
+        indicator.error(label);
+        throw error;
+      } finally {
+        process.stdin.off('keypress', onKeypress);
+      }
     },
     async task(label, run) {
       if (!animate) {
@@ -251,18 +213,16 @@ export function createCliOutput({
         retainLog: true,
         ...toStderr,
       });
-      return await exitOnInterrupt(async () => {
-        try {
-          const result = await run((line) => {
-            taskOutput.message(line);
-          });
-          taskOutput.success(label);
-          return result;
-        } catch (error) {
-          taskOutput.error(label, { showLog: true });
-          throw error;
-        }
-      });
+      try {
+        const result = await run((line) => {
+          taskOutput.message(line);
+        });
+        taskOutput.success(label);
+        return result;
+      } catch (error) {
+        taskOutput.error(label, { showLog: true });
+        throw error;
+      }
     },
   };
 }

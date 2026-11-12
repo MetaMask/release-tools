@@ -7,7 +7,7 @@ import { selectFrontEnd, selectMode } from './select.js';
 /**
  * The main function for this tool. Designed to not access `process.argv`,
  * `process.cwd()`, `process.stdout`, or `process.stderr` directly so as to be
- * more easily testable. The output still reads `NO_COLOR`, `CI`, and `TERM`,
+ * more easily testable. The output still reads `NO_COLOR` and `TERM`,
  * and clack picks the colors of its symbols from `process.stdout`.
  *
  * @param args - The arguments.
