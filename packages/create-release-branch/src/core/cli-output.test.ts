@@ -218,17 +218,9 @@ describe('cli-output', () => {
         ).rejects.toThrow('oops');
       }
 
-      expect(
-        vi
-          .mocked(spinner)
-          .mock.calls.map(([options]) => [
-            options?.output,
-            options?.cancelMessage,
-            options?.errorMessage,
-          ]),
-      ).toStrictEqual([
-        [stderr, 'Doing something', 'Doing something'],
-        [stderr, 'Doing something else', 'Doing something else'],
+      expect(vi.mocked(spinner).mock.calls).toStrictEqual([
+        [{ output: stderr, errorMessage: 'Doing something' }],
+        [{ output: stderr, errorMessage: 'Doing something else' }],
       ]);
       expect(indicators.spinner.start.mock.calls).toStrictEqual([
         ['Doing something'],
@@ -395,47 +387,6 @@ describe('cli-output', () => {
         ].join(''),
       );
       expect(taskLog).not.toHaveBeenCalled();
-    });
-
-    it.each([
-      { keyName: 'Ctrl+C', input: '\u0003', key: { ctrl: true, name: 'c' } },
-      {
-        keyName: 'Escape',
-        input: '\u001b',
-        key: { ctrl: false, name: 'escape' },
-      },
-    ])('cancels a step on $keyName', async ({ input, key }) => {
-      const output = createCliOutput({
-        stdout: new MockWritable(),
-        stderr: buildTerminalStream(),
-      });
-      const press = (): void => {
-        process.stdin.emit('keypress', input, key);
-      };
-
-      await output.step('Doing something', async () => {
-        const signal = vi.mocked(spinner).mock.calls[0][0]?.signal;
-        process.stdin.emit('keypress', 'c', { ctrl: false, name: 'c' });
-        expect(signal?.aborted).toBe(false);
-        press();
-        expect(signal?.aborted).toBe(true);
-      });
-
-      expect(process.stdin.listenerCount('keypress')).toBe(0);
-    });
-
-    it('interrupts the process when a step is cancelled', async () => {
-      const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
-      const output = createCliOutput({
-        stdout: new MockWritable(),
-        stderr: buildTerminalStream(),
-      });
-
-      await output.step('Doing something', async () => {
-        vi.mocked(spinner).mock.calls[0][0]?.onCancel?.();
-      });
-
-      expect(kill).toHaveBeenCalledExactlyOnceWith(process.pid, 'SIGINT');
     });
   });
 });

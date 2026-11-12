@@ -38,11 +38,6 @@ export type OutputStream = Writable &
   Partial<Pick<WriteStream, 'isTTY' | 'columns' | 'hasColors'>>;
 
 /**
- * A key that `readline` reports in a `keypress` event.
- */
-type Key = { ctrl?: boolean; name?: string };
-
-/**
  * The number of lines of output that a running task shows.
  */
 const TASK_LOG_LIMIT = 10;
@@ -151,23 +146,8 @@ export function createCliOutput({
         }
       }
 
-      // clack exits with code 0 on Ctrl+C or Escape. This listener runs first
-      // and cancels the spinner, so that `onCancel` interrupts the process.
-      const cancellation = new AbortController();
-      const onKeypress = (_input: unknown, key: Key | undefined): void => {
-        if ((key?.ctrl && key.name === 'c') || key?.name === 'escape') {
-          cancellation.abort();
-        }
-      };
-      const indicator = spinner({
-        ...toStderr,
-        cancelMessage: label,
-        errorMessage: label,
-        signal: cancellation.signal,
-        onCancel: () => process.kill(process.pid, 'SIGINT'),
-      });
-
-      process.stdin.on('keypress', onKeypress);
+      // clack shows `errorMessage` if the process fails during the step.
+      const indicator = spinner({ ...toStderr, errorMessage: label });
       indicator.start(label);
       try {
         const result = await run();
@@ -176,8 +156,6 @@ export function createCliOutput({
       } catch (error) {
         indicator.error(label);
         throw error;
-      } finally {
-        process.stdin.off('keypress', onKeypress);
       }
     },
     async task(label, run) {
