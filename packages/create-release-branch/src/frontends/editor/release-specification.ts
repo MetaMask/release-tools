@@ -1,4 +1,4 @@
-import YAML from 'yaml';
+import YAML, { YAMLParseError } from 'yaml';
 
 import type { Candidate } from '../../core/candidates.js';
 import type { CliOutput } from '../../core/cli-output.js';
@@ -8,6 +8,7 @@ import type {
   ReleaseChoiceError,
   ReleaseChoices,
 } from '../../core/release-rules.js';
+import type { ErrorDescription } from '../../core/user-facing-error.js';
 import { UserFacingError } from '../../core/user-facing-error.js';
 import { readFile } from '../../utils/fs.js';
 import {
@@ -128,7 +129,7 @@ export class ReleaseSpecificationError extends UserFacingError {
     this.message = [title, '', ...lines].join('\n');
   }
 
-  describe(format: CliOutput['format']): { title: string; lines: string[] } {
+  describe(format: CliOutput['format']): ErrorDescription {
     const count = this.problems.length;
     const title = `The release spec has ${count} ${count === 1 ? 'problem' : 'problems'}:`;
     const problemLines = this.problems.map(
@@ -262,8 +263,11 @@ export async function validateReleaseSpecification<Plan>(
       releaseSpecificationContents,
     ) as { packages: ReleaseChoices };
   } catch (error) {
-    // Typecast: `YAML.parse` throws a `YAMLParseError`, which is an `Error`.
-    const [firstLineOfMessage] = (error as Error).message.split('\n');
+    if (!(error instanceof YAMLParseError)) {
+      throw error;
+    }
+
+    const [firstLineOfMessage] = error.message.split('\n');
     throw new ReleaseSpecificationError(
       {
         problems: [

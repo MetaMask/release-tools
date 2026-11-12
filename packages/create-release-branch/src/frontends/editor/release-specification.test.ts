@@ -422,6 +422,25 @@ packages:
       });
     });
 
+    it('rethrows an error that is not about the YAML syntax', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'release-spec',
+        );
+        await fs.promises.writeFile(releaseSpecificationPath, 'packages: {}');
+        const error = new Error('oops');
+        vi.spyOn(YAML, 'parse').mockImplementation(() => {
+          throw error;
+        });
+
+        await expect(
+          validateReleaseSpecification(project, releaseSpecificationPath),
+        ).rejects.toBe(error);
+      });
+    });
+
     it('throws if the release spec does not hold an object', async () => {
       await withSandbox(async (sandbox) => {
         const project = buildMockProject();

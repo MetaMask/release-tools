@@ -1,6 +1,14 @@
 import type { CliOutput } from './cli-output.js';
 
 /**
+ * How an error is shown to the user.
+ *
+ * @property title - The title.
+ * @property lines - The lines of details.
+ */
+export type ErrorDescription = { title: string; lines: string[] };
+
+/**
  * An error that describes itself to the user, with a title and lines of
  * details, instead of being printed with its message, causes, and stack.
  */
@@ -11,10 +19,7 @@ export abstract class UserFacingError extends Error {
    * @param format - Styles parts of the text.
    * @returns The title and the lines of details.
    */
-  abstract describe(format: CliOutput['format']): {
-    title: string;
-    lines: string[];
-  };
+  abstract describe(format: CliOutput['format']): ErrorDescription;
 }
 
 /**
@@ -42,7 +47,7 @@ export function describeError(
   error: unknown,
   format: CliOutput['format'],
   { debug }: { debug: boolean },
-): { title: string; lines: string[] } {
+): ErrorDescription {
   if (error instanceof UserFacingError) {
     return error.describe(format);
   }
