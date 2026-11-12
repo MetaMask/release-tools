@@ -592,11 +592,11 @@ describe('release-steps', () => {
 
       const text = stripVTControlCharacters(writtenText(stdout));
       const summary = text.slice(text.indexOf('2 packages released'));
-      expect(text.indexOf('Next: review the changelogs')).toBeLessThan(
+      expect(text.indexOf('Next: Review the changelogs')).toBeLessThan(
         text.indexOf('2 packages released'),
       );
       expect(text).toContain(
-        'Next: review the changelogs, then push the branch and open the release PR.',
+        'Next: Review the changelogs, then push the branch and open the release PR.',
       );
       expect(summary).toContain('Branch  release/2.0.0');
       expect(summary).toContain('@metamask/a            1.0.0');

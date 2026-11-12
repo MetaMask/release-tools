@@ -232,7 +232,7 @@ export async function finishRelease({
   const releaseBranchName = `release/${newReleaseVersion}`;
   const nameWidth = Math.max(...releases.map(({ name }) => name.length));
   output.info(
-    'Next: review the changelogs, then push the branch and open the release PR.',
+    'Next: Review the changelogs, then push the branch and open the release PR.',
   );
   output.summary(
     `${describePackageCount(releases.length)} released`,
