@@ -387,26 +387,23 @@ describe('release-steps', () => {
       });
     });
 
-    it('passes only changes and legacy-entries candidates as packages with changes', async () => {
+    it('passes only changes candidates as packages with changes', async () => {
       const project = buildMockProject({
         workspacePackages: {
           a: buildMockPackage('a', '1.0.0', {
             validatedManifest: {
               dependencies: { changed: '1.0.0', dependent: '1.0.0' },
-              peerDependencies: { legacy: '1.0.0' },
             },
           }),
           changed: buildMockPackage('changed', '1.0.0'),
           dependent: buildMockPackage('dependent', '1.0.0', {
             hasChangesSinceLatestRelease: true,
           }),
-          legacy: buildMockPackage('legacy', '1.0.0'),
         },
       });
       const candidates: Candidate[] = [
         { name: 'changed', currentVersion: '1.0.0', kind: 'changes' },
         { name: 'dependent', currentVersion: '1.0.0', kind: 'dependency' },
-        { name: 'legacy', currentVersion: '1.0.0', kind: 'legacy-entries' },
       ];
       const plan = vi.fn();
       const mode = buildMockMode({
@@ -424,7 +421,7 @@ describe('release-steps', () => {
         a: {
           missingDirectDependentNames: [],
           missingPeerDependentNames: [],
-          missingDependencies: ['changed', 'legacy'],
+          missingDependencies: ['changed'],
         },
       });
       expect(plan).not.toHaveBeenCalled();

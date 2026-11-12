@@ -132,9 +132,7 @@ export async function checkChoices<Data>({
 }): Promise<CheckChoicesResult<Data>> {
   const candidates = await mode.listCandidates(choices);
   const packagesWithChanges = new Set(
-    candidates
-      .filter(({ kind }) => kind === 'changes' || kind === 'legacy-entries')
-      .map(({ name }) => name),
+    candidates.filter(({ kind }) => kind === 'changes').map(({ name }) => name),
   );
 
   const { errors, dependencyFindings } = checkReleaseChoices(project, choices, {

@@ -1,6 +1,6 @@
 /**
- * Why a package is offered for release: it has changes, it depends on a
- * package that is being released, or it has entries in its changelog.
+ * Why a package is offered for release: it has changes, or it depends on a
+ * package that is being released.
  */
 export type CandidateKind =
   /**
@@ -11,13 +11,7 @@ export type CandidateKind =
   /**
    * The package is released only because one of its dependencies is released.
    */
-  | 'dependency'
-  /**
-   * Changesets mode only: the package has no changesets, but its changelog has
-   * hand-written entries in its Unreleased section (during the migration to
-   * Changesets).
-   */
-  | 'legacy-entries';
+  | 'dependency';
 
 /**
  * A package that the maintainer can choose to include in the release.
