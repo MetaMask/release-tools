@@ -18,6 +18,7 @@ import type { Project } from '../../project/project.js';
 import * as miscUtils from '../../utils/misc-utils.js';
 import {
   generateReleaseSpecificationTemplateForMonorepo,
+  ReleaseSpecificationError,
   waitForUserToEditReleaseSpecification,
   validateReleaseSpecification as validateReleaseSpecificationWithCheck,
 } from './release-specification.js';
@@ -404,9 +405,13 @@ packages:
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           expect.objectContaining({
-            message: expect.stringMatching(
-              /^Your release spec does not appear to be valid YAML\.\n/u,
-            ) as string,
+            problems: [
+              {
+                problem: 'is not valid YAML',
+                hint: 'Fix the syntax: Missing closing "quote at line 1, column 10',
+              },
+            ],
+            specPath: releaseSpecificationPath,
             cause: expect.objectContaining({
               message: expect.stringMatching(
                 /^Missing closing "quote/u,
@@ -414,6 +419,25 @@ packages:
             }) as Error,
           }),
         );
+      });
+    });
+
+    it('rethrows an error that is not about the YAML syntax', async () => {
+      await withSandbox(async (sandbox) => {
+        const project = buildMockProject();
+        const releaseSpecificationPath = path.join(
+          sandbox.directoryPath,
+          'release-spec',
+        );
+        await fs.promises.writeFile(releaseSpecificationPath, 'packages: {}');
+        const error = new Error('oops');
+        vi.spyOn(YAML, 'parse').mockImplementation(() => {
+          throw error;
+        });
+
+        await expect(
+          validateReleaseSpecification(project, releaseSpecificationPath),
+        ).rejects.toBe(error);
       });
     });
 
@@ -432,7 +456,14 @@ packages:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          /^Your release spec could not be processed because it needs to be an object/u,
+          expect.objectContaining({
+            problems: [
+              {
+                problem:
+                  'needs a packages object, where each key is a package name and each value is a version specifier',
+              },
+            ],
+          }),
         );
       });
     });
@@ -452,7 +483,14 @@ packages:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          /^Your release spec could not be processed because it needs to be an object/u,
+          expect.objectContaining({
+            problems: [
+              {
+                problem:
+                  'needs a packages object, where each key is a package name and each value is a version specifier',
+              },
+            ],
+          }),
         );
       });
     });
@@ -481,14 +519,22 @@ packages:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          new RegExp(
-            [
-              '^Your release spec could not be processed due to the following issues:\n',
-              '\\* Line 2: "foo" is not a package in the project',
-              '\\* Line 3: "bar" is not a package in the project',
-            ].join('\n'),
-            'u',
-          ),
+          expect.objectContaining({
+            problems: [
+              {
+                lineNumber: 2,
+                packageName: 'foo',
+                problem: 'is not a package in the project',
+                hint: 'Check the name, or remove the line.',
+              },
+              {
+                lineNumber: 3,
+                packageName: 'bar',
+                problem: 'is not a package in the project',
+                hint: 'Check the name, or remove the line.',
+              },
+            ],
+          }),
         );
       });
     });
@@ -518,16 +564,22 @@ packages:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          new RegExp(
-            [
-              '^Your release spec could not be processed due to the following issues:\n',
-              '\\* Line 2: "asdflksdaf" is not a valid version specifier for package "a"',
-              '          \\(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1\\.2\\.3"\\)',
-              '\\* Line 3: "1.2\\.\\.\\.3\\." is not a valid version specifier for package "b"',
-              '          \\(must be "major", "minor", or "patch"; or a version string with major, minor, and patch parts, such as "1\\.2\\.3"\\)',
-            ].join('\n'),
-            'u',
-          ),
+          expect.objectContaining({
+            problems: [
+              {
+                lineNumber: 2,
+                packageName: 'a',
+                problem: '"asdflksdaf" is not a valid version specifier',
+                hint: 'Use major, minor, patch, or a version like 1.2.3.',
+              },
+              {
+                lineNumber: 3,
+                packageName: 'b',
+                problem: '"1.2...3." is not a valid version specifier',
+                hint: 'Use major, minor, patch, or a version like 1.2.3.',
+              },
+            ],
+          }),
         );
       });
     });
@@ -557,14 +609,22 @@ packages:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          `
-Your release spec could not be processed due to the following issues:
-
-* Line 2: "1.2.3" is not a valid version specifier for package "a"
-          ("a" is already at version "1.2.3")
-* Line 3: "4.5.6" is not a valid version specifier for package "b"
-          ("b" is already at version "4.5.6")
-`.trim(),
+          expect.objectContaining({
+            problems: [
+              {
+                lineNumber: 2,
+                packageName: 'a',
+                problem: 'is already at version 1.2.3',
+                hint: 'Use a higher version, or major, minor, or patch.',
+              },
+              {
+                lineNumber: 3,
+                packageName: 'b',
+                problem: 'is already at version 4.5.6',
+                hint: 'Use a higher version, or major, minor, or patch.',
+              },
+            ],
+          }),
         );
       });
     });
@@ -594,14 +654,22 @@ Your release spec could not be processed due to the following issues:
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          `
-Your release spec could not be processed due to the following issues:
-
-* Line 2: "1.2.2" is not a valid version specifier for package "a"
-          ("a" is at a greater version "1.2.3")
-* Line 3: "4.5.5" is not a valid version specifier for package "b"
-          ("b" is at a greater version "4.5.6")
-`.trim(),
+          expect.objectContaining({
+            problems: [
+              {
+                lineNumber: 2,
+                packageName: 'a',
+                problem: '"1.2.2" is lower than the current version 1.2.3',
+                hint: 'Use a higher version, or major, minor, or patch.',
+              },
+              {
+                lineNumber: 3,
+                packageName: 'b',
+                problem: '"4.5.5" is lower than the current version 4.5.6',
+                hint: 'Use a higher version, or major, minor, or patch.',
+              },
+            ],
+          }),
         );
       });
     });
@@ -640,21 +708,13 @@ Your release spec could not be processed due to the following issues:
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -695,21 +755,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -750,21 +802,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -805,21 +849,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -861,21 +897,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -917,21 +945,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -973,21 +993,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1029,21 +1041,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its peer dependents are not in the release spec: b
+  Add them so they stay compatible, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  Consider including them in the release spec so that they are compatible with the new 'a' version.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1084,21 +1088,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1139,21 +1135,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1194,21 +1182,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1249,21 +1229,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1305,21 +1277,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1361,21 +1325,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1417,21 +1373,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1473,21 +1421,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following direct dependents of package 'a', which is being released with a major version bump, are missing from the release spec.
+a
+  has a major bump, but its direct dependents are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip.
 
-  - b
-
-  Consider including them in the release spec so that the dependency tree of consuming projects can be kept small.
-
-  If you do not want to do this, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1708,21 +1648,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following packages, which are dependencies or peer dependencies of the package 'a' being released, are missing from the release spec.
+a
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  These packages may have changes that 'a' relies upon. Consider including them in the release spec.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1763,21 +1695,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following packages, which are dependencies or peer dependencies of the package 'a' being released, are missing from the release spec.
+a
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  These packages may have changes that 'a' relies upon. Consider including them in the release spec.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1819,21 +1743,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following packages, which are dependencies or peer dependencies of the package 'a' being released, are missing from the release spec.
+a
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  These packages may have changes that 'a' relies upon. Consider including them in the release spec.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -1875,21 +1791,13 @@ ${releaseSpecificationPath}
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
           `
-Your release spec could not be processed due to the following issues:
+The release spec has 1 problem:
 
-* The following packages, which are dependencies or peer dependencies of the package 'a' being released, are missing from the release spec.
+a
+  depends on packages with unreleased changes that are not in the release spec: b
+  Add them to the release spec, or set them to intentionally-skip if they can wait.
 
-  - b
-
-  These packages may have changes that 'a' relies upon. Consider including them in the release spec.
-
-  If you are ABSOLUTELY SURE these packages are safe to omit, however, and want to postpone the release of a package, then list it with a directive of "intentionally-skip". For example:
-
-    packages:
-      b: intentionally-skip
-
-The release spec file has been retained for you to edit again and make the necessary fixes. Once you've done this, re-run this tool.
-
+Fix the release spec and run the tool again. It was kept at:
 ${releaseSpecificationPath}
 `.trim(),
         );
@@ -2076,7 +1984,7 @@ ${releaseSpecificationPath}
       });
     });
 
-    it("keeps today's line numbers for a generated template", async () => {
+    it("keeps today's line numbers in the new layout", async () => {
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
@@ -2100,9 +2008,92 @@ ${releaseSpecificationPath}
         await expect(
           validateReleaseSpecification(project, releaseSpecificationPath),
         ).rejects.toThrow(
-          '* Line 29: "foo" is not a valid version specifier for package "a"',
+          [
+            'Line 29  a',
+            '         "foo" is not a valid version specifier',
+            '         Use major, minor, patch, or a version like 1.2.3.',
+          ].join('\n'),
         );
       });
+    });
+  });
+
+  describe('ReleaseSpecificationError', () => {
+    const format = {
+      name: (text: string): string => `<${text}>`,
+      dim: (text: string): string => `(${text})`,
+    };
+
+    it('describes each problem with its line, package, problem, and hint', () => {
+      const error = new ReleaseSpecificationError({
+        problems: [
+          {
+            lineNumber: 7,
+            packageName: 'a',
+            problem: '"foo" is not a valid version specifier',
+            hint: 'Use major, minor, patch, or a version like 1.2.3.',
+          },
+          {
+            packageName: 'b',
+            problem: 'has a major bump',
+            hint: 'Add them.',
+          },
+          {
+            problem: 'is not valid YAML',
+            hint: 'Fix the syntax: Missing closing "quote at line 1, column 10',
+          },
+        ],
+        specPath: '/path/to/RELEASE_SPEC.yml',
+      });
+
+      expect(error.describe(format)).toStrictEqual({
+        title: 'The release spec has 3 problems:',
+        lines: [
+          'Line 7  <a>',
+          '        "foo" is not a valid version specifier',
+          '        (Use major, minor, patch, or a version like 1.2.3.)',
+          '',
+          '<b>',
+          '  has a major bump',
+          '  (Add them.)',
+          '',
+          'The release spec',
+          '  is not valid YAML',
+          '  (Fix the syntax: Missing closing "quote at line 1, column 10)',
+          '',
+          'Fix the release spec and run the tool again. It was kept at:',
+          '(/path/to/RELEASE_SPEC.yml)',
+        ],
+      });
+    });
+
+    it('uses the singular for one problem', () => {
+      const error = new ReleaseSpecificationError({
+        problems: [{ packageName: 'a', problem: 'is not a package' }],
+        specPath: '/path/to/RELEASE_SPEC.yml',
+      });
+
+      expect(error.describe(format)).toStrictEqual({
+        title: 'The release spec has 1 problem:',
+        lines: [
+          '<a>',
+          '  is not a package',
+          '',
+          'Fix the release spec and run the tool again. It was kept at:',
+          '(/path/to/RELEASE_SPEC.yml)',
+        ],
+      });
+      expect(error.message).toBe(
+        [
+          'The release spec has 1 problem:',
+          '',
+          'a',
+          '  is not a package',
+          '',
+          'Fix the release spec and run the tool again. It was kept at:',
+          '/path/to/RELEASE_SPEC.yml',
+        ].join('\n'),
+      );
     });
   });
 });

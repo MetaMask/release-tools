@@ -1,4 +1,4 @@
-import { log, spinner, taskLog } from '@clack/prompts';
+import { cancel, log, spinner, taskLog } from '@clack/prompts';
 import { Writable } from 'node:stream';
 import type { WriteStream } from 'node:tty';
 import { stripVTControlCharacters, styleText } from 'node:util';
@@ -14,6 +14,10 @@ import { stripVTControlCharacters, styleText } from 'node:util';
  * out.
  * @property warn - Writes a warning to standard error.
  * @property error - Writes an error to standard error.
+ * @property failure - Writes the error that stopped the run, with lines of
+ * details, and ends the output, to standard error.
+ * @property format - Styles parts of the text for standard error: `name` for
+ * names, such as package names, and `dim` for secondary text.
  * @property step - Runs a long-running action and returns its result.
  * @property task - Runs a long-running action that prints lines of output,
  * such as a command, and returns its result. The lines are shown only while
@@ -24,6 +28,8 @@ export type CliOutput = {
   success(text: string): void;
   warn(text: string): void;
   error(text: string): void;
+  failure(title: string, lines: string[]): void;
+  format: { name(text: string): string; dim(text: string): string };
   step<Result>(label: string, run: () => Promise<Result>): Promise<Result>;
   task<Result>(
     label: string,
@@ -120,6 +126,12 @@ export function createCliOutput({
 }): CliOutput {
   const toStdout = { output: styled.stdout ? stdout : withoutColors(stdout) };
   const toStderr = { output: styled.stderr ? stderr : withoutColors(stderr) };
+  const format = {
+    name: (text: string): string =>
+      styled.stderr ? styleText('cyan', text, { stream: stderr }) : text,
+    dim: (text: string): string =>
+      styled.stderr ? styleText('dim', text, { stream: stderr }) : text,
+  };
 
   return {
     info(text) {
@@ -134,6 +146,15 @@ export function createCliOutput({
     error(text) {
       log.error(trimTrailingNewlines(text), toStderr);
     },
+    failure(title, lines) {
+      const details = lines.flatMap((line) => line.split('\n'));
+      log.error(title, toStderr);
+      // clack writes one gutter line before the details, so an empty entry
+      // after them adds the same gutter line before the closing line.
+      log.message(details.length > 0 ? [...details, ''] : [], toStderr);
+      cancel('The release did not finish.', toStderr);
+    },
+    format,
     async step(label, run) {
       if (!animate) {
         try {
@@ -169,10 +190,7 @@ export function createCliOutput({
           return result;
         } catch (error) {
           log.error(label, toStderr);
-          log.message(
-            lines.map((line) => styleText('dim', line, { stream: stderr })),
-            toStderr,
-          );
+          log.message(lines.map(format.dim), toStderr);
           throw error;
         }
       }
