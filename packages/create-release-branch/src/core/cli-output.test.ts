@@ -1,63 +1,110 @@
-import chalk, { Chalk, chalkStderr } from 'chalk';
-import ora from 'ora';
+import {
+  S_BAR,
+  S_ERROR,
+  S_INFO,
+  S_STEP_SUBMIT,
+  S_SUCCESS,
+  S_WARN,
+  spinner,
+  taskLog,
+} from '@clack/prompts';
+import { stripVTControlCharacters } from 'node:util';
 import { MockWritable } from 'stdio-mock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { writtenText } from '../../tests/unit/helpers.js';
 import type { CliOutput } from './cli-output.js';
 import { createCliOutput } from './cli-output.js';
 
-const spinner = vi.hoisted(() => ({
-  start: vi.fn(),
-  succeed: vi.fn(),
-  fail: vi.fn(),
+const indicators = vi.hoisted(() => ({
+  spinner: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    cancel: vi.fn(),
+    error: vi.fn(),
+    message: vi.fn(),
+    clear: vi.fn(),
+    isCancelled: false,
+  },
+  taskLog: {
+    message: vi.fn(),
+    group: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
-vi.mock('ora', () => ({ default: vi.fn(() => spinner) }));
-
-const colors = new Chalk({ level: 1 });
+vi.mock(import('@clack/prompts'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  spinner: vi.fn(() => indicators.spinner),
+  taskLog: vi.fn(() => indicators.taskLog),
+}));
 
 /**
- * Builds a mock stream that reports being a terminal with a width.
+ * Builds a mock stream that reports being a color terminal with a width.
  *
  * @returns The mock stream.
  */
 function buildTerminalStream(): MockWritable & {
   isTTY: boolean;
   columns: number;
+  hasColors: () => boolean;
 } {
-  return Object.assign(new MockWritable(), { isTTY: true, columns: 80 });
+  return Object.assign(new MockWritable(), {
+    isTTY: true,
+    columns: 80,
+    hasColors: () => true,
+  });
 }
 
 /**
- * Sends one message through each method of the output, and runs one step.
+ * Builds the text that clack writes for one log message: a gutter line, then
+ * the symbol and the message.
+ *
+ * @param symbol - The symbol in front of the message.
+ * @param message - The message.
+ * @returns The text, without colors.
+ */
+function logLine(symbol: string, message: string): string {
+  return `${S_BAR}\n${symbol}  ${message}\n`;
+}
+
+/**
+ * Sends one message through each method of the output, runs one step, and
+ * runs one task that fails after printing a line.
  *
  * @param output - The output.
  */
 async function writeEveryKindOfMessage(output: CliOutput): Promise<void> {
   output.info('Some info\n');
-  output.success('\nSome success\n');
+  output.success('Some success\n');
   output.warn('Some warning\n');
   output.error('Some error\n');
   await output.step('Doing something', async () => undefined);
+  await expect(
+    output.task('Running something', async (log) => {
+      log('Some line');
+      throw new Error('oops');
+    }),
+  ).rejects.toThrow('oops');
 }
 
 describe('cli-output', () => {
-  const originalLevels = { stdout: chalk.level, stderr: chalkStderr.level };
-
   beforeEach(() => {
+    // Make clack color its symbols, whatever the terminal running the tests.
+    vi.stubEnv('FORCE_COLOR', '1');
     vi.stubEnv('NO_COLOR', undefined);
-    chalk.level = 1;
-    chalkStderr.level = 1;
+    // clack does not redraw a task log when `CI` is set.
+    vi.stubEnv('CI', undefined);
+    vi.stubEnv('TERM', 'xterm-256color');
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    chalk.level = originalLevels.stdout;
-    chalkStderr.level = originalLevels.stderr;
   });
 
   describe('createCliOutput', () => {
-    it('writes info and success to stdout as given', () => {
+    it('writes info and success through clack to stdout', () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
       const output = createCliOutput({ stdout, stderr });
@@ -65,51 +112,46 @@ describe('cli-output', () => {
       output.info('Some info\n');
       output.success('Some success');
 
-      expect(stdout.data()).toStrictEqual(['Some info\n', 'Some success']);
+      expect(writtenText(stdout)).toBe(
+        `${logLine(S_INFO, 'Some info')}${logLine(S_SUCCESS, 'Some success')}`,
+      );
       expect(stderr.data()).toStrictEqual([]);
     });
 
-    it('writes warn and error to stderr as given', () => {
+    it('writes warnings and errors to stderr', () => {
       const stdout = new MockWritable();
       const stderr = new MockWritable();
       const output = createCliOutput({ stdout, stderr });
 
-      output.warn('Some warning');
-      output.error('Some error\n');
+      output.warn('Some warning\n\n');
+      output.error('Some error');
 
-      expect(stderr.data()).toStrictEqual(['Some warning', 'Some error\n']);
+      expect(writtenText(stderr)).toBe(
+        `${logLine(S_WARN, 'Some warning')}${logLine(S_ERROR, 'Some error')}`,
+      );
       expect(stdout.data()).toStrictEqual([]);
     });
 
-    it('step runs the callback, returns its result, and writes nothing', async () => {
-      const stdout = new MockWritable();
+    it('writes stderr without colors when only stdout is a color terminal', () => {
+      const stdout = buildTerminalStream();
       const stderr = new MockWritable();
       const output = createCliOutput({ stdout, stderr });
 
-      const result = await output.step('Doing something', async () => 42);
+      output.success('Some success');
+      output.error('Some error');
 
-      expect(result).toBe(42);
-      expect(stdout.data()).toStrictEqual([]);
-      expect(stderr.data()).toStrictEqual([]);
-    });
-
-    it('step rethrows the callback error', async () => {
-      const stdout = new MockWritable();
-      const stderr = new MockWritable();
-      const output = createCliOutput({ stdout, stderr });
-
-      await expect(
-        output.step('Doing something', async () => {
-          throw new Error('oops');
-        }),
-      ).rejects.toThrow('oops');
-      expect(stdout.data()).toStrictEqual([]);
-      expect(stderr.data()).toStrictEqual([]);
+      expect(writtenText(stdout)).not.toBe(
+        stripVTControlCharacters(writtenText(stdout)),
+      );
+      expect(stripVTControlCharacters(writtenText(stdout))).toBe(
+        logLine(S_SUCCESS, 'Some success'),
+      );
+      expect(writtenText(stderr)).toBe(logLine(S_ERROR, 'Some error'));
     });
 
     it.each([
       {
-        condition: 'not a TTY',
+        condition: 'the streams are not terminals',
         buildStream: (): MockWritable => new MockWritable(),
         arrange: (): void => undefined,
       },
@@ -117,220 +159,236 @@ describe('cli-output', () => {
         condition: 'NO_COLOR is set',
         buildStream: buildTerminalStream,
         arrange: (): void => {
+          vi.stubEnv('FORCE_COLOR', undefined);
           vi.stubEnv('NO_COLOR', '1');
         },
       },
       {
-        condition: 'chalk detects no color support',
-        buildStream: buildTerminalStream,
-        arrange: (): void => {
-          chalk.level = 0;
-          chalkStderr.level = 0;
-        },
+        condition: 'the terminals have no colors',
+        buildStream: (): MockWritable =>
+          Object.assign(buildTerminalStream(), { hasColors: () => false }),
+        arrange: (): void => undefined,
+      },
+      {
+        condition: 'the terminals cannot tell whether they have colors',
+        buildStream: (): MockWritable =>
+          Object.assign(new MockWritable(), { isTTY: true, columns: 80 }),
+        arrange: (): void => undefined,
       },
     ])(
-      'writes the same bytes as plain output when $condition',
+      'writes no ANSI codes when no stream is styled because $condition',
       async ({ buildStream, arrange }) => {
         arrange();
-        const plainStdout = new MockWritable();
-        const plainStderr = new MockWritable();
         const stdout = buildStream();
         const stderr = buildStream();
 
-        await writeEveryKindOfMessage(
-          createCliOutput({
-            stdout: plainStdout,
-            stderr: plainStderr,
-            styled: { stdout: false, stderr: false },
-          }),
-        );
         await writeEveryKindOfMessage(createCliOutput({ stdout, stderr }));
 
-        expect(stdout.data()).toStrictEqual(plainStdout.data());
-        expect(stderr.data()).toStrictEqual(plainStderr.data());
-        expect(ora).not.toHaveBeenCalled();
+        expect(writtenText(stdout)).toBe(
+          [
+            logLine(S_INFO, 'Some info'),
+            logLine(S_SUCCESS, 'Some success'),
+            logLine(S_STEP_SUBMIT, 'Doing something'),
+          ].join(''),
+        );
+        expect(writtenText(stderr)).toBe(
+          [
+            logLine(S_WARN, 'Some warning'),
+            logLine(S_ERROR, 'Some error'),
+            logLine(S_ERROR, 'Running something'),
+            logLine(S_BAR, 'Some line'),
+          ].join(''),
+        );
+        expect(spinner).not.toHaveBeenCalled();
+        expect(taskLog).not.toHaveBeenCalled();
       },
     );
 
-    it('styles only stdout when stderr is not a terminal', async () => {
-      const stdout = buildTerminalStream();
-      const stderr = new MockWritable();
-      const output = createCliOutput({ stdout, stderr });
-
-      output.success('Some success\n');
-      output.warn('Some warning\n');
-      output.error('Some error\n');
-      const result = await output.step('Doing something', async () => 42);
-
-      expect(result).toBe(42);
-      expect(stdout.data()).toStrictEqual([
-        `${colors.green('Some success')}\n`,
-      ]);
-      expect(stderr.data()).toStrictEqual(['Some warning\n', 'Some error\n']);
-      expect(ora).not.toHaveBeenCalled();
-    });
-
-    it('styles only stderr when stdout is not a terminal', async () => {
-      const stdout = new MockWritable();
+    it('shows a spinner for a step when animating, and static lines otherwise', async () => {
       const stderr = buildTerminalStream();
-      const output = createCliOutput({ stdout, stderr });
-
-      output.success('Some success\n');
-      output.error('Some error\n');
-      await output.step('Doing something', async () => undefined);
-
-      expect(stdout.data()).toStrictEqual(['Some success\n']);
-      expect(stderr.data()).toStrictEqual([`${colors.red('Some error')}\n`]);
-      expect(ora).toHaveBeenCalledTimes(1);
-    });
-
-    it('colors success, warn, and error when styled', () => {
+      const animated = createCliOutput({ stdout: new MockWritable(), stderr });
       const stdout = new MockWritable();
-      const stderr = new MockWritable();
-      const output = createCliOutput({
-        stdout,
-        stderr,
-        styled: { stdout: true, stderr: true },
-      });
-
-      output.info('Some info');
-      output.success('Some success');
-      output.warn('Some warning');
-      output.error('Some error');
-
-      expect(stdout.data()).toStrictEqual([
-        'Some info',
-        colors.green('Some success'),
-      ]);
-      expect(stderr.data()).toStrictEqual([
-        `${colors.yellow('Some warning')}\n`,
-        `${colors.red('Some error')}\n`,
-      ]);
-    });
-
-    it('ends warn and error with a newline only when stderr is styled', () => {
       const plainStderr = new MockWritable();
-      const styledStderr = new MockWritable();
-      const plainOutput = createCliOutput({
-        stdout: new MockWritable(),
-        stderr: plainStderr,
-        styled: { stdout: false, stderr: false },
-      });
-      const styledOutput = createCliOutput({
-        stdout: new MockWritable(),
-        stderr: styledStderr,
-        styled: { stdout: false, stderr: true },
-      });
+      const plain = createCliOutput({ stdout, stderr: plainStderr });
 
-      for (const output of [plainOutput, styledOutput]) {
-        output.warn('Some warning');
-        output.error('Some error');
-        output.warn('Some other warning\n');
+      for (const output of [animated, plain]) {
+        expect(await output.step('Doing something', async () => 42)).toBe(42);
+        await expect(
+          output.step('Doing something else', async () => {
+            throw new Error('oops');
+          }),
+        ).rejects.toThrow('oops');
       }
 
-      expect(plainStderr.data()).toStrictEqual([
-        'Some warning',
-        'Some error',
-        'Some other warning\n',
+      expect(vi.mocked(spinner).mock.calls).toStrictEqual([
+        [{ output: stderr, errorMessage: 'Doing something' }],
+        [{ output: stderr, errorMessage: 'Doing something else' }],
       ]);
-      expect(styledStderr.data()).toStrictEqual([
-        `${colors.yellow('Some warning')}\n`,
-        `${colors.red('Some error')}\n`,
-        `${colors.yellow('Some other warning')}\n`,
+      expect(indicators.spinner.start.mock.calls).toStrictEqual([
+        ['Doing something'],
+        ['Doing something else'],
       ]);
-    });
-
-    it('keeps surrounding newlines outside the color codes', () => {
-      const stdout = new MockWritable();
-      const stderr = new MockWritable();
-      const output = createCliOutput({
-        stdout,
-        stderr,
-        styled: { stdout: true, stderr: true },
-      });
-
-      output.success('Some success\n');
-      output.error('\nSome error\n\n');
-      output.warn('\n');
-
-      expect(stdout.data()).toStrictEqual([
-        `${colors.green('Some success')}\n`,
-      ]);
-      expect(stderr.data()).toStrictEqual([
-        `\n${colors.red('Some error')}\n\n`,
-        '\n',
-      ]);
-    });
-
-    it('step shows a spinner and marks success', async () => {
-      const stdout = new MockWritable();
-      const stderr = buildTerminalStream();
-      const output = createCliOutput({
-        stdout,
-        stderr,
-        styled: { stdout: true, stderr: true },
-      });
-
-      const result = await output.step('Doing something', async () => 42);
-
-      expect(result).toBe(42);
-      expect(ora).toHaveBeenCalledWith({
-        text: 'Doing something',
-        stream: stderr,
-        discardStdin: false,
-        isEnabled: true,
-      });
-      expect(spinner.start).toHaveBeenCalledTimes(1);
-      expect(spinner.succeed).toHaveBeenCalledTimes(1);
-      expect(spinner.fail).not.toHaveBeenCalled();
-    });
-
-    it('step marks failure and rethrows', async () => {
-      const stdout = new MockWritable();
-      const stderr = buildTerminalStream();
-      const output = createCliOutput({
-        stdout,
-        stderr,
-        styled: { stdout: true, stderr: true },
-      });
-
-      await expect(
-        output.step('Doing something', async () => {
-          throw new Error('oops');
-        }),
-      ).rejects.toThrow('oops');
-      expect(spinner.start).toHaveBeenCalledTimes(1);
-      expect(spinner.fail).toHaveBeenCalledTimes(1);
-      expect(spinner.succeed).not.toHaveBeenCalled();
+      expect(indicators.spinner.stop).toHaveBeenCalledExactlyOnceWith(
+        'Doing something',
+      );
+      expect(indicators.spinner.error).toHaveBeenCalledExactlyOnceWith(
+        'Doing something else',
+      );
+      expect(stderr.data()).toStrictEqual([]);
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Doing something'),
+      );
+      expect(writtenText(plainStderr)).toBe(
+        logLine(S_ERROR, 'Doing something else'),
+      );
     });
 
     it.each([
       {
-        description: '0 columns',
+        condition: 'stderr reports no width',
         buildStderr: (): MockWritable =>
-          Object.assign(new MockWritable(), { columns: 0 }),
+          Object.assign(buildTerminalStream(), { columns: 0 }),
+        arrange: (): void => undefined,
       },
       {
-        description: 'no columns',
-        buildStderr: (): MockWritable => new MockWritable(),
+        condition: 'TERM is dumb',
+        buildStderr: buildTerminalStream,
+        arrange: (): void => {
+          vi.stubEnv('TERM', 'dumb');
+        },
       },
-    ])(
-      'step does not show a spinner when stderr reports $description',
-      async ({ buildStderr }) => {
-        const stdout = new MockWritable();
-        const stderr = buildStderr();
-        const output = createCliOutput({
-          stdout,
-          stderr,
-          styled: { stdout: true, stderr: true },
-        });
+    ])('shows no spinner when $condition', async ({ buildStderr, arrange }) => {
+      arrange();
+      const stdout = new MockWritable();
+      const output = createCliOutput({ stdout, stderr: buildStderr() });
 
-        const result = await output.step('Doing something', async () => 42);
+      await output.step('Doing something', async () => undefined);
 
-        expect(result).toBe(42);
-        expect(ora).not.toHaveBeenCalled();
-        expect(stderr.data()).toStrictEqual([]);
-      },
-    );
+      expect(spinner).not.toHaveBeenCalled();
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Doing something'),
+      );
+    });
+
+    it('streams task output and clears it when the task succeeds', async () => {
+      const stdout = new MockWritable();
+      const stderr = buildTerminalStream();
+      const output = createCliOutput({ stdout, stderr });
+
+      const result = await output.task('Running something', async (log) => {
+        log('Line 1');
+        log('Line 2');
+        return 42;
+      });
+
+      expect(result).toBe(42);
+      expect(taskLog).toHaveBeenCalledExactlyOnceWith({
+        title: 'Running something',
+        limit: 10,
+        retainLog: true,
+        output: stderr,
+      });
+      expect(indicators.taskLog.message.mock.calls).toStrictEqual([
+        ['Line 1'],
+        ['Line 2'],
+      ]);
+      expect(indicators.taskLog.success).toHaveBeenCalledExactlyOnceWith(
+        'Running something',
+      );
+      expect(indicators.taskLog.error).not.toHaveBeenCalled();
+      expect(stdout.data()).toStrictEqual([]);
+    });
+
+    it('keeps the task output when the task fails', async () => {
+      const output = createCliOutput({
+        stdout: new MockWritable(),
+        stderr: buildTerminalStream(),
+      });
+
+      await expect(
+        output.task('Running something', async (log) => {
+          log('Line 1');
+          throw new Error('oops');
+        }),
+      ).rejects.toThrow('oops');
+
+      expect(indicators.taskLog.message).toHaveBeenCalledExactlyOnceWith(
+        'Line 1',
+      );
+      expect(indicators.taskLog.error).toHaveBeenCalledExactlyOnceWith(
+        'Running something',
+        { showLog: true },
+      );
+      expect(indicators.taskLog.success).not.toHaveBeenCalled();
+    });
+
+    it('shows only the last lines while a task runs, and every line when it fails', async () => {
+      const actual =
+        await vi.importActual<typeof import('@clack/prompts')>(
+          '@clack/prompts',
+        );
+      vi.mocked(taskLog).mockImplementation(actual.taskLog);
+      const stderr = buildTerminalStream();
+      const output = createCliOutput({ stdout: new MockWritable(), stderr });
+      const lines = Array.from(
+        { length: 15 },
+        (_, index) => `Line ${index + 1}`,
+      );
+      let writesBeforeFailure = 0;
+
+      await expect(
+        output.task('Running something', async (log) => {
+          lines.forEach(log);
+          writesBeforeFailure = stderr.data().length;
+          throw new Error('oops');
+        }),
+      ).rejects.toThrow('oops');
+
+      const lastRedraw = stripVTControlCharacters(
+        stderr
+          .data()
+          .slice(writesBeforeFailure - 1, writesBeforeFailure)
+          .join(''),
+      );
+      expect(lastRedraw).not.toContain('Line 5\n');
+      expect(lastRedraw).toContain('Line 6\n');
+      const failure = stripVTControlCharacters(
+        stderr.data().slice(writesBeforeFailure).join(''),
+      );
+      expect(failure).toContain(`${S_ERROR}  Running something`);
+      for (const line of lines) {
+        expect(failure).toContain(`${S_BAR}  ${line}\n`);
+      }
+    });
+
+    it('prints the task output only when it fails in plain output', async () => {
+      const stdout = new MockWritable();
+      const stderr = new MockWritable();
+      const output = createCliOutput({ stdout, stderr });
+
+      const result = await output.task('Running something', async (log) => {
+        log('Hidden line');
+        return 42;
+      });
+      await expect(
+        output.task('Running something else', async (log) => {
+          log('Line 1');
+          log('Line 2');
+          throw new Error('oops');
+        }),
+      ).rejects.toThrow('oops');
+
+      expect(result).toBe(42);
+      expect(writtenText(stdout)).toBe(
+        logLine(S_STEP_SUBMIT, 'Running something'),
+      );
+      expect(writtenText(stderr)).toBe(
+        [
+          logLine(S_ERROR, 'Running something else'),
+          `${S_BAR}\n${S_BAR}  Line 1\n${S_BAR}  Line 2\n`,
+        ].join(''),
+      );
+      expect(taskLog).not.toHaveBeenCalled();
+    });
   });
 });

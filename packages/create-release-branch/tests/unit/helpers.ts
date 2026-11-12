@@ -2,6 +2,7 @@ import { isPlainObject } from '@metamask/utils';
 import fs from 'fs';
 import path from 'path';
 import { SemVer } from 'semver';
+import type { MockWritable } from 'stdio-mock';
 import { vi } from 'vitest';
 
 import { createCliOutput } from '../../src/core/cli-output.js';
@@ -168,6 +169,17 @@ export function buildMockManifest(
  */
 export function createNoopWriteStream(): fs.WriteStream {
   return fs.createWriteStream('/dev/null');
+}
+
+/**
+ * Gets the text written to a mock stream. The stream keeps one chunk per
+ * write, and clack splits a message across writes as it likes.
+ *
+ * @param stream - The mock stream.
+ * @returns The text written to the stream.
+ */
+export function writtenText(stream: MockWritable): string {
+  return stream.data().join('');
 }
 
 /**

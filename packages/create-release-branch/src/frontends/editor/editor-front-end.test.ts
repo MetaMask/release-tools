@@ -9,7 +9,11 @@ import {
   Sandbox,
   isErrorWithCode,
 } from '../../../tests/helpers.js';
-import { buildMockProject, Require } from '../../../tests/unit/helpers.js';
+import {
+  buildMockProject,
+  Require,
+  writtenText,
+} from '../../../tests/unit/helpers.js';
 import { createCliOutput } from '../../core/cli-output.js';
 import type { CliOutput } from '../../core/cli-output.js';
 import * as releaseBranchModule from '../../core/release-branch.js';
@@ -587,16 +591,21 @@ describe('editor-front-end', () => {
           );
 
           expect(fixConstraintsSpy).toHaveBeenCalledTimes(1);
-          expect(fixConstraintsSpy).toHaveBeenCalledWith(projectDirectoryPath);
+          expect(fixConstraintsSpy).toHaveBeenCalledWith(
+            projectDirectoryPath,
+            expect.any(Function),
+          );
 
           expect(updateYarnLockfileSpy).toHaveBeenCalledTimes(1);
           expect(updateYarnLockfileSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
+            expect.any(Function),
           );
 
           expect(deduplicateDependenciesSpy).toHaveBeenCalledTimes(1);
           expect(deduplicateDependenciesSpy).toHaveBeenCalledWith(
             projectDirectoryPath,
+            expect.any(Function),
           );
 
           // Second call of followMonorepoWorkflow
@@ -998,8 +1007,8 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data()[0]).toMatch(
-            /^A template has been generated that specifies this release/u,
+          expect(writtenText(stdout)).toContain(
+            'A template has been generated that specifies this release',
           );
         });
       });
@@ -1761,8 +1770,8 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data()[0]).toMatch(
-            /^A template has been generated that specifies this release/u,
+          expect(writtenText(stdout)).toContain(
+            'A template has been generated that specifies this release',
           );
         });
       });
@@ -2285,8 +2294,8 @@ describe('editor-front-end', () => {
             output,
           });
 
-          expect(stdout.data()[0]).toMatch(
-            /^A template has been generated that specifies this release/u,
+          expect(writtenText(stdout)).toContain(
+            'A template has been generated that specifies this release',
           );
         });
       });

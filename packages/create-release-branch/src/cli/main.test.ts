@@ -2,7 +2,7 @@ import fs from 'fs';
 import { MockWritable } from 'stdio-mock';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildMockProject } from '../../tests/unit/helpers.js';
+import { buildMockProject, writtenText } from '../../tests/unit/helpers.js';
 import type { CliOutput } from '../core/cli-output.js';
 import type { Mode } from '../core/mode.js';
 import * as editorFrontEndModule from '../frontends/editor/editor-front-end.js';
@@ -63,8 +63,8 @@ describe('main', () => {
       releaseType: 'backport',
       output: expect.any(Object) as CliOutput,
     });
-    expect(stdout.data()).toContain(
-      'Project appears to have workspaces. Following monorepo workflow.\n',
+    expect(writtenText(stdout)).toContain(
+      'Project appears to have workspaces. Following monorepo workflow.',
     );
   });
 

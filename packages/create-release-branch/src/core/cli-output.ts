@@ -1,15 +1,13 @@
-import chalk, { Chalk, chalkStderr } from 'chalk';
-import type { ChalkInstance } from 'chalk';
-import ora from 'ora';
-
-import type { WriteStreamLike } from '../utils/fs.js';
+import { log, spinner, taskLog } from '@clack/prompts';
+import { Writable } from 'node:stream';
+import type { WriteStream } from 'node:tty';
+import { stripVTControlCharacters, styleText } from 'node:util';
 
 /**
  * The single place through which the tool writes user-facing messages.
  *
- * Each method writes the text exactly as given, so callers include any
- * trailing newline themselves. The one exception: when standard error is
- * styled, warnings and errors always end with a newline.
+ * Each message is laid out by clack, which adds its own spacing, so any
+ * trailing newlines in the text are dropped.
  *
  * @property info - Writes an informational message to standard out.
  * @property success - Writes a message about a completed action to standard
@@ -17,6 +15,9 @@ import type { WriteStreamLike } from '../utils/fs.js';
  * @property warn - Writes a warning to standard error.
  * @property error - Writes an error to standard error.
  * @property step - Runs a long-running action and returns its result.
+ * @property task - Runs a long-running action that prints lines of output,
+ * such as a command, and returns its result. The lines are shown only while
+ * the action runs, or if it fails.
  */
 export type CliOutput = {
   info(text: string): void;
@@ -24,120 +25,175 @@ export type CliOutput = {
   warn(text: string): void;
   error(text: string): void;
   step<Result>(label: string, run: () => Promise<Result>): Promise<Result>;
+  task<Result>(
+    label: string,
+    run: (log: (line: string) => void) => Promise<Result>,
+  ): Promise<Result>;
 };
 
 /**
- * Applies a color to the text, leaving any leading and trailing whitespace
- * outside of the color codes.
- *
- * @param text - The text.
- * @param color - The color to apply.
- * @returns The colored text.
+ * A stream that the output can write to, such as `process.stdout`.
  */
-function colorize(text: string, color: ChalkInstance): string {
-  const content = text.trim();
-  const start = text.indexOf(content);
-  return `${text.slice(0, start)}${color(content)}${text.slice(start + content.length)}`;
-}
+export type OutputStream = Writable &
+  Partial<Pick<WriteStream, 'isTTY' | 'columns' | 'hasColors'>>;
 
 /**
- * Adds a newline to the end of the text if it does not already end with one.
- *
- * @param text - The text.
- * @returns The text, ending with a newline.
+ * The number of lines of output that a running task shows.
  */
-function endWithNewline(text: string): string {
-  return text.endsWith('\n') ? text : `${text}\n`;
-}
+const TASK_LOG_LIMIT = 10;
 
 /**
  * Determines whether a stream is a terminal that shows colors.
  *
  * @param stream - The stream.
- * @param colorLevel - The color level that chalk detected for the stream.
  * @returns Whether to style what is written to the stream.
  */
-function isColorTerminal(
-  stream: { isTTY?: boolean },
-  colorLevel: number,
-): boolean {
+function isColorTerminal(stream: OutputStream): boolean {
   return (
     Boolean(stream.isTTY) &&
-    colorLevel > 0 &&
+    (stream.hasColors?.() ?? false) &&
     process.env.NO_COLOR === undefined
   );
 }
 
 /**
+ * Wraps a stream so that what is written to it has no ANSI codes. clack
+ * decides on colors from `process.stdout`, even for text sent to another
+ * stream.
+ *
+ * @param stream - The stream.
+ * @returns The wrapped stream.
+ */
+function withoutColors(stream: Writable): Writable {
+  return new Writable({
+    write(chunk: Buffer | string, _encoding, callback): void {
+      stream.write(stripVTControlCharacters(chunk.toString()));
+      callback();
+    },
+  });
+}
+
+/**
+ * Removes the newlines at the end of the text.
+ *
+ * @param text - The text.
+ * @returns The text, without trailing newlines.
+ */
+function trimTrailingNewlines(text: string): string {
+  return text.replace(/\n+$/u, '');
+}
+
+/**
  * Creates a `CliOutput` that writes to the given streams.
  *
- * When standard out is styled, success messages are colored. When standard
- * error is styled, warnings and errors are colored and end with a newline,
- * and, if standard error reports a width, each step shows a spinner on it.
- * Otherwise, the text is written as given and steps write nothing.
+ * Messages, and lines for completed steps and tasks, go to standard out.
+ * Warnings, errors, spinners, and task output go to standard error. A stream
+ * that is not styled gets no ANSI codes. When animating, a step shows a
+ * spinner and a task streams its output until it ends. Otherwise, each ends
+ * with one line, and a task prints its output only if it fails.
  *
  * @param args - The arguments.
  * @param args.stdout - A stream that can be used to write to standard out.
  * @param args.stderr - A stream that can be used to write to standard error.
  * @param args.styled - Whether to style each stream. By default, a stream is
- * styled when it is a terminal, chalk detects color support for it, and
- * `NO_COLOR` is not set.
+ * styled when it is a terminal that has colors and `NO_COLOR` is not set.
+ * @param args.animate - Whether to show spinners and live task output on
+ * standard error. By default, this is the case when standard error is styled
+ * and reports a width, and when `TERM` is not `dumb`.
  * @returns The output.
  */
 export function createCliOutput({
   stdout,
   stderr,
   styled = {
-    stdout: isColorTerminal(stdout, chalk.level),
-    stderr: isColorTerminal(stderr, chalkStderr.level),
+    stdout: isColorTerminal(stdout),
+    stderr: isColorTerminal(stderr),
   },
+  animate = styled.stderr &&
+    Boolean(stderr.columns) &&
+    process.env.TERM !== 'dumb',
 }: {
-  stdout: WriteStreamLike & { isTTY?: boolean };
-  stderr: NodeJS.WritableStream & { isTTY?: boolean; columns?: number };
+  stdout: OutputStream;
+  stderr: OutputStream;
   styled?: { stdout: boolean; stderr: boolean };
+  animate?: boolean;
 }): CliOutput {
-  const stdoutColors = new Chalk({ level: styled.stdout ? 1 : 0 });
-  const stderrColors = new Chalk({ level: styled.stderr ? 1 : 0 });
-  // A running spinner clears the current line on its next frame, which would
-  // erase a message that does not end with a newline.
-  const toStderr = (text: string): string =>
-    styled.stderr ? endWithNewline(text) : text;
+  const toStdout = { output: styled.stdout ? stdout : withoutColors(stdout) };
+  const toStderr = { output: styled.stderr ? stderr : withoutColors(stderr) };
 
   return {
     info(text) {
-      stdout.write(text);
+      log.info(trimTrailingNewlines(text), toStdout);
     },
     success(text) {
-      stdout.write(colorize(text, stdoutColors.green));
+      log.success(trimTrailingNewlines(text), toStdout);
     },
     warn(text) {
-      stderr.write(colorize(toStderr(text), stderrColors.yellow));
+      log.warn(trimTrailingNewlines(text), toStderr);
     },
     error(text) {
-      stderr.write(colorize(toStderr(text), stderrColors.red));
+      log.error(trimTrailingNewlines(text), toStderr);
     },
     async step(label, run) {
-      // ora needs the width of the terminal to draw the spinner.
-      if (!styled.stderr || !stderr.columns) {
-        return await run();
+      if (!animate) {
+        try {
+          const result = await run();
+          log.step(label, toStdout);
+          return result;
+        } catch (error) {
+          log.error(label, toStderr);
+          throw error;
+        }
       }
 
-      // Leave stdin alone so that a prompt during the step still receives
-      // keystrokes. Standard error is already known to be a color terminal
-      // here, so ora's own check (which is off in CI) is skipped.
-      const spinner = ora({
-        text: label,
-        stream: stderr,
-        discardStdin: false,
-        isEnabled: true,
-      });
-      spinner.start();
+      // clack shows `errorMessage` if the process fails during the step.
+      const indicator = spinner({ ...toStderr, errorMessage: label });
+      indicator.start(label);
       try {
         const result = await run();
-        spinner.succeed();
+        indicator.stop(label);
         return result;
       } catch (error) {
-        spinner.fail();
+        indicator.error(label);
+        throw error;
+      }
+    },
+    async task(label, run) {
+      if (!animate) {
+        const lines: string[] = [];
+        try {
+          const result = await run((line) => {
+            lines.push(line);
+          });
+          log.step(label, toStdout);
+          return result;
+        } catch (error) {
+          log.error(label, toStderr);
+          log.message(
+            lines.map((line) => styleText('dim', line, { stream: stderr })),
+            toStderr,
+          );
+          throw error;
+        }
+      }
+
+      // clack redraws every shown line on each message, which breaks once the
+      // lines are taller than the terminal. `retainLog` keeps the full log
+      // for a failure.
+      const taskOutput = taskLog({
+        title: label,
+        limit: TASK_LOG_LIMIT,
+        retainLog: true,
+        ...toStderr,
+      });
+      try {
+        const result = await run((line) => {
+          taskOutput.message(line);
+        });
+        taskOutput.success(label);
+        return result;
+      } catch (error) {
+        taskOutput.error(label, { showLog: true });
         throw error;
       }
     },
