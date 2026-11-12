@@ -13,6 +13,8 @@ import { stripVTControlCharacters, styleText } from 'node:util';
  * @property success - Writes a message about a completed action to standard
  * out.
  * @property warn - Writes a warning to standard error.
+ * @property warnList - Writes a warning to standard error, with each item, such
+ * as a package name, on its own line below it.
  * @property error - Writes an error to standard error.
  * @property failure - Writes the error that stopped the run, with lines of
  * details, and ends the output, to standard error.
@@ -27,6 +29,7 @@ export type CliOutput = {
   info(text: string): void;
   success(text: string): void;
   warn(text: string): void;
+  warnList(title: string, items: string[]): void;
   error(text: string): void;
   failure(title: string, lines: string[]): void;
   format: { name(text: string): string; dim(text: string): string };
@@ -142,6 +145,17 @@ export function createCliOutput({
     },
     warn(text) {
       log.warn(trimTrailingNewlines(text), toStderr);
+    },
+    warnList(title, items) {
+      log.warn(
+        [
+          title,
+          ...items
+            .flatMap((item) => item.split('\n'))
+            .map((line) => `  ${format.dim(line)}`),
+        ].join('\n'),
+        toStderr,
+      );
     },
     error(text) {
       log.error(trimTrailingNewlines(text), toStderr);

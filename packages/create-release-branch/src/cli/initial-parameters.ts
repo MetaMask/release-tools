@@ -1,7 +1,6 @@
 import os from 'os';
 import path from 'path';
 
-import type { CliOutput } from '../core/cli-output.js';
 import type { FrontEndName } from '../core/front-end.js';
 import type { ModeName } from '../core/mode.js';
 import type { Formatter, ReleaseType } from '../core/types.js';
@@ -27,22 +26,19 @@ type InitialParameters = {
  * @param args - The arguments to this function.
  * @param args.argv - The arguments to this executable.
  * @param args.cwd - The directory in which this executable was run.
- * @param args.output - Where to write user-facing messages.
  * @returns The initial parameters.
  */
 export async function determineInitialParameters({
   argv,
   cwd,
-  output,
 }: {
   argv: string[];
   cwd: string;
-  output: CliOutput;
 }): Promise<InitialParameters> {
   const args = await readCommandLineArguments(argv);
 
   const projectDirectoryPath = path.resolve(cwd, args.projectDirectory);
-  const project = await readProject(projectDirectoryPath, { output });
+  const project = await readProject(projectDirectoryPath);
   const tempDirectoryPath =
     args.tempDirectory === undefined
       ? path.join(

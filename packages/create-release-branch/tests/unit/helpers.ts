@@ -66,6 +66,7 @@ export function buildMockProject(overrides: Partial<Project> = {}): Project {
     repositoryUrl: 'https://repo.url',
     rootPackage: buildMockPackage('root'),
     workspacePackages: {},
+    packagesUsingRootTag: [],
     isMonorepo: false,
     releaseVersion: {
       ordinaryNumber: 1,
@@ -206,10 +207,10 @@ export function buildMockMode(
 ): Mode<string> {
   return {
     name: 'legacy',
-    prepare: vi.fn(),
+    prepare: vi.fn().mockResolvedValue([]),
     listCandidates: vi.fn().mockResolvedValue([]),
     plan: vi.fn(),
-    apply: vi.fn(),
+    apply: vi.fn().mockResolvedValue([]),
     getReleaseNotes: vi.fn(),
     ...overrides,
   };

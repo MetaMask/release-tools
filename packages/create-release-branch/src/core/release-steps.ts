@@ -1,6 +1,7 @@
 import type { Project } from '../project/project.js';
 import type { CliOutput } from './cli-output.js';
 import type { Mode, ModePlan } from './mode.js';
+import type { Notice } from './notices.js';
 import {
   determineReleaseVersion,
   ensureReleaseBranch,
@@ -20,8 +21,21 @@ import {
 } from './yarn-commands.js';
 
 /**
+ * Prints each notice as one warning with its items.
+ *
+ * @param output - Where to write user-facing messages.
+ * @param notices - The notices.
+ */
+function printNotices(output: CliOutput, notices: Notice[]): void {
+  for (const { title, items } of notices) {
+    output.warnList(title, items);
+  }
+}
+
+/**
  * Creates (or switches to) the release branch. On the first run, prepares the
- * project with the mode and commits the result.
+ * project with the mode, prints the notices of the mode, and commits the
+ * result.
  *
  * @param args - The arguments.
  * @param args.project - Information about the project.
@@ -49,7 +63,11 @@ export async function startRelease<Data>({
   );
 
   if (firstRun) {
-    await output.step('Updating changelogs', async () => await mode.prepare());
+    const notices = await output.step(
+      'Updating changelogs',
+      async () => await mode.prepare(),
+    );
+    printNotices(output, notices);
     // `prepare` may change nothing, and the release branch still needs this
     // commit.
     await commitAllChanges(
@@ -122,7 +140,8 @@ export async function checkChoices<Data>({
 }
 
 /**
- * Writes the planned release to the project with the mode.
+ * Writes the planned release to the project with the mode, then prints the
+ * notices of the mode.
  *
  * @param args - The arguments.
  * @param args.mode - The release mode.
@@ -141,10 +160,11 @@ export async function applyRelease<Data>({
   newReleaseVersion: string;
   output: CliOutput;
 }): Promise<void> {
-  await output.step(
+  const notices = await output.step(
     'Applying the release',
     async () => await mode.apply(plan, newReleaseVersion),
   );
+  printNotices(output, notices);
 }
 
 /**
