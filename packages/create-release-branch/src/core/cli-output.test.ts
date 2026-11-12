@@ -94,6 +94,8 @@ describe('cli-output', () => {
     // Make clack color its symbols, whatever the terminal running the tests.
     vi.stubEnv('FORCE_COLOR', '1');
     vi.stubEnv('NO_COLOR', undefined);
+    // clack does not redraw a task log when `CI` is set.
+    vi.stubEnv('CI', undefined);
     vi.stubEnv('TERM', 'xterm-256color');
   });
 
