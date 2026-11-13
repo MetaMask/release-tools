@@ -29,8 +29,8 @@ jobs:
       pull-requests: write
     uses: MetaMask/github-tools/.github/workflows/publish-preview-oidc.yml@v1
     with:
-      pull-request: ${{ github.event.inputs.pull-request }}
-      branch: ${{ github.event.inputs.branch }}
-      dry-run: ${{ github.event.inputs.dry-run }}
+      pull-request: ${{ inputs.pull-request }}
+      branch: ${{ inputs.branch }}
+      dry-run: ${{ inputs.dry-run }}
       environment: default-branch
       docs-url: 'https://github.com/MetaMask/release-tools/blob/main/docs/processes/preview-builds.md'
