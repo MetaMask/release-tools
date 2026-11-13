@@ -1,20 +1,36 @@
 name: Publish a preview build
 
 on:
-  issue_comment:
-    types: created
+  workflow_dispatch:
+    inputs:
+      pull-request:
+        description: 'Pull request number to publish a preview build for. Mutually exclusive with "branch".'
+        required: false
+        type: number
+      branch:
+        description: 'Branch in this repository to publish a preview build for. Mutually exclusive with "pull-request".'
+        required: false
+        type: string
+        default: ''
+      dry-run:
+        description: 'Perform a dry run.'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   publish-preview:
-    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, '@metamaskbot publish-preview') }}
     permissions:
       contents: read
       id-token: write
       pull-requests: write
     uses: MetaMask/github-tools/.github/workflows/publish-preview-oidc.yml@v1
     with:
+      pull-request: ${{ github.event.inputs.pull-request }}
+      branch: ${{ github.event.inputs.branch }}
+      dry-run: ${{ github.event.inputs.dry-run }}
       environment: default-branch
       docs-url: 'https://github.com/MetaMask/release-tools/blob/main/docs/processes/preview-builds.md'
