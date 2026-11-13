@@ -215,6 +215,26 @@ export async function branchExists(
 }
 
 /**
+ * Checks whether a path in the given repository has uncommitted changes,
+ * including untracked files.
+ *
+ * @param repositoryDirectoryPath - The path to the repository directory.
+ * @param pathspec - The path to check, relative to the repository directory.
+ * @returns Whether `git status` reports any change under the path.
+ */
+export async function hasUncommittedChanges(
+  repositoryDirectoryPath: string,
+  pathspec: string,
+): Promise<boolean> {
+  const statusLines = await getLinesFromGitCommandWithin(
+    repositoryDirectoryPath,
+    'status',
+    ['--porcelain', '--', pathspec],
+  );
+  return statusLines.length > 0;
+}
+
+/**
  * Retrieves the names of the tags in the given repo, sorted by ascending
  * semantic version order. As this fetches tags from the remote first, you are
  * advised to only run this once.
