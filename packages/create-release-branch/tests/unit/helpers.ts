@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 
 import { createCliOutput } from '../../src/core/cli-output.js';
 import type { CliOutput } from '../../src/core/cli-output.js';
-import type { Mode } from '../../src/core/mode.js';
+import type { Mode, ModePrepareStep } from '../../src/core/mode.js';
 import {
   PackageManifestDependenciesFieldNames,
   PackageManifestFieldNames,
@@ -197,6 +197,22 @@ export function createNoopCliOutput(): CliOutput {
 }
 
 /**
+ * Builds the prepare step of a mode for use in tests.
+ *
+ * @param run - The function that runs the step.
+ * @returns The mock prepare step.
+ */
+export function buildMockPrepareStep(
+  run: ModePrepareStep['run'] = vi.fn().mockResolvedValue([]),
+): ModePrepareStep {
+  return {
+    title: 'Preparing the project',
+    result: 'Prepared the project',
+    run,
+  };
+}
+
+/**
  * Builds a mode for use in tests. All methods are mock functions.
  *
  * @param overrides - The properties to override in the mode.
@@ -207,7 +223,7 @@ export function buildMockMode(
 ): Mode<string> {
   return {
     name: 'legacy',
-    prepare: vi.fn().mockResolvedValue([]),
+    prepare: buildMockPrepareStep(),
     listCandidates: vi.fn().mockResolvedValue([]),
     plan: vi.fn(),
     apply: vi.fn().mockResolvedValue([]),

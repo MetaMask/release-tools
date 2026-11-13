@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildMockMode,
+  buildMockPrepareStep,
   buildMockPackage,
   buildMockProject,
   createNoopCliOutput,
@@ -117,8 +118,8 @@ describe('release-steps', () => {
   describe('startRelease', () => {
     it('prepares and commits only on the first run', async () => {
       const project = buildMockProject();
-      const prepare = vi.fn().mockResolvedValue([]);
-      const mode = buildMockMode({ prepare });
+      const run = vi.fn().mockResolvedValue([]);
+      const mode = buildMockMode({ prepare: buildMockPrepareStep(run) });
       const determineReleaseVersionSpy = vi
         .spyOn(releaseBranchModule, 'determineReleaseVersion')
         .mockReturnValue('2.0.0');
@@ -150,7 +151,7 @@ describe('release-steps', () => {
         'ordinary',
       );
       expect(ensureReleaseBranchSpy).toHaveBeenCalledWith(project, '2.0.0');
-      expect(prepare).toHaveBeenCalledTimes(1);
+      expect(run).toHaveBeenCalledTimes(1);
       expect(commitAllChangesSpy).toHaveBeenCalledTimes(1);
       expect(commitAllChangesSpy).toHaveBeenCalledWith(
         project.directoryPath,
@@ -163,10 +164,12 @@ describe('release-steps', () => {
       const project = buildMockProject();
       const calls: string[] = [];
       const mode = buildMockMode({
-        prepare: vi.fn().mockImplementation(async () => {
-          calls.push('prepare');
-          return [];
-        }),
+        prepare: buildMockPrepareStep(
+          vi.fn().mockImplementation(async () => {
+            calls.push('prepare');
+            return [];
+          }),
+        ),
       });
       vi.spyOn(
         releaseBranchModule,
@@ -199,9 +202,9 @@ describe('release-steps', () => {
         'start Creating the release branch',
         'ensureReleaseBranch',
         'end Creating the release branch',
-        'start Updating changelogs',
+        'start Preparing the project',
         'prepare',
-        'end Updating changelogs',
+        'end Preparing the project',
         'commitAllChanges /path/to/project Initialize Release 2.0.0',
         'done Committed "Initialize Release 2.0.0"',
       ]);
@@ -233,7 +236,7 @@ describe('release-steps', () => {
       },
     );
 
-    it('ends the "Updating changelogs" step with "Updated changelogs"', async () => {
+    it('ends the prepare step with the result that the mode gives', async () => {
       const { output, stepLines } = buildOutputWithStepLines();
       vi.spyOn(releaseBranchModule, 'determineReleaseVersion').mockReturnValue(
         '2.0.0',
@@ -249,7 +252,7 @@ describe('release-steps', () => {
         output,
       });
 
-      expect(stepLines()[1]).toBe('Updated changelogs');
+      expect(stepLines()[1]).toBe('Prepared the project');
     });
 
     it('prints the notices from prepare after the step', async () => {
@@ -268,7 +271,7 @@ describe('release-steps', () => {
         project: buildMockProject(),
         releaseType: 'ordinary',
         mode: buildMockMode({
-          prepare: vi.fn().mockResolvedValue(notices),
+          prepare: buildMockPrepareStep(vi.fn().mockResolvedValue(notices)),
         }),
         output: buildRecordingOutput(calls),
       });
@@ -276,8 +279,8 @@ describe('release-steps', () => {
       expect(calls).toStrictEqual([
         'start Creating the release branch',
         'end Creating the release branch',
-        'start Updating changelogs',
-        'end Updating changelogs',
+        'start Preparing the project',
+        'end Preparing the project',
         'warnList Title 1: a, b',
         'warnList Title 2: c',
         'commitAllChanges',

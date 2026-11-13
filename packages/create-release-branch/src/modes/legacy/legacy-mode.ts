@@ -42,8 +42,11 @@ export function createLegacyMode({
   return {
     name: 'legacy',
 
-    async prepare() {
-      return await updateChangelogsForChangedPackages({ project, formatter });
+    prepare: {
+      title: 'Updating changelogs',
+      result: 'Updated changelogs',
+      run: async () =>
+        await updateChangelogsForChangedPackages({ project, formatter }),
     },
 
     async listCandidates(choices) {
