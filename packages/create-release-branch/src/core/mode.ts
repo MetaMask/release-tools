@@ -5,7 +5,7 @@ import type { ReleaseChoiceError, ReleaseChoices } from './release-rules.js';
 /**
  * The names of the release modes.
  */
-export const MODE_NAMES = ['legacy'] as const;
+export const MODE_NAMES = ['legacy', 'changesets'] as const;
 
 /**
  * The name of a release mode.

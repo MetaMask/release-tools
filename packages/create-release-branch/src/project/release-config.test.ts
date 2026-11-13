@@ -28,18 +28,21 @@ describe('release-config', () => {
       });
     });
 
-    it('reads the mode from the config file', async () => {
-      await withSandbox(async ({ directoryPath }) => {
-        await fs.promises.writeFile(
-          path.join(directoryPath, 'release.config.json'),
-          JSON.stringify({ mode: 'legacy' }),
-        );
+    it.each(['legacy', 'changesets'])(
+      'reads the mode %j from the config file',
+      async (mode) => {
+        await withSandbox(async ({ directoryPath }) => {
+          await fs.promises.writeFile(
+            path.join(directoryPath, 'release.config.json'),
+            JSON.stringify({ mode }),
+          );
 
-        expect(await readReleaseConfig(directoryPath)).toStrictEqual({
-          mode: 'legacy',
+          expect(await readReleaseConfig(directoryPath)).toStrictEqual({
+            mode,
+          });
         });
-      });
-    });
+      },
+    );
 
     it.each(['unknown', 1, null])('rejects the mode %j', async (mode) => {
       await withSandbox(async ({ directoryPath }) => {
@@ -65,12 +68,15 @@ describe('release-config', () => {
         }),
       ).toStrictEqual({
         title: 'The "mode" in <release.config.json> is not valid: "unknown"',
-        lines: ['Use one of: "legacy".', '(/path/to/release.config.json)'],
+        lines: [
+          'Use one of: "legacy", "changesets".',
+          '(/path/to/release.config.json)',
+        ],
       });
       expect(error.message).toBe(
         [
           'The "mode" in release.config.json is not valid: "unknown"',
-          'Use one of: "legacy".',
+          'Use one of: "legacy", "changesets".',
           '/path/to/release.config.json',
         ].join('\n'),
       );

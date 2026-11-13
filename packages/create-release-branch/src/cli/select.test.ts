@@ -5,11 +5,13 @@ import type { FrontEnd } from '../core/front-end.js';
 import type { Mode } from '../core/mode.js';
 import * as editorFrontEndModule from '../frontends/editor/editor-front-end.js';
 import * as uiFrontEndModule from '../frontends/ui/server.js';
+import * as changesetsModeModule from '../modes/changesets/changesets-mode.js';
 import * as legacyModeModule from '../modes/legacy/legacy-mode.js';
 import { selectFrontEnd, selectMode } from './select.js';
 
 vi.mock('../frontends/editor/editor-front-end');
 vi.mock('../frontends/ui/server');
+vi.mock('../modes/changesets/changesets-mode');
 vi.mock('../modes/legacy/legacy-mode');
 
 describe('select', () => {
@@ -33,6 +35,27 @@ describe('select', () => {
         formatter: 'prettier',
       });
       expect(mode).toBe(legacyMode);
+    });
+
+    it('selectMode returns the Changesets mode', () => {
+      const project = buildMockProject();
+      const changesetsMode = { name: 'changesets' } as Mode<never>;
+      const createChangesetsModeSpy = vi
+        .spyOn(changesetsModeModule, 'createChangesetsMode')
+        .mockReturnValue(changesetsMode);
+
+      const mode = selectMode('changesets', {
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+
+      expect(createChangesetsModeSpy).toHaveBeenCalledWith({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+      expect(mode).toBe(changesetsMode);
     });
   });
 
