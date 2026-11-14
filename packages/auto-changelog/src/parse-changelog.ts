@@ -192,14 +192,15 @@ export function parseChangelog({
   removeEmptyUnreleasedSection?: boolean;
 }): Changelog {
   const changelogLines = changelogContent.split(/(?:\r)?\n/u); // Split on either Windows or Unix line endings
+  const normalizedRepoUrl = repoUrl.replace(/\.git$/u, '');
   const changelog = new Changelog({
-    repoUrl,
+    repoUrl: normalizedRepoUrl,
     tagPrefix,
     ...(formatter !== undefined && { formatter }),
     ...(packageRename !== undefined && { packageRename }),
     removeEmptyUnreleasedSection,
   });
-  const repoName = extractRepoName(repoUrl);
+  const repoName = extractRepoName(normalizedRepoUrl);
 
   let contentfulChangelogLines: string[];
   if (allowMissingUnreleasedSection) {

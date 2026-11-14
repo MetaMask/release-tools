@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - With `--removeEmptyUnreleasedSection`, `--fix` removes an empty `Unreleased` section. This requires `--allowMissingUnreleasedSection`.
 - Add `allowMissingUnreleasedSection` and `removeEmptyUnreleasedSection` options to `parseChangelog` and `validateChangelog`, and a `removeEmptyUnreleasedSection` option to the `Changelog` constructor, so changelogs managed with Changesets no longer need an `Unreleased` section ([#134](https://github.com/MetaMask/release-tools/pull/134))
 
+### Fixed
+
+- Extract and round-trip pull request links when `parseChangelog` receives a repository URL ending in `.git` ([#141](https://github.com/MetaMask/release-tools/pull/141))
+
 ## [7.1.0]
 
 ### Added
