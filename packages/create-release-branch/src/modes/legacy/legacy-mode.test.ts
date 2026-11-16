@@ -10,11 +10,13 @@ import { IncrementableVersionParts } from '../../core/release-rules.js';
 import * as projectModule from '../../project/project.js';
 import * as fsModule from '../../utils/fs.js';
 import { createLegacyMode } from './legacy-mode.js';
+import * as packageChangesModule from './package-changes.js';
 import * as releasePlanModule from './release-plan.js';
 import type { ReleasePlan } from './release-plan.js';
 
 vi.mock('../../project/project');
 vi.mock('../../utils/fs');
+vi.mock('./package-changes');
 vi.mock(import('./release-plan.js'), async (importActual) => ({
   ...(await importActual()),
   planRelease: vi.fn(),
@@ -27,6 +29,78 @@ const notices: Notice[] = [
 
 describe('legacy mode', () => {
   describe('createLegacyMode', () => {
+    it.each([
+      {
+        packagesUsingRootTag: ['a', 'b'],
+        expected: [
+          {
+            title:
+              '2 packages have no tag for their current version, so changes are compared against the root tag v1389.0.0:',
+            items: ['a', 'b'],
+          },
+        ],
+      },
+      {
+        packagesUsingRootTag: ['a'],
+        expected: [
+          {
+            title:
+              '1 package has no tag for its current version, so changes are compared against the root tag v1389.0.0:',
+            items: ['a'],
+          },
+        ],
+      },
+      {
+        packagesUsingRootTag: [],
+        expected: [],
+      },
+    ])(
+      'initialize returns root-tag notices for $packagesUsingRootTag',
+      async ({ packagesUsingRootTag, expected }) => {
+        const project = buildMockProject({
+          rootPackage: buildMockPackage('root', '1389.0.0'),
+        });
+        vi.spyOn(
+          packageChangesModule,
+          'findLegacyPackageChanges',
+        ).mockResolvedValue({
+          changedPackageNames: new Set(),
+          packagesUsingRootTag,
+        });
+        const mode = createLegacyMode({
+          project,
+          defaultBranch: 'main',
+          formatter: 'prettier',
+        });
+
+        expect(await mode.initialize?.()).toStrictEqual(expected);
+      },
+    );
+
+    it('caches legacy package changes across calls', async () => {
+      const project = buildMockProject({
+        workspacePackages: { a: buildMockPackage('a', '1.0.0') },
+      });
+      const findSpy = vi
+        .spyOn(packageChangesModule, 'findLegacyPackageChanges')
+        .mockResolvedValue({
+          changedPackageNames: new Set(['a']),
+          packagesUsingRootTag: [],
+        });
+      const mode = createLegacyMode({
+        project,
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+
+      await mode.initialize?.();
+      await mode.prepare.run();
+      await mode.listCandidates();
+      await mode.apply({ releases: [], data: {} }, '2.0.0');
+
+      expect(findSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('names its prepare step after the changelog update', () => {
       const mode = createLegacyMode({
         project: buildMockProject(),
@@ -39,6 +113,14 @@ describe('legacy mode', () => {
 
     it('updates the changelogs of changed packages when preparing', async () => {
       const project = buildMockProject();
+      const changedPackageNames = new Set(['a']);
+      vi.spyOn(
+        packageChangesModule,
+        'findLegacyPackageChanges',
+      ).mockResolvedValue({
+        changedPackageNames,
+        packagesUsingRootTag: [],
+      });
       const mode = createLegacyMode({
         project,
         defaultBranch: 'main',
@@ -49,10 +131,21 @@ describe('legacy mode', () => {
 
       expect(
         projectModule.updateChangelogsForChangedPackages,
-      ).toHaveBeenCalledWith({ project, formatter: 'prettier' });
+      ).toHaveBeenCalledWith({
+        project,
+        changedPackageNames,
+        formatter: 'prettier',
+      });
     });
 
     it('prepare returns the result and the grouped changelog notices', async () => {
+      vi.spyOn(
+        packageChangesModule,
+        'findLegacyPackageChanges',
+      ).mockResolvedValue({
+        changedPackageNames: new Set(),
+        packagesUsingRootTag: [],
+      });
       vi.mocked(
         projectModule.updateChangelogsForChangedPackages,
       ).mockResolvedValue(notices);
@@ -71,13 +164,18 @@ describe('legacy mode', () => {
     it('lists the legacy candidates for the given choices', async () => {
       const project = buildMockProject({
         workspacePackages: {
-          a: buildMockPackage('a', '1.0.0', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a', '1.0.0'),
           b: buildMockPackage('b', '1.0.0', {
             validatedManifest: { dependencies: { a: '1.0.0' } },
           }),
         },
+      });
+      vi.spyOn(
+        packageChangesModule,
+        'findLegacyPackageChanges',
+      ).mockResolvedValue({
+        changedPackageNames: new Set(['a']),
+        packagesUsingRootTag: [],
       });
       const mode = createLegacyMode({
         project,
@@ -150,6 +248,14 @@ describe('legacy mode', () => {
           return [];
         },
       );
+      const changedPackageNames = new Set(['b']);
+      vi.spyOn(
+        packageChangesModule,
+        'findLegacyPackageChanges',
+      ).mockResolvedValue({
+        changedPackageNames,
+        packagesUsingRootTag: [],
+      });
       const mode = createLegacyMode({
         project,
         defaultBranch: 'main',
@@ -170,6 +276,7 @@ describe('legacy mode', () => {
         projectModule.restoreChangelogsForSkippedPackages,
       ).toHaveBeenCalledWith({
         project,
+        changedPackageNames,
         releaseSpecificationPackages,
         defaultBranch: 'main',
       });
@@ -186,6 +293,13 @@ describe('legacy mode', () => {
     });
 
     it('apply returns the grouped changelog notices', async () => {
+      vi.spyOn(
+        packageChangesModule,
+        'findLegacyPackageChanges',
+      ).mockResolvedValue({
+        changedPackageNames: new Set(),
+        packagesUsingRootTag: [],
+      });
       vi.mocked(releasePlanModule.executeReleasePlan).mockResolvedValue(
         notices,
       );

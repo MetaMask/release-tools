@@ -65,16 +65,8 @@ describe('project', () => {
             ),
           }),
         };
-        const projectTagNames = ['tag1', 'tag2', 'tag3'];
-        vi.when(vi.spyOn(repoModule, 'getTagNames'))
+        vi.when(vi.spyOn(packageModule, 'readPackage'))
           .calledWith(projectDirectoryPath)
-          .thenResolve(projectTagNames);
-        vi.when(vi.spyOn(packageModule, 'readMonorepoRootPackage'))
-          .calledWith({
-            packageDirectoryPath: projectDirectoryPath,
-            projectDirectoryPath,
-            projectTagNames,
-          })
           .thenResolve(rootPackage);
         vi.when(vi.spyOn(actionUtils, 'getWorkspaceLocations'))
           .calledWith(
@@ -83,37 +75,15 @@ describe('project', () => {
             true,
           )
           .thenResolve(['packages/a', 'packages/subpackages/b']);
-        const readMonorepoWorkspacePackageMock = vi.spyOn(
-          packageModule,
-          'readMonorepoWorkspacePackage',
-        );
-        vi.when(readMonorepoWorkspacePackageMock)
-          .calledWith({
-            packageDirectoryPath: path.join(
-              projectDirectoryPath,
-              'packages',
-              'a',
-            ),
-            rootPackageName,
-            rootPackageVersion,
-            projectDirectoryPath,
-            projectTagNames,
-          })
-          .thenResolve({ ...workspacePackages.a, usesRootTag: false });
-        vi.when(readMonorepoWorkspacePackageMock)
-          .calledWith({
-            packageDirectoryPath: path.join(
-              projectDirectoryPath,
-              'packages',
-              'subpackages',
-              'b',
-            ),
-            rootPackageName,
-            rootPackageVersion,
-            projectDirectoryPath,
-            projectTagNames,
-          })
-          .thenResolve({ ...workspacePackages.b, usesRootTag: false });
+        const readPackageMock = vi.spyOn(packageModule, 'readPackage');
+        vi.when(readPackageMock)
+          .calledWith(path.join(projectDirectoryPath, 'packages', 'a'))
+          .thenResolve(workspacePackages.a);
+        vi.when(readPackageMock)
+          .calledWith(
+            path.join(projectDirectoryPath, 'packages', 'subpackages', 'b'),
+          )
+          .thenResolve(workspacePackages.b);
         await mkdir(path.join(projectDirectoryPath, 'packages'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'a'));
         await mkdir(path.join(projectDirectoryPath, 'packages', 'subpackages'));
@@ -126,7 +96,6 @@ describe('project', () => {
           repositoryUrl: projectRepositoryUrl,
           rootPackage,
           workspacePackages,
-          packagesUsingRootTag: [],
           isMonorepo: true,
           releaseVersion: {
             ordinaryNumber: 4,
@@ -136,7 +105,7 @@ describe('project', () => {
       });
     });
 
-    it('lists the packages that use the root tag', async () => {
+    it('preserves workspace order when listing workspace packages', async () => {
       await withSandbox(async (sandbox) => {
         const projectDirectoryPath = sandbox.directoryPath;
         const rootPackage = buildMockPackage('root', '1.0.0', {
@@ -144,48 +113,28 @@ describe('project', () => {
           validatedManifest: { workspaces: ['packages/*'] },
           unvalidatedManifest: { repository: 'https://github.com/org/repo' },
         });
-        vi.spyOn(repoModule, 'getTagNames').mockResolvedValue(['v1.0.0']);
-        vi.spyOn(packageModule, 'readMonorepoRootPackage').mockResolvedValue(
-          rootPackage,
-        );
+        vi.when(vi.spyOn(packageModule, 'readPackage'))
+          .calledWith(projectDirectoryPath)
+          .thenResolve(rootPackage);
         vi.spyOn(actionUtils, 'getWorkspaceLocations').mockResolvedValue([
           'packages/c',
           'packages/a',
           'packages/b',
         ]);
-        const readMonorepoWorkspacePackageMock = vi.spyOn(
-          packageModule,
-          'readMonorepoWorkspacePackage',
-        );
-        for (const [name, usesRootTag] of [
-          ['c', true],
-          ['a', false],
-          ['b', true],
-        ] as const) {
-          vi.when(readMonorepoWorkspacePackageMock)
-            .calledWith({
-              packageDirectoryPath: path.join(
-                projectDirectoryPath,
-                'packages',
-                name,
-              ),
-              rootPackageName: 'root',
-              rootPackageVersion: rootPackage.validatedManifest.version,
-              projectDirectoryPath,
-              projectTagNames: ['v1.0.0'],
-            })
-            .thenResolve({ ...buildMockPackage(name), usesRootTag });
+        const readPackageMock = vi.spyOn(packageModule, 'readPackage');
+        for (const name of ['c', 'a', 'b'] as const) {
+          vi.when(readPackageMock)
+            .calledWith(path.join(projectDirectoryPath, 'packages', name))
+            .thenResolve(buildMockPackage(name));
         }
 
         const project = await readProject(projectDirectoryPath);
 
-        expect(project.packagesUsingRootTag).toStrictEqual(['c', 'b']);
         expect(Object.keys(project.workspacePackages)).toStrictEqual([
           'c',
           'a',
           'b',
         ]);
-        expect(project.workspacePackages.c).not.toHaveProperty('usesRootTag');
       });
     });
   });
@@ -259,15 +208,9 @@ describe('project', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          c: buildMockPackage('c', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
+          c: buildMockPackage('c'),
         },
       });
 
@@ -283,6 +226,7 @@ describe('project', () => {
 
       await restoreChangelogsForSkippedPackages({
         project,
+        changedPackageNames: new Set(['a', 'b', 'c']),
         defaultBranch: 'main',
         releaseSpecificationPackages: {
           a: IncrementableVersionParts.minor,
@@ -303,12 +247,8 @@ describe('project', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: false,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
         },
       });
 
@@ -316,6 +256,7 @@ describe('project', () => {
 
       await restoreChangelogsForSkippedPackages({
         project,
+        changedPackageNames: new Set(['a']),
         defaultBranch: 'main',
         releaseSpecificationPackages: {
           a: IncrementableVersionParts.minor,
@@ -333,12 +274,8 @@ describe('project', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
         },
       });
 
@@ -350,6 +287,7 @@ describe('project', () => {
 
       await restoreChangelogsForSkippedPackages({
         project,
+        changedPackageNames: new Set(['a', 'b']),
         defaultBranch: 'main',
         releaseSpecificationPackages: {
           a: IncrementableVersionParts.minor,
@@ -369,12 +307,8 @@ describe('project', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
         },
       });
 
@@ -384,6 +318,7 @@ describe('project', () => {
 
       const notices = await updateChangelogsForChangedPackages({
         project,
+        changedPackageNames: new Set(['a', 'b']),
         formatter: 'prettier',
       });
 
@@ -405,9 +340,7 @@ describe('project', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: false,
-          }),
+          a: buildMockPackage('a'),
         },
       });
 
@@ -418,6 +351,7 @@ describe('project', () => {
 
       await updateChangelogsForChangedPackages({
         project,
+        changedPackageNames: new Set(),
         formatter: 'prettier',
       });
 
@@ -427,10 +361,7 @@ describe('project', () => {
     it('returns the packages without a changelog or without updates as notices', async () => {
       const project = buildMockProject({
         workspacePackages: Object.fromEntries(
-          ['a', 'b', 'c', 'd'].map((name) => [
-            name,
-            buildMockPackage(name, { hasChangesSinceLatestRelease: true }),
-          ]),
+          ['a', 'b', 'c', 'd'].map((name) => [name, buildMockPackage(name)]),
         ),
       });
       const results = {
@@ -446,6 +377,7 @@ describe('project', () => {
 
       const notices = await updateChangelogsForChangedPackages({
         project,
+        changedPackageNames: new Set(['a', 'b', 'c', 'd']),
         formatter: 'prettier',
       });
 

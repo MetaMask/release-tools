@@ -221,8 +221,7 @@ function findCandidateDependencies(
  * @param choices - The release choices.
  * @param options - The options.
  * @param options.packagesWithChanges - The names of the packages that have
- * changes since their latest release. Defaults to the workspace packages that
- * have changes since their latest release.
+ * changes since their latest release. Defaults to an empty set.
  * @returns The problems with the choices, and the missing dependencies and
  * dependents for each package that has any.
  */
@@ -230,12 +229,7 @@ export function checkReleaseChoices(
   project: Project,
   choices: ReleaseChoices,
   {
-    packagesWithChanges = new Set(
-      Object.keys(project.workspacePackages).filter(
-        (packageName) =>
-          project.workspacePackages[packageName].hasChangesSinceLatestRelease,
-      ),
-    ),
+    packagesWithChanges = new Set(),
   }: { packagesWithChanges?: ReadonlySet<string> } = {},
 ): {
   errors: ReleaseChoiceError[];

@@ -3,7 +3,7 @@ import { isPlainObject } from '@metamask/utils';
 import { resolve } from 'path';
 
 import type { Notice } from '../core/notices.js';
-import { getTagNames, restoreFiles } from '../core/repo.js';
+import { restoreFiles } from '../core/repo.js';
 import type { Formatter, VersionSpecifiers } from '../core/types.js';
 import { fileExists } from '../utils/fs.js';
 import {
@@ -18,8 +18,7 @@ import {
 import {
   ChangelogUpdateResult,
   Package,
-  readMonorepoRootPackage,
-  readMonorepoWorkspacePackage,
+  readPackage,
   updatePackageChangelog,
 } from './package.js';
 
@@ -51,16 +50,12 @@ type ReleaseVersion = {
  * project is a monorepo).
  * @property workspacePackages - Information about packages that are referenced
  * via workspaces (assuming that the project is a monorepo).
- * @property packagesUsingRootTag - The names of the workspace packages that
- * have no tag for their current version, so their changes are found from the
- * tag of the root package, in workspace order.
  */
 export type Project = {
   directoryPath: string;
   repositoryUrl: string;
   rootPackage: Package;
   workspacePackages: Record<string, Package>;
-  packagesUsingRootTag: string[];
   isMonorepo: boolean;
   releaseVersion: ReleaseVersion;
 };
@@ -94,12 +89,7 @@ function examineReleaseVersion(packageVersion: SemVer): ReleaseVersion {
 export async function readProject(
   projectDirectoryPath: string,
 ): Promise<Project> {
-  const tagNames = await getTagNames(projectDirectoryPath);
-  const rootPackage = await readMonorepoRootPackage({
-    packageDirectoryPath: projectDirectoryPath,
-    projectDirectoryPath,
-    projectTagNames: tagNames,
-  });
+  const rootPackage = await readPackage(projectDirectoryPath);
   const repositoryUrl = await getValidRepositoryUrl(
     rootPackage.unvalidatedManifest,
     projectDirectoryPath,
@@ -116,23 +106,14 @@ export async function readProject(
 
   const workspacePackageReads = await Promise.all(
     workspaceDirectories.map(async (directory) => {
-      return await readMonorepoWorkspacePackage({
-        packageDirectoryPath: resolve(projectDirectoryPath, directory),
-        rootPackageName: rootPackage.validatedManifest.name,
-        rootPackageVersion: rootPackage.validatedManifest.version,
-        projectDirectoryPath,
-        projectTagNames: tagNames,
-      });
+      return await readPackage(resolve(projectDirectoryPath, directory));
     }),
   );
   const workspacePackages = workspacePackageReads.reduce<
     Record<string, Package>
-  >((obj, { usesRootTag: _usesRootTag, ...pkg }) => {
+  >((obj, pkg) => {
     return { ...obj, [pkg.validatedManifest.name]: pkg };
   }, {});
-  const packagesUsingRootTag = workspacePackageReads
-    .filter(({ usesRootTag }) => usesRootTag)
-    .map(({ validatedManifest }) => validatedManifest.name);
 
   const isMonorepo = Object.keys(workspacePackages).length > 0;
 
@@ -141,7 +122,6 @@ export async function readProject(
     repositoryUrl,
     rootPackage,
     workspacePackages,
-    packagesUsingRootTag,
     isMonorepo,
     releaseVersion,
   };
@@ -204,28 +184,31 @@ export async function getValidRepositoryUrl(
 }
 
 /**
- * Updates the changelog files of all packages that have changes since latest release to include those changes.
+ * Updates the changelog files of the given changed packages.
  *
  * @param args - The arguments.
  * @param args.project - The project.
+ * @param args.changedPackageNames - The names of the changed packages.
  * @param args.formatter - The formatter to use for formatting the changelog.
  * @returns The packages without a changelog, and the packages with nothing to
  * add to their changelog, as notices.
  */
 export async function updateChangelogsForChangedPackages({
   project,
+  changedPackageNames,
   formatter,
 }: {
   project: Pick<
     Project,
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
+  changedPackageNames: ReadonlySet<string>;
   formatter: Formatter;
 }): Promise<Notice[]> {
   const results = await Promise.all(
     Object.values(project.workspacePackages)
-      .filter(
-        ({ hasChangesSinceLatestRelease }) => hasChangesSinceLatestRelease,
+      .filter(({ validatedManifest: { name } }) =>
+        changedPackageNames.has(name),
       )
       .map(async (pkg) => ({
         name: pkg.validatedManifest.name,
@@ -273,12 +256,13 @@ export function buildChangelogNotices(
 }
 
 /**
- * Restores the changelogs of unreleased packages which has changes since latest release.
+ * Restores the changelogs of unreleased packages that had changes.
  *
  * @param args - The arguments.
  * @param args.project - The project.
  * @param args.project.directoryPath - The path to the project's root directory.
  * @param args.project.workspacePackages - The workspace packages in the project.
+ * @param args.changedPackageNames - The names of the changed packages.
  * @param args.releaseSpecificationPackages - A parsed version of the release spec
  * entered by the user.
  * @param args.defaultBranch - The name of the default branch in the repository.
@@ -286,6 +270,7 @@ export function buildChangelogNotices(
  */
 export async function restoreChangelogsForSkippedPackages({
   project: { directoryPath, workspacePackages },
+  changedPackageNames,
   releaseSpecificationPackages,
   defaultBranch,
 }: {
@@ -293,6 +278,7 @@ export async function restoreChangelogsForSkippedPackages({
     Project,
     'directoryPath' | 'repositoryUrl' | 'workspacePackages'
   >;
+  changedPackageNames: ReadonlySet<string>;
   releaseSpecificationPackages: VersionSpecifiers;
   defaultBranch: string;
 }): Promise<void> {
@@ -304,7 +290,7 @@ export async function restoreChangelogsForSkippedPackages({
           '',
         );
         const shouldInclude =
-          pkg.hasChangesSinceLatestRelease &&
+          changedPackageNames.has(name) &&
           !releaseSpecificationPackages[name] &&
           (await fileExists(pkg.changelogPath));
         return [changelogPath, shouldInclude] as const;

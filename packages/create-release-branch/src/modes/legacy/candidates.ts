@@ -10,11 +10,14 @@ import type { Project } from '../../project/project.js';
  * being released with a major version bump.
  *
  * @param project - Information about the whole project.
+ * @param changedPackageNames - The names of workspace packages that have
+ * changes since their latest release.
  * @param choices - The release choices.
  * @returns The candidates, in the order of the workspace packages.
  */
 export function listLegacyCandidates(
   project: Project,
+  changedPackageNames: ReadonlySet<string>,
   choices: ReleaseChoices = {},
 ): Candidate[] {
   const majorBumpNames = Object.keys(choices).filter(
@@ -39,7 +42,7 @@ export function listLegacyCandidates(
   return Object.values(project.workspacePackages).flatMap<Candidate>((pkg) => {
     const { name, version } = pkg.validatedManifest;
 
-    if (pkg.hasChangesSinceLatestRelease) {
+    if (changedPackageNames.has(name)) {
       return [{ name, currentVersion: version.version, kind: 'changes' }];
     }
 

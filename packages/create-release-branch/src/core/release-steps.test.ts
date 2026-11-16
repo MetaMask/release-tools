@@ -410,9 +410,7 @@ describe('release-steps', () => {
             },
           }),
           changed: buildMockPackage('changed', '1.0.0'),
-          dependent: buildMockPackage('dependent', '1.0.0', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          dependent: buildMockPackage('dependent', '1.0.0'),
         },
       });
       const candidates: Candidate[] = [
