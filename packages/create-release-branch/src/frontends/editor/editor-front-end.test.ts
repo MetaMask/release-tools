@@ -26,6 +26,7 @@ import type {
 } from '../../core/types.js';
 import * as yarnCommands from '../../core/yarn-commands.js';
 import { createLegacyMode } from '../../modes/legacy/legacy-mode.js';
+import * as packageChangesModule from '../../modes/legacy/package-changes.js';
 import * as releasePlanModule from '../../modes/legacy/release-plan.js';
 import type { ReleasePlan } from '../../modes/legacy/release-plan.js';
 import type { Project } from '../../project/project.js';
@@ -35,6 +36,7 @@ import type { Editor } from './editor.js';
 import * as releaseSpecificationModule from './release-specification.js';
 
 vi.mock('./editor');
+vi.mock('../../modes/legacy/package-changes');
 vi.mock('../../modes/legacy/release-plan');
 vi.mock('./release-specification');
 vi.mock('../../core/repo');
@@ -299,6 +301,11 @@ async function setupFollowMonorepoWorkflow({
     updateYarnLockfileSpy,
     deduplicateDependenciesSpy,
   } = getDependencySpies();
+
+  vi.spyOn(packageChangesModule, 'findLegacyPackageChanges').mockResolvedValue({
+    changedPackageNames: new Set(),
+    packagesUsingRootTag: [],
+  });
   const editor = buildMockEditor();
   const releaseSpecificationPath = path.join(
     sandbox.directoryPath,

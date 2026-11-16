@@ -39,9 +39,7 @@ describe('release-rules', () => {
     it('reports a missing direct dependent of a major bump as a finding and an error', () => {
       const project = buildMockProject({
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
           b: buildMockPackage('b', {
             validatedManifest: {
               dependencies: {
@@ -81,9 +79,7 @@ describe('release-rules', () => {
               },
             },
           }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          b: buildMockPackage('b'),
         },
       });
 
@@ -256,9 +252,10 @@ describe('release-rules', () => {
               peerDependencies: { c: '1.0.0' },
             },
           }),
-          b: buildMockPackage('b', { hasChangesSinceLatestRelease: true }),
-          c: buildMockPackage('c', { hasChangesSinceLatestRelease: true }),
+          b: buildMockPackage('b'),
+          c: buildMockPackage('c'),
         },
+        packagesWithChanges: new Set(['b', 'c']),
         choices: { a: 'minor' },
         error: {
           packageName: 'a',
@@ -269,12 +266,17 @@ describe('release-rules', () => {
       },
     ])(
       'reports $rule with its problem and hint',
-      ({ workspacePackages, choices, error }) => {
+      ({
+        workspacePackages,
+        packagesWithChanges = new Set(),
+        choices,
+        error,
+      }) => {
         const project = buildMockProject({ workspacePackages });
 
-        expect(checkReleaseChoices(project, choices).errors).toStrictEqual([
-          error,
-        ]);
+        expect(
+          checkReleaseChoices(project, choices, { packagesWithChanges }).errors,
+        ).toStrictEqual([error]);
       },
     );
   });

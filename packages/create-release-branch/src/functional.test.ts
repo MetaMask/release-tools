@@ -1490,6 +1490,28 @@ __metadata:
       );
     });
 
+    it('releases a project whose git tags do not match its package versions', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        await environment.runCommand('git', ['tag', 'unrelated-tag']);
+
+        const result = await environment.runTool({
+          releaseSpecification: {
+            packages: {
+              a: 'minor',
+              b: 'major',
+              c: 'patch',
+              d: 'minor',
+            },
+          },
+        });
+
+        expect(result.all).not.toContain('no tag for');
+        expect(
+          await environment.readJsonFileWithinPackage('a', 'package.json'),
+        ).toStrictEqual({ name: '@scope/a', version: '1.1.0' });
+      });
+    });
+
     it('fails without changing the working tree if --interactive is given', async () => {
       await withChangesetsMonorepo({}, async (environment) => {
         const headBefore = (

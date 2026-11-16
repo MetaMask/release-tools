@@ -2,7 +2,6 @@ import * as autoChangelog from '@metamask/auto-changelog';
 import fs from 'fs';
 import path from 'path';
 import type { Plugin } from 'prettier';
-import { SemVer } from 'semver';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -15,19 +14,16 @@ import {
   buildMockProject,
   buildMockManifest,
 } from '../../tests/unit/helpers.js';
-import * as repoModule from '../core/repo.js';
 import * as fsModule from '../utils/fs.js';
 import * as packageManifestModule from './package-manifest.js';
 import {
   getFormatter,
-  readMonorepoRootPackage,
-  readMonorepoWorkspacePackage,
+  readPackage,
   updatePackage,
   updatePackageChangelog,
 } from './package.js';
 
 vi.mock('./package-manifest');
-vi.mock('../core/repo');
 vi.mock('@metamask/auto-changelog', async () => ({
   ...(await vi.importActual('@metamask/auto-changelog')),
   updateChangelog: vi.fn(),
@@ -50,18 +46,14 @@ vi.mock('@metamask/auto-changelog', async () => ({
 }));
 
 describe('package', () => {
-  describe('readMonorepoRootPackage', () => {
+  describe('readPackage', () => {
     it('returns information about the file structure of the package located at the given directory', async () => {
       vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
         unvalidated: {},
         validated: buildMockManifest(),
       });
 
-      const pkg = await readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-      });
+      const pkg = await readPackage('/path/to/package');
 
       expect(pkg).toMatchObject({
         directoryPath: '/path/to/package',
@@ -80,337 +72,12 @@ describe('package', () => {
           validated: validatedManifest,
         });
 
-      const pkg = await readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-      });
+      const pkg = await readPackage('/path/to/package');
 
       expect(pkg).toMatchObject({
         unvalidatedManifest,
         validatedManifest,
       });
-    });
-
-    it("flags the package as having been changed since its latest release if a tag matching the current version exists and changes have been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .thenResolve(true);
-
-      const pkg = await readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['v1.0.0'],
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: true,
-      });
-    });
-
-    it("does not flag the package as having been changed since its latest release if a tag matching the current version exists, but changes have not been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .thenResolve(false);
-
-      const pkg = await readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['v1.0.0'],
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: false,
-      });
-    });
-
-    it('flags the package as having been changed since its latest release if a tag matching the current version does not exist', async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          version: new SemVer('1.0.0'),
-        }),
-      });
-
-      const pkg = await readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: true,
-      });
-    });
-
-    it('throws if a tag matching the current version does not exist', async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          name: '@scope/workspace-package',
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith('/path/to/project', '/path/to/package', 'v1.0.0')
-        .thenResolve(true);
-
-      const promiseForPkg = readMonorepoRootPackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['some-tag'],
-      });
-
-      await expect(promiseForPkg).rejects.toThrow(
-        new Error(
-          'The package @scope/workspace-package has no Git tag for its current version 1.0.0 (expected "v1.0.0"), so this tool is unable to determine whether it should be included in this release. You will need to create a tag for this package in order to proceed.',
-        ),
-      );
-    });
-  });
-
-  describe('readMonorepoWorkspacePackage', () => {
-    it('returns information about the file structure of the package located at the given directory', async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest(),
-      });
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        directoryPath: '/path/to/package',
-        manifestPath: '/path/to/package/package.json',
-        changelogPath: '/path/to/package/CHANGELOG.md',
-      });
-    });
-
-    it('returns information about the manifest (in both unvalidated and validated forms)', async () => {
-      const unvalidatedManifest = {};
-      const validatedManifest = buildMockManifest();
-      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
-        .calledWith('/path/to/package/package.json')
-        .thenResolve({
-          unvalidated: unvalidatedManifest,
-          validated: validatedManifest,
-        });
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        unvalidatedManifest,
-        validatedManifest,
-      });
-    });
-
-    it("flags the package as having been changed since its latest release if a tag matching the package name + version exists and changes have been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          name: '@scope/workspace-package',
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith(
-          '/path/to/project',
-          '/path/to/package',
-          '@scope/workspace-package@1.0.0',
-        )
-        .thenResolve(true);
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['@scope/workspace-package@1.0.0'],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: true,
-      });
-    });
-
-    it("does not flag the package as having been changed since its latest release if a tag matching the package name + version exists, but changes have not been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          name: '@scope/workspace-package',
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith(
-          '/path/to/project',
-          '/path/to/package',
-          '@scope/workspace-package@1.0.0',
-        )
-        .thenResolve(false);
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['@scope/workspace-package@1.0.0'],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: false,
-      });
-    });
-
-    it("flags the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, and changes have been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          name: '@scope/workspace-package',
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
-        .thenResolve(true);
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['v5.0.0'],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: true,
-      });
-    });
-
-    it("does not flag the package as having been changed since its latest release if a tag matching 'v' + the root package version exists instead of the package name + version, but changes have not been made to the package's directory since the tag", async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          version: new SemVer('1.0.0'),
-        }),
-      });
-      vi.when(vi.spyOn(repoModule, 'hasChangesInDirectorySinceGitTag'))
-        .calledWith('/path/to/project', '/path/to/package', 'v5.0.0')
-        .thenResolve(false);
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['v5.0.0'],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: false,
-      });
-    });
-
-    it('flags the package as having been changed since its latest release if the project has no tags', async () => {
-      vi.spyOn(packageManifestModule, 'readPackageManifest').mockResolvedValue({
-        unvalidated: {},
-        validated: buildMockManifest({
-          version: new SemVer('1.0.0'),
-        }),
-      });
-
-      const pkg = await readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: [],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      expect(pkg).toMatchObject({
-        hasChangesSinceLatestRelease: true,
-      });
-    });
-
-    it.each([
-      { tagNames: ['v5.0.0'], usesRootTag: true },
-      {
-        tagNames: ['v5.0.0', '@scope/workspace-package@1.0.0'],
-        usesRootTag: false,
-      },
-      { tagNames: [], usesRootTag: false },
-    ])(
-      'flags whether the package uses the root tag when the tags are $tagNames',
-      async ({ tagNames, usesRootTag }) => {
-        vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
-          .calledWith('/path/to/package/package.json')
-          .thenResolve({
-            unvalidated: {},
-            validated: buildMockManifest({
-              name: '@scope/workspace-package',
-              version: new SemVer('1.0.0'),
-            }),
-          });
-
-        const pkg = await readMonorepoWorkspacePackage({
-          packageDirectoryPath: '/path/to/package',
-          projectDirectoryPath: '/path/to/project',
-          projectTagNames: tagNames,
-          rootPackageName: 'root-package',
-          rootPackageVersion: new SemVer('5.0.0'),
-        });
-
-        expect(pkg.usesRootTag).toBe(usesRootTag);
-      },
-    );
-
-    it("throws if the project has tags, but neither a tag matching the package name + version nor 'v' + the root package version exists", async () => {
-      vi.when(vi.spyOn(packageManifestModule, 'readPackageManifest'))
-        .calledWith('/path/to/package/package.json')
-        .thenResolve({
-          unvalidated: {},
-          validated: buildMockManifest({
-            name: '@scope/workspace-package',
-            version: new SemVer('1.0.0'),
-          }),
-        });
-
-      const promise = readMonorepoWorkspacePackage({
-        packageDirectoryPath: '/path/to/package',
-        projectDirectoryPath: '/path/to/project',
-        projectTagNames: ['some-tag'],
-        rootPackageName: 'root-package',
-        rootPackageVersion: new SemVer('5.0.0'),
-      });
-
-      await expect(promise).rejects.toThrow(
-        new Error(
-          'The current release of workspace package @scope/workspace-package, 1.0.0, has no corresponding Git tag "@scope/workspace-package@1.0.0", and the current release of root package root-package, 5.0.0, has no tag "v5.0.0". Hence, this tool is unable to know whether the workspace package changed and should be included in this release. You will need to create tags for both of these packages in order to proceed.',
-        ),
-      );
     });
   });
 

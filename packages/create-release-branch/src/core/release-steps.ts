@@ -1,7 +1,7 @@
 import type { Project } from '../project/project.js';
 import type { CliOutput } from './cli-output.js';
 import type { Mode, ModePlan } from './mode.js';
-import type { Notice } from './notices.js';
+import { printNotices } from './notices.js';
 import {
   determineReleaseVersion,
   ensureReleaseBranch,
@@ -19,18 +19,6 @@ import {
   fixConstraints,
   updateYarnLockfile,
 } from './yarn-commands.js';
-
-/**
- * Prints each notice as one warning with its items.
- *
- * @param output - Where to write user-facing messages.
- * @param notices - The notices.
- */
-function printNotices(output: CliOutput, notices: Notice[]): void {
-  for (const { title, items } of notices) {
-    output.warnList(title, items);
-  }
-}
 
 /**
  * Describes a number of packages, such as "1 package" or "2 packages".

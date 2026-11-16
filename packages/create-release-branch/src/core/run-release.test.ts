@@ -11,6 +11,7 @@ import {
 import { createCliOutput } from './cli-output.js';
 import type { ReleaseContext } from './front-end.js';
 import type { Mode } from './mode.js';
+import type { Notice } from './notices.js';
 import { runRelease } from './run-release.js';
 
 /**
@@ -18,24 +19,25 @@ import { runRelease } from './run-release.js';
  *
  * @param args - The arguments.
  * @param args.isMonorepo - Whether the project has workspaces.
- * @param args.packagesUsingRootTag - The packages that use the root tag.
+ * @param args.initialize - Optional initialize hook for the mode.
  * @param args.stdout - The stream that receives standard out.
  * @param args.stderr - The stream that receives standard error.
  * @returns The release context.
  */
 function buildContext({
   isMonorepo,
-  packagesUsingRootTag = [],
+  initialize,
   stdout,
   stderr = new MockWritable(),
 }: {
   isMonorepo: boolean;
-  packagesUsingRootTag?: string[];
+  initialize?: () => Promise<Notice[]>;
   stdout: MockWritable;
   stderr?: MockWritable;
 }): ReleaseContext {
   const mode: Mode<unknown> = {
     name: 'legacy',
+    ...(initialize === undefined ? {} : { initialize }),
     prepare: buildMockPrepareStep(),
     listCandidates: vi.fn(),
     plan: vi.fn(),
@@ -47,7 +49,6 @@ function buildContext({
     project: buildMockProject({
       isMonorepo,
       rootPackage: buildMockPackage('root', '1389.0.0'),
-      packagesUsingRootTag,
     }),
     mode,
     releaseType: 'ordinary',
@@ -80,44 +81,50 @@ describe('run-release', () => {
       );
     });
 
-    it.each([
-      {
-        packagesUsingRootTag: ['a', 'b'],
-        title:
-          '2 packages have no tag for their current version, so changes are compared against the root tag v1389.0.0:',
-      },
-      {
-        packagesUsingRootTag: ['a'],
-        title:
-          '1 package has no tag for its current version, so changes are compared against the root tag v1389.0.0:',
-      },
-    ])(
-      'prints the packages that use the root tag before running the front end ($packagesUsingRootTag)',
-      async ({ packagesUsingRootTag, title }) => {
-        const stderr = new MockWritable();
-        const context = buildContext({
-          isMonorepo: true,
-          packagesUsingRootTag,
-          stdout: new MockWritable(),
-          stderr,
-        });
-        let stderrWhenRunning = '';
-        const run = vi.fn().mockImplementation(async () => {
-          stderrWhenRunning = writtenText(stderr);
-        });
+    it('prints notices from mode.initialize before running the front end', async () => {
+      const stderr = new MockWritable();
+      const context = buildContext({
+        isMonorepo: true,
+        initialize: async () => [
+          {
+            title: '2 packages have something to report:',
+            items: ['a', 'b'],
+          },
+        ],
+        stdout: new MockWritable(),
+        stderr,
+      });
+      let stderrWhenRunning = '';
+      const run = vi.fn().mockImplementation(async () => {
+        stderrWhenRunning = writtenText(stderr);
+      });
 
-        await runRelease(context, { run });
+      await runRelease(context, { run });
 
-        expect(stderrWhenRunning).toBe(
-          [
-            `${S_BAR}\n${S_WARN}  ${title}\n`,
-            ...packagesUsingRootTag.map((name) => `${S_BAR}    ${name}\n`),
-          ].join(''),
-        );
-      },
-    );
+      expect(stderrWhenRunning).toBe(
+        [
+          `${S_BAR}\n${S_WARN}  2 packages have something to report:\n`,
+          `${S_BAR}    a\n`,
+          `${S_BAR}    b\n`,
+        ].join(''),
+      );
+    });
 
-    it('prints nothing when no package uses the root tag', async () => {
+    it('prints nothing when mode.initialize returns no notices', async () => {
+      const stderr = new MockWritable();
+      const context = buildContext({
+        isMonorepo: true,
+        initialize: async () => [],
+        stdout: new MockWritable(),
+        stderr,
+      });
+
+      await runRelease(context, { run: vi.fn() });
+
+      expect(stderr.data()).toStrictEqual([]);
+    });
+
+    it('prints nothing when mode.initialize is not defined', async () => {
       const stderr = new MockWritable();
       const context = buildContext({
         isMonorepo: true,
