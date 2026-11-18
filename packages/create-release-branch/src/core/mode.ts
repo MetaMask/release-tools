@@ -33,12 +33,24 @@ export type ModePlanResult<Data> =
   | { errors: ReleaseChoiceError[] };
 
 /**
+ * A step that a mode runs on the first run, before the "Initialize Release"
+ * commit.
+ *
+ * @property title - What the step does, shown while it runs.
+ * @property run - Changes the project, and returns what the step did and the
+ * notices to print.
+ */
+export type ModePrepareStep = {
+  title: string;
+  run: () => Promise<{ result: string; notices: Notice[] }>;
+};
+
+/**
  * Decides which packages can be released, plans the release from the release
  * choices, and writes it to the project.
  *
  * @property name - The name of the mode.
- * @property prepare - Changes the project on the first run, before the
- * "Initialize Release" commit, and returns the notices to print.
+ * @property prepare - The step that prepares the project on the first run.
  * @property listCandidates - Lists the packages that can be released, including
  * the packages that the given choices pull in.
  * @property plan - Plans the release from release choices that passed the
@@ -49,7 +61,7 @@ export type ModePlanResult<Data> =
  */
 export type Mode<Data> = {
   name: ModeName;
-  prepare(): Promise<Notice[]>;
+  prepare: ModePrepareStep;
   listCandidates(choices?: ReleaseChoices): Promise<Candidate[]>;
   plan(choices: ReleaseChoices): Promise<ModePlanResult<Data>>;
   apply(plan: ModePlan<Data>, newRootVersion: string): Promise<Notice[]>;

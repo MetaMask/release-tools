@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildMockPackage,
+  buildMockPrepareStep,
   buildMockProject,
   writtenText,
 } from '../../tests/unit/helpers.js';
@@ -35,7 +36,7 @@ function buildContext({
 }): ReleaseContext {
   const mode: Mode<unknown> = {
     name: 'legacy',
-    prepare: vi.fn(),
+    prepare: buildMockPrepareStep(),
     listCandidates: vi.fn(),
     plan: vi.fn(),
     apply: vi.fn(),

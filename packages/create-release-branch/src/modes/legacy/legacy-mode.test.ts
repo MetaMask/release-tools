@@ -27,6 +27,16 @@ const notices: Notice[] = [
 
 describe('legacy mode', () => {
   describe('createLegacyMode', () => {
+    it('names its prepare step after the changelog update', () => {
+      const mode = createLegacyMode({
+        project: buildMockProject(),
+        defaultBranch: 'main',
+        formatter: 'prettier',
+      });
+
+      expect(mode.prepare.title).toBe('Updating changelogs');
+    });
+
     it('updates the changelogs of changed packages when preparing', async () => {
       const project = buildMockProject();
       const mode = createLegacyMode({
@@ -35,14 +45,14 @@ describe('legacy mode', () => {
         formatter: 'prettier',
       });
 
-      await mode.prepare();
+      await mode.prepare.run();
 
       expect(
         projectModule.updateChangelogsForChangedPackages,
       ).toHaveBeenCalledWith({ project, formatter: 'prettier' });
     });
 
-    it('prepare returns the grouped changelog notices', async () => {
+    it('prepare returns the result and the grouped changelog notices', async () => {
       vi.mocked(
         projectModule.updateChangelogsForChangedPackages,
       ).mockResolvedValue(notices);
@@ -52,7 +62,10 @@ describe('legacy mode', () => {
         formatter: 'prettier',
       });
 
-      expect(await mode.prepare()).toStrictEqual(notices);
+      expect(await mode.prepare.run()).toStrictEqual({
+        result: 'Updated changelogs',
+        notices,
+      });
     });
 
     it('lists the legacy candidates for the given choices', async () => {

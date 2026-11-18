@@ -1,6 +1,5 @@
-import { SemVer } from 'semver';
-
 import type { Notice } from '../../core/notices.js';
+import { resolveVersionSpecifier } from '../../core/release-rules.js';
 import type { Formatter, VersionSpecifiers } from '../../core/types.js';
 import { updatePackage } from '../../project/package.js';
 import type { PackageReleasePlan } from '../../project/package.js';
@@ -51,14 +50,10 @@ export function planWorkspacePackageReleases({
     const pkg = project.workspacePackages[packageName];
     const versionSpecifier = releaseSpecificationPackages[packageName];
     const currentVersion = pkg.validatedManifest.version;
-    const newVersion =
-      versionSpecifier instanceof SemVer
-        ? versionSpecifier
-        : new SemVer(currentVersion.toString()).inc(versionSpecifier);
 
     return {
       package: pkg,
-      newVersion: newVersion.toString(),
+      newVersion: resolveVersionSpecifier(currentVersion, versionSpecifier),
     };
   });
 }
