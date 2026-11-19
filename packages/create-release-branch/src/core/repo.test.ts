@@ -7,6 +7,7 @@ import {
   hasChangesInDirectorySinceGitTag,
   getCurrentBranchName,
   branchExists,
+  hasUncommittedChanges,
   restoreFiles,
 } from './repo.js';
 
@@ -215,6 +216,32 @@ describe('repo', () => {
         .thenResolve([]);
 
       expect(await branchExists('/path/to/repo', releaseBranchName)).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('hasUncommittedChanges', () => {
+    it('returns true when git status lists a change under the path', async () => {
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+        .calledWith('git', ['status', '--porcelain', '--', '.changeset'], {
+          cwd: '/path/to/repo',
+        })
+        .thenResolve(['?? .changeset/brave-cats-sing.md']);
+
+      expect(await hasUncommittedChanges('/path/to/repo', '.changeset')).toBe(
+        true,
+      );
+    });
+
+    it('returns false when git status lists no change under the path', async () => {
+      vi.when(vi.spyOn(miscUtils, 'getLinesFromCommand'))
+        .calledWith('git', ['status', '--porcelain', '--', '.changeset'], {
+          cwd: '/path/to/repo',
+        })
+        .thenResolve([]);
+
+      expect(await hasUncommittedChanges('/path/to/repo', '.changeset')).toBe(
         false,
       );
     });
