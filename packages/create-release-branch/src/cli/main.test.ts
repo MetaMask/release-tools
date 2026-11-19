@@ -5,14 +5,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildMockProject, writtenText } from '../../tests/unit/helpers.js';
 import type { CliOutput } from '../core/cli-output.js';
 import type { Mode } from '../core/mode.js';
+import type { VersionSpecifiers } from '../core/types.js';
 import * as editorFrontEndModule from '../frontends/editor/editor-front-end.js';
 import * as uiFrontEndModule from '../frontends/ui/server.js';
+import * as legacyModeModule from '../modes/legacy/legacy-mode.js';
 import * as initialParametersModule from './initial-parameters.js';
 import { main } from './main.js';
 
 vi.mock('./initial-parameters');
 vi.mock('../frontends/editor/editor-front-end');
 vi.mock('../frontends/ui/server');
+vi.mock('../modes/legacy/legacy-mode');
 vi.mock('../dirname', () => ({
   getCurrentDirectoryPath: vi.fn().mockReturnValue('/path/to/somewhere'),
 }));
@@ -27,6 +30,9 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = new MockWritable();
     const stderr = fs.createWriteStream('/dev/null');
+    vi.spyOn(legacyModeModule, 'createLegacyMode').mockReturnValue({
+      name: 'legacy',
+    } as Mode<VersionSpecifiers>);
     vi.spyOn(
       initialParametersModule,
       'determineInitialParameters',
@@ -72,6 +78,9 @@ describe('main', () => {
     const project = buildMockProject({ isMonorepo: true });
     const stdout = fs.createWriteStream('/dev/null');
     const stderr = fs.createWriteStream('/dev/null');
+    vi.spyOn(legacyModeModule, 'createLegacyMode').mockReturnValue({
+      name: 'legacy',
+    } as Mode<VersionSpecifiers>);
     vi.spyOn(
       initialParametersModule,
       'determineInitialParameters',

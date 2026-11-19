@@ -9,6 +9,8 @@ import {
 import type { Project } from '../../project/project.js';
 import { readFile } from '../../utils/fs.js';
 import { listLegacyCandidates } from './candidates.js';
+import { findLegacyPackageChanges } from './package-changes.js';
+import type { LegacyPackageChanges } from './package-changes.js';
 import {
   executeReleasePlan,
   planRelease,
@@ -39,22 +41,50 @@ export function createLegacyMode({
   defaultBranch: string;
   formatter: Formatter;
 }): Mode<VersionSpecifiers> {
+  let changesPromise: Promise<LegacyPackageChanges> | undefined;
+  const getChanges = async (): Promise<LegacyPackageChanges> => {
+    changesPromise ??= findLegacyPackageChanges(project);
+    return changesPromise;
+  };
+
   return {
     name: 'legacy',
 
+    async initialize() {
+      const { packagesUsingRootTag } = await getChanges();
+      if (packagesUsingRootTag.length === 0) {
+        return [];
+      }
+      const rootTag = `v${project.rootPackage.validatedManifest.version.toString()}`;
+      return [
+        {
+          title:
+            packagesUsingRootTag.length === 1
+              ? `1 package has no tag for its current version, so changes are compared against the root tag ${rootTag}:`
+              : `${packagesUsingRootTag.length} packages have no tag for their current version, so changes are compared against the root tag ${rootTag}:`,
+          items: packagesUsingRootTag,
+        },
+      ];
+    },
+
     prepare: {
       title: 'Updating changelogs',
-      run: async () => ({
-        result: 'Updated changelogs',
-        notices: await updateChangelogsForChangedPackages({
-          project,
-          formatter,
-        }),
-      }),
+      run: async () => {
+        const { changedPackageNames } = await getChanges();
+        return {
+          result: 'Updated changelogs',
+          notices: await updateChangelogsForChangedPackages({
+            project,
+            changedPackageNames,
+            formatter,
+          }),
+        };
+      },
     },
 
     async listCandidates(choices) {
-      return listLegacyCandidates(project, choices);
+      const { changedPackageNames } = await getChanges();
+      return listLegacyCandidates(project, changedPackageNames, choices);
     },
 
     async plan(choices) {
@@ -71,8 +101,10 @@ export function createLegacyMode({
     },
 
     async apply({ data: releaseSpecificationPackages }, newRootVersion) {
+      const { changedPackageNames } = await getChanges();
       await restoreChangelogsForSkippedPackages({
         project,
+        changedPackageNames,
         releaseSpecificationPackages,
         defaultBranch,
       });

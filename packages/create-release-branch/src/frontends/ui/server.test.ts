@@ -22,6 +22,7 @@ import { IncrementableVersionParts } from '../../core/release-rules.js';
 import * as repoModule from '../../core/repo.js';
 import * as yarnCommandsModule from '../../core/yarn-commands.js';
 import { createLegacyMode } from '../../modes/legacy/legacy-mode.js';
+import * as packageChangesModule from '../../modes/legacy/package-changes.js';
 import type { Project } from '../../project/project.js';
 import { createApp, createUIFrontEnd } from './server.js';
 
@@ -29,6 +30,7 @@ vi.mock('open');
 vi.mock('../../core/release-branch');
 vi.mock('../../core/repo');
 vi.mock('../../core/yarn-commands');
+vi.mock('../../modes/legacy/package-changes');
 
 /**
  * Builds a project in which package "b" depends on package "a".
@@ -388,6 +390,13 @@ describe('server', () => {
           },
         });
         const apply = vi.fn().mockResolvedValue([]);
+        vi.spyOn(
+          packageChangesModule,
+          'findLegacyPackageChanges',
+        ).mockResolvedValue({
+          changedPackageNames: new Set(['a', 'b', 'c']),
+          packagesUsingRootTag: [],
+        });
         const mode = {
           ...createLegacyMode({
             project,

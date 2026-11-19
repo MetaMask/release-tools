@@ -50,6 +50,8 @@ export type ModePrepareStep = {
  * choices, and writes it to the project.
  *
  * @property name - The name of the mode.
+ * @property initialize - Checks the project before the release starts, and
+ * returns the notices to print.
  * @property prepare - The step that prepares the project on the first run.
  * @property listCandidates - Lists the packages that can be released, including
  * the packages that the given choices pull in.
@@ -61,6 +63,7 @@ export type ModePrepareStep = {
  */
 export type Mode<Data> = {
   name: ModeName;
+  initialize?: () => Promise<Notice[]>;
   prepare: ModePrepareStep;
   listCandidates(choices?: ReleaseChoices): Promise<Candidate[]>;
   plan(choices: ReleaseChoices): Promise<ModePlanResult<Data>>;
