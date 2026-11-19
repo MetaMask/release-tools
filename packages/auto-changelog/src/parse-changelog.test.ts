@@ -49,6 +49,29 @@ function createChangelog(
 }
 
 describe('parseChangelog', () => {
+  it('extracts and round-trips PR links with a .git-suffixed repoUrl', async () => {
+    const changelog = parseChangelog({
+      changelogContent: createChangelog(
+        COMMON_HEADER,
+        outdent`
+          ## [1.0.0]
+          ### Changed
+          - Change something ([#100](${repoUrl}/pull/100))
+        `,
+        COMMON_REFERENCE_LINKS_1,
+      ),
+      repoUrl: `${repoUrl}.git`,
+      shouldExtractPrLinks: true,
+    });
+
+    expect(changelog.getReleaseChanges('1.0.0')).toStrictEqual({
+      Changed: [{ description: 'Change something', prNumbers: ['100'] }],
+    });
+    const output = await changelog.toString();
+    expect(output).toContain(`[#100](${repoUrl}/pull/100)`);
+    expect(output).not.toContain(`${repoUrl}.git/`);
+  });
+
   it('should parse empty changelog', () => {
     const changelog = parseChangelog({
       changelogContent: outdent`
