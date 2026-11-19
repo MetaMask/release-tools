@@ -1,7 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ChangesetSpecification } from '../tests/functional/helpers/local-monorepo.js';
+import type MonorepoEnvironment from '../tests/functional/helpers/monorepo-environment.js';
 import { withMonorepoProjectEnvironment } from '../tests/functional/helpers/with.js';
 import { buildChangelog } from '../tests/helpers.js';
+
+type ChangesetsPackageNickname = 'a' | 'b' | 'c' | 'd' | 'l';
+
+type LockfilePackageEntry = {
+  name: string;
+  directoryPath: string;
+  specifiers?: string[];
+  dependencies?: Record<string, string>;
+};
+
+const REPOSITORY_URL = 'https://github.com/example-org/example-repo';
+
+/**
+ * The pull request of the commit that adds the changesets, which their
+ * changelog entries link to.
+ */
+const SETUP_PULL_REQUEST = 20;
+
+/**
+ * The changeset that releases `@scope/a` and `@scope/d`.
+ */
+const SHARED_CHANGESET: ChangesetSpecification = {
+  id: 'eager-owls-fly',
+  releases: { '@scope/a': 'patch', '@scope/d': 'minor' },
+  summary: '## Fixed\n\n- Fix a and extend d',
+};
 
 describe('create-release-branch (functional)', () => {
   describe('against a monorepo with independent versions', () => {
@@ -1065,4 +1093,685 @@ __metadata:
       );
     });
   });
+
+  describe('against a monorepo using Changesets', () => {
+    it('releases every pending changeset, then commits the release', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        const rootChangelogBefore = await environment.readFile('CHANGELOG.md');
+        const changelogOfLBefore = await environment.readFileWithinPackage(
+          'l',
+          'CHANGELOG.md',
+        );
+
+        await environment.runTool({
+          releaseSpecification: {
+            packages: {
+              a: 'minor',
+              b: 'major',
+              c: 'patch',
+              d: 'minor',
+            },
+          },
+        });
+
+        expect(await environment.readJsonFile('package.json')).toMatchObject({
+          name: '@scope/monorepo',
+          version: '2.0.0',
+        });
+        expect(await environment.readFile('CHANGELOG.md')).toBe(
+          rootChangelogBefore,
+        );
+        expect(
+          await environment.readJsonFileWithinPackage('a', 'package.json'),
+        ).toStrictEqual({ name: '@scope/a', version: '1.1.0' });
+        expect(
+          await environment.readJsonFileWithinPackage('b', 'package.json'),
+        ).toStrictEqual({ name: '@scope/b', version: '2.0.0' });
+        expect(
+          await environment.readJsonFileWithinPackage('c', 'package.json'),
+        ).toStrictEqual({
+          name: '@scope/c',
+          version: '1.0.1',
+          dependencies: { '@scope/b': '^2.0.0' },
+        });
+        expect(
+          await environment.readJsonFileWithinPackage('d', 'package.json'),
+        ).toStrictEqual({ name: '@scope/d', version: '0.2.0' });
+        expect(
+          await environment.readJsonFileWithinPackage('l', 'package.json'),
+        ).toStrictEqual({ name: '@scope/l', version: '1.0.0' });
+
+        expect(
+          await environment.readFileWithinPackage('a', 'CHANGELOG.md'),
+        ).toStrictEqual(
+          buildChangelog(`
+            ## [1.1.0]
+
+            ### Added
+
+            - Add a feature to a (${buildPullRequestLink(SETUP_PULL_REQUEST)})
+
+            ### Fixed
+
+            - Fix a and extend d (${buildPullRequestLink(SETUP_PULL_REQUEST)})
+
+            ## [1.0.0]
+
+            ### Added
+
+            - Initial release (${buildPullRequestLink(0)})
+
+            [1.1.0]: ${REPOSITORY_URL}/compare/@scope/a@1.0.0...@scope/a@1.1.0
+            [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/a@1.0.0
+          `),
+        );
+        expect(
+          await environment.readFileWithinPackage('b', 'CHANGELOG.md'),
+        ).toStrictEqual(
+          buildChangelog(`
+            ## [2.0.0]
+
+            ### Removed
+
+            - **BREAKING:** Remove the old API of b (${buildPullRequestLink(SETUP_PULL_REQUEST)})
+
+            [2.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/b@2.0.0
+          `),
+        );
+        expect(
+          await environment.readFileWithinPackage('c', 'CHANGELOG.md'),
+        ).toStrictEqual(
+          buildChangelog(`
+            ## [1.0.1]
+
+            ### Changed
+
+            - Bump \`@scope/b\` from \`1.0.0\` to \`2.0.0\`
+
+            ## [1.0.0]
+
+            ### Added
+
+            - Initial release (${buildPullRequestLink(0)})
+
+            [1.0.1]: ${REPOSITORY_URL}/compare/@scope/c@1.0.0...@scope/c@1.0.1
+            [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/c@1.0.0
+          `),
+        );
+        expect(
+          await environment.readFileWithinPackage('l', 'CHANGELOG.md'),
+        ).toBe(changelogOfLBefore);
+
+        expect(await listChangesetDirectory(environment)).toStrictEqual([
+          'config.json',
+        ]);
+        expect(await environment.readFile('yarn.lock')).toStrictEqual(
+          buildYarnLockfile([
+            { name: '@scope/a', directoryPath: 'packages/a' },
+            {
+              name: '@scope/b',
+              directoryPath: 'packages/b',
+              specifiers: ['@scope/b@^2.0.0'],
+            },
+            {
+              name: '@scope/c',
+              directoryPath: 'packages/c',
+              dependencies: { '@scope/b': '^2.0.0' },
+            },
+            { name: '@scope/d', directoryPath: 'packages/d' },
+            { name: '@scope/l', directoryPath: 'packages/l' },
+            { name: '@scope/monorepo', directoryPath: '.' },
+          ]),
+        );
+        expect(await readLatestCommitSubjects(environment, 2)).toStrictEqual([
+          'Update Release 2.0.0',
+          'Initialize Release 2.0.0',
+        ]);
+        expect(
+          (
+            await environment.runCommand('git', [
+              'rev-parse',
+              '--abbrev-ref',
+              'HEAD',
+            ])
+          ).stdout,
+        ).toBe('release/2.0.0');
+        expect(await readStatus(environment)).toBe('');
+      });
+    });
+
+    it('keeps the changesets of a package that the release spec leaves out', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        await environment.runTool({
+          releaseSpecification: {
+            packages: {
+              a: 'minor',
+              b: 'major',
+              c: 'patch',
+            },
+          },
+        });
+
+        expect(
+          await environment.readJsonFileWithinPackage('a', 'package.json'),
+        ).toStrictEqual({ name: '@scope/a', version: '1.1.0' });
+        expect(
+          await environment.readJsonFileWithinPackage('d', 'package.json'),
+        ).toStrictEqual({ name: '@scope/d', version: '0.1.0' });
+        expect(
+          await environment.readJsonFileWithinPackage('l', 'package.json'),
+        ).toStrictEqual({ name: '@scope/l', version: '1.0.0' });
+        expect(await listChangesetDirectory(environment)).toStrictEqual([
+          'config.json',
+          'eager-owls-fly.md',
+        ]);
+        expect(await environment.readFile('.changeset/eager-owls-fly.md')).toBe(
+          `---\n"@scope/d": minor\n---\n${SHARED_CHANGESET.summary}`,
+        );
+        expect(await readStatus(environment)).toBe('');
+      });
+    });
+
+    it('stops if the release spec changes the version that the changesets give, and changes no package', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        const changesetsBefore = await listChangesetDirectory(environment);
+
+        const promise = environment.runTool({
+          releaseSpecification: {
+            packages: {
+              a: 'major',
+              b: 'major',
+              c: 'patch',
+              d: 'minor',
+            },
+          },
+        });
+
+        await expect(promise).rejects.toThrow(
+          /is set to major, but the changesets release it as 1\.1\.0/u,
+        );
+        expect(
+          await environment.readJsonFileWithinPackage('a', 'package.json'),
+        ).toStrictEqual({ name: '@scope/a', version: '1.0.0' });
+        expect(await listChangesetDirectory(environment)).toStrictEqual(
+          changesetsBefore,
+        );
+      });
+    });
+
+    it('stops if a released package has entries in Unreleased, and changes no package', async () => {
+      const changelogOfA = buildChangelog(`
+        ## [Unreleased]
+
+        ### Added
+
+        - Add a legacy feature to a (${buildPullRequestLink(1)})
+
+        ## [1.0.0]
+
+        ### Added
+
+        - Initial release (${buildPullRequestLink(0)})
+
+        [Unreleased]: ${REPOSITORY_URL}/compare/@scope/a@1.0.0...HEAD
+        [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/a@1.0.0
+      `);
+      await withChangesetsMonorepo(
+        { files: { 'packages/a/CHANGELOG.md': changelogOfA } },
+        async (environment) => {
+          const changesetsBefore = await listChangesetDirectory(environment);
+
+          const promise = environment.runTool({
+            releaseSpecification: {
+              packages: {
+                a: 'minor',
+                b: 'major',
+                c: 'patch',
+                d: 'minor',
+              },
+            },
+          });
+
+          await expect(promise).rejects.toThrow(
+            /1 changelog has entries in Unreleased:/u,
+          );
+          expect(
+            await environment.readJsonFileWithinPackage('a', 'package.json'),
+          ).toStrictEqual({ name: '@scope/a', version: '1.0.0' });
+          expect(
+            await environment.readFileWithinPackage('a', 'CHANGELOG.md'),
+          ).toBe(changelogOfA);
+          expect(await listChangesetDirectory(environment)).toStrictEqual(
+            changesetsBefore,
+          );
+        },
+      );
+    });
+
+    it('stops before the first commit of the release if the .changeset directory has uncommitted changes', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        await environment.writeFile(
+          '.changeset/quiet-foxes-hide.md',
+          '---\n"@scope/a": patch\n---\n\n## Fixed\n\n- Fix a again\n',
+        );
+
+        const promise = environment.runTool({
+          releaseSpecification: {
+            packages: { a: 'minor', b: 'major', c: 'patch', d: 'minor' },
+          },
+        });
+
+        await expect(promise).rejects.toThrow(
+          /The \.changeset directory has uncommitted changes\./u,
+        );
+        expect(await readLatestCommitSubjects(environment, 1)).toStrictEqual([
+          `Set up the monorepo (#${SETUP_PULL_REQUEST})`,
+        ]);
+        expect(await readStatus(environment)).toBe(
+          '?? .changeset/quiet-foxes-hide.md',
+        );
+      });
+    });
+
+    it('releases a committed changeset whose commit has no pull request number, without a link', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        await environment.writeFile(
+          '.changeset/quiet-foxes-hide.md',
+          '---\n"@scope/a": patch\n---\n\n## Fixed\n\n- Fix a again\n',
+        );
+        await environment.createCommit('Add a changeset for a');
+
+        await environment.runTool({
+          releaseSpecification: {
+            packages: { a: 'minor', b: 'major', c: 'patch', d: 'minor' },
+          },
+        });
+
+        expect(
+          await environment.readFileWithinPackage('a', 'CHANGELOG.md'),
+        ).toContain('- Fix a again\n');
+        expect(await listChangesetDirectory(environment)).toStrictEqual([
+          'config.json',
+        ]);
+      });
+    });
+
+    it('stops with the recovery command if the release cannot be applied, and changes no file', async () => {
+      await withChangesetsMonorepo(
+        {
+          changesets: [
+            {
+              id: 'sharp-bees-buzz',
+              releases: { '@scope/a': 'patch' },
+              summary: 'A summary without a category',
+            },
+          ],
+        },
+        async (environment) => {
+          const changesetsBefore = await listChangesetDirectory(environment);
+
+          const promise = environment.runTool({
+            releaseSpecification: {
+              packages: {
+                a: 'minor',
+                b: 'major',
+                c: 'patch',
+                d: 'minor',
+              },
+            },
+          });
+
+          await expect(promise).rejects.toThrow(
+            /The release could not be applied\./u,
+          );
+          await expect(promise).rejects.toThrow(
+            /git stash --include-untracked/u,
+          );
+          expect(await listChangesetDirectory(environment)).toStrictEqual(
+            changesetsBefore,
+          );
+          expect(
+            await environment.readJsonFileWithinPackage('a', 'package.json'),
+          ).toStrictEqual({ name: '@scope/a', version: '1.0.0' });
+          // The temporary directory keeps the release spec for the next run.
+          expect(await readStatus(environment)).toBe('?? tmp/');
+        },
+      );
+    });
+
+    it('follows the legacy workflow if Changesets mode is not chosen', async () => {
+      await withChangesetsMonorepo(
+        { files: { 'release.config.json': '{}\n' } },
+        async (environment) => {
+          const changesetsBefore = await listChangesetDirectory(environment);
+
+          await environment.runTool({
+            releaseSpecification: {
+              packages: {
+                a: 'minor',
+                l: 'patch',
+              },
+            },
+          });
+
+          expect(
+            await environment.readJsonFileWithinPackage('a', 'package.json'),
+          ).toStrictEqual({ name: '@scope/a', version: '1.1.0' });
+          expect(
+            await environment.readJsonFileWithinPackage('b', 'package.json'),
+          ).toStrictEqual({ name: '@scope/b', version: '1.0.0' });
+          expect(
+            await environment.readFileWithinPackage('a', 'CHANGELOG.md'),
+          ).toStrictEqual(
+            buildChangelog(`
+            ## [Unreleased]
+
+            ## [1.1.0]
+
+            ### Uncategorized
+
+            - Set up the monorepo (${buildPullRequestLink(20)})
+
+            ## [1.0.0]
+
+            ### Added
+
+            - Initial release (${buildPullRequestLink(0)})
+
+            [Unreleased]: ${REPOSITORY_URL}/compare/@scope/a@1.1.0...HEAD
+            [1.1.0]: ${REPOSITORY_URL}/compare/@scope/a@1.0.0...@scope/a@1.1.0
+            [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/a@1.0.0
+          `),
+          );
+          expect(await listChangesetDirectory(environment)).toStrictEqual(
+            changesetsBefore,
+          );
+        },
+      );
+    });
+
+    it('fails without changing the working tree if --interactive is given', async () => {
+      await withChangesetsMonorepo({}, async (environment) => {
+        const headBefore = (
+          await environment.runCommand('git', ['rev-parse', 'HEAD'])
+        ).stdout;
+
+        await expect(
+          environment.runTool({
+            args: ['--interactive'],
+            releaseSpecification: { packages: {} },
+          }),
+        ).rejects.toThrow(
+          /The interactive UI does not support Changesets mode yet\./u,
+        );
+
+        expect(
+          (await environment.runCommand('git', ['rev-parse', 'HEAD'])).stdout,
+        ).toBe(headBefore);
+        expect(
+          (
+            await environment.runCommand('git', [
+              'rev-parse',
+              '--abbrev-ref',
+              'HEAD',
+            ])
+          ).stdout,
+        ).toBe('main');
+        expect(await readStatus(environment)).toBe('');
+      });
+    });
+  });
 });
+
+/**
+ * Builds a link to a pull request of the repository of the functional tests.
+ *
+ * @param pullRequest - The number of the pull request.
+ * @returns The Markdown link.
+ */
+function buildPullRequestLink(pullRequest: number): string {
+  return `[#${pullRequest}](${REPOSITORY_URL}/pull/${pullRequest})`;
+}
+
+/**
+ * Builds a `yarn.lock` skeleton from the given workspace package entries.
+ *
+ * @param entries - The workspace package entries to include in the lockfile.
+ * @returns The content of `yarn.lock`.
+ */
+function buildYarnLockfile(entries: LockfilePackageEntry[]): string {
+  const lines = [
+    '# This file is generated by running "yarn install" inside your project.',
+    '# Manual changes might be lost - proceed with caution!',
+    '',
+    '__metadata:',
+    '  version: 6',
+  ];
+
+  for (const {
+    name,
+    directoryPath,
+    specifiers = [],
+    dependencies,
+  } of entries) {
+    const keys = [...specifiers, `${name}@workspace:${directoryPath}`].join(
+      ', ',
+    );
+    const dependencyLines = dependencies
+      ? [
+          '  dependencies:',
+          ...Object.entries(dependencies).map(
+            ([depName, range]) => `    ${JSON.stringify(depName)}: ${range}`,
+          ),
+        ]
+      : [];
+
+    lines.push(
+      '',
+      `${JSON.stringify(keys)}:`,
+      '  version: 0.0.0-use.local',
+      `  resolution: "${name}@workspace:${directoryPath}"`,
+      ...dependencyLines,
+      '  languageName: unknown',
+      '  linkType: soft',
+    );
+  }
+
+  lines.push('');
+  return lines.join('\n');
+}
+
+/**
+ * Builds a monorepo that uses Changesets and commits all of its files, then
+ * calls the given function with it. The monorepo has:
+ *
+ * - `a`, released by a minor changeset, with an empty `Unreleased` section;
+ * - `b`, released by a major changeset, without a changelog;
+ * - `c`, which depends on `b`, with an empty `Unreleased` section;
+ * - `d`, released with `a` by a shared changeset;
+ * - `l`, which only has hand-written `Unreleased` entries.
+ *
+ * @param options - The options.
+ * @param options.changesets - Changesets to add to the default ones.
+ * @param options.files - Other files to write, by path relative to the root.
+ * @param callback - The function to call with the environment.
+ * @returns Whatever the callback returns.
+ */
+async function withChangesetsMonorepo<CallbackReturnValue>(
+  {
+    changesets = [],
+    files = {},
+  }: {
+    changesets?: ChangesetSpecification[];
+    files?: Record<string, string>;
+  },
+  callback: (
+    environment: MonorepoEnvironment<ChangesetsPackageNickname>,
+  ) => Promise<CallbackReturnValue>,
+): Promise<CallbackReturnValue> {
+  return await withMonorepoProjectEnvironment(
+    {
+      packages: {
+        $root$: {
+          name: '@scope/monorepo',
+          version: '1.0.0',
+          directoryPath: '.',
+        },
+        a: { name: '@scope/a', version: '1.0.0', directoryPath: 'packages/a' },
+        b: { name: '@scope/b', version: '1.0.0', directoryPath: 'packages/b' },
+        c: { name: '@scope/c', version: '1.0.0', directoryPath: 'packages/c' },
+        d: { name: '@scope/d', version: '0.1.0', directoryPath: 'packages/d' },
+        l: { name: '@scope/l', version: '1.0.0', directoryPath: 'packages/l' },
+      },
+      workspaces: {
+        '.': ['packages/*'],
+      },
+      changesets: [
+        {
+          id: 'brave-cats-sing',
+          releases: { '@scope/a': 'minor' },
+          summary: '## Added\n\n- Add a feature to a',
+        },
+        {
+          id: 'calm-dogs-run',
+          releases: { '@scope/b': 'major' },
+          summary: '## Removed\n\n- Remove the old API of b',
+        },
+        SHARED_CHANGESET,
+        ...changesets,
+      ],
+      createInitialCommit: false,
+    },
+    async (environment) => {
+      await environment.writeFileWithinPackage(
+        'a',
+        'CHANGELOG.md',
+        buildChangelog(`
+          ## [Unreleased]
+
+          ## [1.0.0]
+
+          ### Added
+
+          - Initial release (${buildPullRequestLink(0)})
+
+          [Unreleased]: ${REPOSITORY_URL}/compare/@scope/a@1.0.0...HEAD
+          [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/a@1.0.0
+        `),
+      );
+      await environment.updateJsonFileWithinPackage('c', 'package.json', {
+        dependencies: { '@scope/b': '^1.0.0' },
+      });
+      await environment.writeFileWithinPackage(
+        'c',
+        'CHANGELOG.md',
+        buildChangelog(`
+          ## [Unreleased]
+
+          ## [1.0.0]
+
+          ### Added
+
+          - Initial release (${buildPullRequestLink(0)})
+
+          [Unreleased]: ${REPOSITORY_URL}/compare/@scope/c@1.0.0...HEAD
+          [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/c@1.0.0
+        `),
+      );
+      await environment.writeFileWithinPackage(
+        'l',
+        'CHANGELOG.md',
+        buildChangelog(`
+          ## [Unreleased]
+
+          ### Fixed
+
+          - Fix a legacy bug in l (${buildPullRequestLink(2)})
+
+          ## [1.0.0]
+
+          ### Added
+
+          - Initial release (${buildPullRequestLink(0)})
+
+          [Unreleased]: ${REPOSITORY_URL}/compare/@scope/l@1.0.0...HEAD
+          [1.0.0]: ${REPOSITORY_URL}/releases/tag/@scope/l@1.0.0
+        `),
+      );
+      await environment.writeFile(
+        'yarn.lock',
+        buildYarnLockfile([
+          { name: '@scope/a', directoryPath: 'packages/a' },
+          {
+            name: '@scope/b',
+            directoryPath: 'packages/b',
+            specifiers: ['@scope/b@^1.0.0'],
+          },
+          {
+            name: '@scope/c',
+            directoryPath: 'packages/c',
+            dependencies: { '@scope/b': '^1.0.0' },
+          },
+          { name: '@scope/d', directoryPath: 'packages/d' },
+          { name: '@scope/l', directoryPath: 'packages/l' },
+          { name: '@scope/monorepo', directoryPath: '.' },
+        ]),
+      );
+      for (const [filePath, content] of Object.entries({
+        'release.config.json': '{ "mode": "changesets" }\n',
+        ...files,
+      })) {
+        await environment.writeFile(filePath, content);
+      }
+      await environment.createCommit(
+        `Set up the monorepo (#${SETUP_PULL_REQUEST})`,
+      );
+      return await callback(environment);
+    },
+  );
+}
+
+/**
+ * Reads the subjects of the latest commits, newest first.
+ *
+ * @param environment - The environment.
+ * @param count - The number of commits to read.
+ * @returns The subjects.
+ */
+async function readLatestCommitSubjects(
+  environment: MonorepoEnvironment<ChangesetsPackageNickname>,
+  count: number,
+): Promise<string[]> {
+  const { stdout } = await environment.runCommand('git', [
+    'log',
+    '--pretty=%s',
+    `--max-count=${count}`,
+  ]);
+  return stdout.split('\n');
+}
+
+/**
+ * Lists the files in the `.changeset` directory.
+ *
+ * @param environment - The environment.
+ * @returns The file names, sorted.
+ */
+async function listChangesetDirectory(
+  environment: MonorepoEnvironment<ChangesetsPackageNickname>,
+): Promise<string[]> {
+  const { stdout } = await environment.runCommand('ls', ['.changeset']);
+  return stdout.split('\n');
+}
+
+/**
+ * Reads the status of the working tree.
+ *
+ * @param environment - The environment.
+ * @returns The output of `git status --porcelain`.
+ */
+async function readStatus(
+  environment: MonorepoEnvironment<ChangesetsPackageNickname>,
+): Promise<string> {
+  return (await environment.runCommand('git', ['status', '--porcelain']))
+    .stdout;
+}
