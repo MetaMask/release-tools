@@ -5,6 +5,7 @@
     "tsBuildInfoFile": "./.tsc-lint-cache/tsconfig.tsbuildinfo"
   },
   "references": [
+    { "path": "../apply-release-plan/tsconfig.lint.json" },
     { "path": "../auto-changelog/tsconfig.lint.json" },
     { "path": "../changesets-utils/tsconfig.lint.json" }
   ]

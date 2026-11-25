@@ -51,6 +51,7 @@
     "@clack/prompts": "^1.8.1",
     "@manypkg/get-packages": "^3.1.0",
     "@metamask/action-utils": "^2.0.0",
+    "@metamask/apply-release-plan": "^0.0.0",
     "@metamask/auto-changelog": "^7.1.0",
     "@metamask/changesets-utils": "^0.0.0",
     "@metamask/utils": "^11.12.0",

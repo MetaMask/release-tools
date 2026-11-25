@@ -43,6 +43,7 @@ linkStyle default opacity:0.5
   changesets_lint --> changesets_utils;
   changesets_lint --> auto_changelog;
   changesets_utils --> auto_changelog;
+  create_release_branch --> apply_release_plan;
   create_release_branch --> auto_changelog;
   create_release_branch --> changesets_utils;
 ```
