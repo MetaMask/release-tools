@@ -9,7 +9,10 @@ import { npath, ppath } from '@yarnpkg/fslib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
-import { getWorkspacePackageNames } from './workspace-package-names.js';
+import {
+  getWorkspacePackageNames,
+  getWorkspacePackages,
+} from './workspace-package-names.js';
 
 const projectDirectory = npath.toPortablePath('/repo');
 let configuration: Configuration;
@@ -121,5 +124,47 @@ describe('getWorkspacePackageNames', () => {
     findProject.mockRejectedValue(error);
 
     await expect(getWorkspacePackageNames('/repo')).rejects.toBe(error);
+  });
+});
+
+describe('getWorkspacePackages', () => {
+  beforeEach(() => {
+    configuration = Configuration.create(projectDirectory);
+    project = new Project(projectDirectory, { configuration });
+    findConfiguration = vi
+      .spyOn(Configuration, 'find')
+      .mockResolvedValue(configuration);
+    findProject = vi.spyOn(Project, 'find').mockResolvedValue({
+      project,
+      workspace: null,
+      locator: structUtils.makeLocator(
+        structUtils.makeIdent('metamask', 'root'),
+        'workspace:.',
+      ),
+    });
+  });
+
+  it('returns workspace names, relative locations, and privacy flags', async () => {
+    addWorkspace('.', { name: '@metamask/root', private: true });
+    addWorkspace('packages/public', { name: '@metamask/public' });
+    addWorkspace('packages/private', {
+      name: '@metamask/private',
+      private: true,
+    });
+    addWorkspace('packages/unnamed', {});
+
+    expect(await getWorkspacePackages('/repo')).toStrictEqual([
+      { name: '@metamask/root', location: '.', isPrivate: true },
+      {
+        name: '@metamask/public',
+        location: 'packages/public',
+        isPrivate: false,
+      },
+      {
+        name: '@metamask/private',
+        location: 'packages/private',
+        isPrivate: true,
+      },
+    ]);
   });
 });

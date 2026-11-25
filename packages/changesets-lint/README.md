@@ -22,7 +22,15 @@ The command runs linting by default; no `lint` subcommand is needed. Use `--help
 
 The command reads workspace package names through Yarn's APIs, including private packages and the root package if it has a name. It skips unnamed packages and does not need Yarn on `PATH`.
 
-The command validates every regular `.md` file directly in `.changeset/`, except `README.md`, in filename order. It checks package names, bump types, and the summary grammar from `@metamask/changesets-utils`. It does not use Git to select files or inspect nested directories such as `.changeset/pre/`. It does not edit files or check whether a changed package needs a Changeset.
+The command validates every regular `.md` file directly in `.changeset/`, except `README.md`, in filename order. It checks package names, bump types, and the summary grammar from `@metamask/changesets-utils`. It does not use Git to select files or inspect nested directories such as `.changeset/pre/`. It does not edit files.
+
+To check whether changed non-private workspace packages have matching Changesets, run the `check-packages` subcommand:
+
+```sh
+yarn changesets-lint check-packages
+```
+
+Pass `--since <ref>` (defaults to `origin/main`) to choose the base Git ref or commit SHA to compare against `HEAD`. The `check-packages` subcommand ignores `CHANGELOG.md`, `docs/`, `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, and `package.json` edits limited to `version` and `devDependencies`, and verifies that every remaining changed non-private package has a `major`, `minor`, or `patch` entry in an added or modified `.changeset/*.md` file.
 
 The command shows progress on stdout while discovering workspace packages and validating Changeset files. It animates a spinner in interactive terminals and prints progress lines otherwise. A successful run prints `✔ Done!` and exits with status `0`, including when no Changeset files exist.
 

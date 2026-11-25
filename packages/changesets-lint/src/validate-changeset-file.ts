@@ -9,7 +9,7 @@ import { parseChangesetFile } from './parse-changeset-file.js';
 
 type SupportedBumpType = Exclude<VersionType, 'none'>;
 
-const VALID_BUMP_TYPES = new Set<string>([
+export const VALID_BUMP_TYPES = new Set<string>([
   'major',
   'minor',
   'patch',

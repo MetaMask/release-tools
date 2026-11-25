@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getChangesetPaths } from './changeset-paths.js';
+import { getChangesetPaths, isChangesetPath } from './changeset-paths.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -65,5 +65,17 @@ describe('getChangesetPaths', () => {
     await expect(getChangesetPaths(repositoryDirectory)).rejects.toMatchObject({
       code: 'ENOTDIR',
     });
+  });
+});
+
+describe('isChangesetPath', () => {
+  it.each([
+    ['.changeset/alpha.md', true],
+    ['.changeset/README.md', false],
+    ['.changeset/config.json', false],
+    ['.changeset/nested/hidden.md', false],
+    ['outside.md', false],
+  ])('returns %s for %s', (filePath, expected) => {
+    expect(isChangesetPath(filePath)).toBe(expected);
   });
 });
