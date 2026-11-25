@@ -90,9 +90,9 @@ main() {
   fi
 
   if should_validate_as_release_candidate "${branch_name}" "${current_version}" "${base_version}"; then
-    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" --rc "$@"
+    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" --rc --allowMissingUnreleasedSection --removeEmptyUnreleasedSection "$@"
   else
-    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" "$@"
+    yarn auto-changelog validate --formatter oxfmt --tag-prefix "${package_name}@" --allowMissingUnreleasedSection --removeEmptyUnreleasedSection "$@"
   fi
 }
 

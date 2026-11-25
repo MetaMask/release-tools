@@ -1,0 +1,62 @@
+name: Check Changesets
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  check-changesets:
+    name: Check changesets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HAS_SKIP_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') || contains(github.event.pull_request.labels.*.name, 'no-changeset') }}
+    steps:
+      - name: Skip check if label is present
+        if: env.HAS_SKIP_LABEL == 'true'
+        run: echo "Skip label found; skipping changeset check."
+
+      - name: Checkout repository
+        if: env.HAS_SKIP_LABEL != 'true'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Get merge base
+        id: merge-base
+        if: env.HAS_SKIP_LABEL != 'true'
+        shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          MERGE_BASE=$(git merge-base HEAD "refs/remotes/origin/$BASE_REF")
+          echo "merge-base=$MERGE_BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Check if the pull request is a release
+        id: is-release
+        if: env.HAS_SKIP_LABEL != 'true'
+        uses: MetaMask/action-is-release@v2
+        with:
+          commit-starts-with: ${{ vars.RELEASE_COMMIT_PREFIX }}
+          commit-message: ${{ github.event.pull_request.title }}
+          before: ${{ steps.merge-base.outputs.merge-base }}
+          skip-checkout: true
+
+      - name: Set up environment
+        if: env.HAS_SKIP_LABEL != 'true' && steps.is-release.outputs.IS_RELEASE != 'true'
+        uses: MetaMask/action-checkout-and-setup@v3
+        with:
+          is-high-risk-environment: false
+          persist-credentials: false
+
+      - name: Check that changed packages have changesets
+        if: env.HAS_SKIP_LABEL != 'true' && steps.is-release.outputs.IS_RELEASE != 'true'
+        env:
+          MERGE_BASE: ${{ steps.merge-base.outputs.merge-base }}
+        run: yarn check:changesets --since "$MERGE_BASE"

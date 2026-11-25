@@ -1,3 +1,4 @@
 {
-  "versioningStrategy": "independent"
+  "versioningStrategy": "independent",
+  "mode": "changesets"
 }

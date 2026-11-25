@@ -1014,7 +1014,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@metamask/changesets-changelog@workspace:packages/changesets-changelog":
+"@metamask/changesets-changelog@npm:^0.0.0, @metamask/changesets-changelog@workspace:packages/changesets-changelog":
   version: 0.0.0-use.local
   resolution: "@metamask/changesets-changelog@workspace:packages/changesets-changelog"
   dependencies:
@@ -1034,7 +1034,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@metamask/changesets-lint@workspace:packages/changesets-lint":
+"@metamask/changesets-lint@npm:^0.0.0, @metamask/changesets-lint@workspace:packages/changesets-lint":
   version: 0.0.0-use.local
   resolution: "@metamask/changesets-lint@workspace:packages/changesets-lint"
   dependencies:
@@ -1215,8 +1215,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@metamask/release-tools@workspace:."
   dependencies:
+    "@changesets/cli": "npm:3.0.3"
     "@lavamoat/allow-scripts": "npm:^5.1.0"
     "@lavamoat/preinstall-always-fail": "npm:^2.1.0"
+    "@metamask/changesets-changelog": "npm:^0.0.0"
+    "@metamask/changesets-lint": "npm:^0.0.0"
     "@metamask/create-release-branch": "npm:^4.2.4"
     "@metamask/oxlint-config": "npm:^0.1.1"
     "@metamask/oxlint-config-browser": "npm:^0.1.1"

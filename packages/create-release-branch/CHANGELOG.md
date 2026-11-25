@@ -5,29 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- Add Changesets mode ([#170](https://github.com/MetaMask/release-tools/pull/170))
-  - Use pending changesets to populate released packages and their new versions in the release spec and update changelogs automatically.
-  - Choose it by setting `"mode": "changesets"` in a project's `release.config.json`.
-  - For more, read `docs/setup.md`.
-- Read the release mode from an optional `mode` property in `release.config.json` ([#165](https://github.com/MetaMask/release-tools/pull/165))
-
-### Changed
-
-- Show colors and progress spinners in the CLI output ([#154](https://github.com/MetaMask/release-tools/pull/154))
-- Show the CLI output in one block, with a spinner for long steps and the output of a failing Yarn step ([#159](https://github.com/MetaMask/release-tools/pull/159))
-- Show errors without a stack trace (set `DEBUG=create-release-branch:*` to see it), with their causes, and list release spec problems by line and package ([#160](https://github.com/MetaMask/release-tools/pull/160))
-- Group repeated warnings (packages without a tag, changelogs without updates) into one warning with a list of packages ([#162](https://github.com/MetaMask/release-tools/pull/162))
-- Start the CLI output with a header, end each step with its result, and end the run with a summary of the released packages ([#163](https://github.com/MetaMask/release-tools/pull/163))
-
-### Fixed
-
-- Open the editor on the release spec without a shell, so paths with spaces or shell characters are passed as-is ([#156](https://github.com/MetaMask/release-tools/pull/156))
-- Support editor commands with arguments in `EDITOR`, such as `idea --wait` ([#158](https://github.com/MetaMask/release-tools/pull/158))
-
 ## [4.2.4]
 
 ### Changed
@@ -45,6 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump `@metamask/auto-changelog` from `^6.1.0` to `^7.0.0` ([#103](https://github.com/MetaMask/release-tools/pull/103), [#85](https://github.com/MetaMask/release-tools/pull/85))
 - This package was migrated from [`MetaMask/create-release-branch`](https://github.com/MetaMask/create-release-branch). See [the original changelog](https://github.com/MetaMask/create-release-branch/blob/v4.2.2/CHANGELOG.md) for changes prior to the migration.
 
-[Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/create-release-branch@4.2.4...HEAD
 [4.2.4]: https://github.com/MetaMask/release-tools/compare/@metamask/create-release-branch@4.2.3...@metamask/create-release-branch@4.2.4
 [4.2.3]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/create-release-branch@4.2.3

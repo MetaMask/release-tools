@@ -11,6 +11,8 @@ const config: KnipConfig = {
       project: ['scripts/**/*.ts', 'tests/**/*.ts', '*.{js,cjs,mjs,ts}'],
       ignore: ['scripts/create-package/package-template/**'],
       ignoreDependencies: [
+        // Used manually by contributors to generate changeset files.
+        '@changesets/cli',
         // Installed for the `plugin-allow-scripts` Yarn plugin and the
         // `preinstall` lifecycle guard, neither of which knip can see.
         '@lavamoat/allow-scripts',
