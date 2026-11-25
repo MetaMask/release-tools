@@ -1,32 +1,41 @@
 # Updating changelogs
 
-Each package in this repo has a file called `CHANGELOG.md` which is used to record consumer-facing changes that have been published over time. This file is useful for other engineers who are upgrading to new versions of packages so that they know how to use new features they are expecting, they know when bugs have been addressed, and they understand how to adapt to breaking changes (if any). All changelogs follow the ["Keep a Changelog"](https://keepachangelog.com/) specification (enforced by `@metamask/auto-changelog`).
+Each package in this repo has a `CHANGELOG.md` file that records consumer-facing changes over time. It helps consumers understand new features, bug fixes, and breaking changes when upgrading. All changelogs follow the ["Keep a Changelog"](https://keepachangelog.com/) specification (validated by `@metamask/auto-changelog`).
 
-As you make changes to packages, make sure to update their changelogs in the same branch.
+This repository uses [Changesets](https://github.com/changesets/changesets) to manage package versions and changelogs. **Do not edit `CHANGELOG.md` directly in feature pull requests.** Instead, add a changeset file in `.changeset/` on the same branch.
 
-We will offer more guidance here in the future, but in general:
+## Adding a changeset
 
-- Place new entries under the "Unreleased" section.
-- Place changes into categories. Consult the ["Keep a Changelog"](https://keepachangelog.com/en/1.1.0/#how) specification for the list.
-- Highlight breaking changes by prefixing them with `**BREAKING:**`.
-- Omit non-consumer facing changes from the changelog.
-- Do not simply reuse the commit message, but describe exact changes to the API or usable surface area of the project.
-- Use a list nested under a changelog entry to enumerate more details about a change if need be.
-- Include links to pull request(s) that introduced each change. (Most likely, this is the very same pull request in which you are updating the changelog.)
-- Combine like changes from multiple pull requests into a single changelog entry if necessary.
-- Split disparate changes from the same pull request into multiple entries if necessary.
-- Omit reverted changes from the changelog.
+1. Run `yarn changeset` from the repository root.
+2. Select the packages affected by your change and choose the SemVer bump type (`patch`, `minor`, or `major`).
+3. Write the summary using one level-two [Keep a Changelog](https://keepachangelog.com/en/1.1.0/#how) category heading followed by one top-level bullet:
 
-## Generating changelog entries for dependency bumps
+   ```markdown
+   ## Added
 
-Recording dependency bumps within package changelogs can be tedious. You can have these entries generated for you instead of writing them by hand:
+   - Add support for custom categories
+     - Optional nested details go here
+   ```
 
-1. Post a comment on your pull request with the text `@metamaskbot update-changelogs`.
-2. The `Update Changelogs` GitHub action reacts to your comment with a 👍 and kicks off.
-3. After a few minutes you will see a new comment saying either that the changelogs were updated and pushed to your branch, or that no changes were needed. If validation errors remain that the action cannot fix, the comment links to the workflow run so you can see them.
+   Supported category headings are `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, and `Security`.
 
-A few things to know:
+4. Validate your changeset files by running:
 
-- This works on any pull request, not just release pull requests. Release pull requests also get this automatically when they are opened.
-- If the action pushes a commit to your branch, remember to pull it locally before you push again.
-- This only works on pull requests opened from a branch in this repo. Pull requests from forks are skipped, so if you are an outside contributor you will need to update changelogs by hand.
+   ```sh
+   yarn lint:changesets
+   ```
+
+   You can also verify that every changed package has a changeset against `origin/main` by running:
+
+   ```sh
+   yarn check:changesets
+   ```
+
+## Writing good changeset summaries
+
+- Describe exact changes to the public API or consumer-facing behavior rather than copying commit messages.
+- Use nested bullets under the main bullet when you need to list extra details.
+- Omit non-consumer-facing changes (such as test updates, internal scripts, or contributor docs). If a PR touches a package without consumer-facing changes, add the `no-changelog` (or `no-changeset`) label instead of adding a changeset.
+- Do not add pull request links to the summary. `@metamask/changesets-changelog` adds the PR link automatically from the commit at release time.
+- Do not prefix entries with `**BREAKING:**` manually. Choose a `major` bump in the changeset, and `@metamask/changesets-changelog` adds the prefix automatically when generating `CHANGELOG.md`.
+- Dependency bumps between workspace packages are recorded in `CHANGELOG.md` automatically at release time.
