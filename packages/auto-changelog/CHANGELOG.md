@@ -5,15 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- Add `--allowMissingUnreleasedSection` and `--removeEmptyUnreleasedSection` options to the `validate` command for changelogs managed with Changesets ([#134](https://github.com/MetaMask/release-tools/pull/134))
-  - With `--allowMissingUnreleasedSection`, the `Unreleased` section is optional.
-  - With `--removeEmptyUnreleasedSection`, `--fix` removes an empty `Unreleased` section. This requires `--allowMissingUnreleasedSection`.
-- Add `allowMissingUnreleasedSection` and `removeEmptyUnreleasedSection` options to `parseChangelog` and `validateChangelog`, and a `removeEmptyUnreleasedSection` option to the `Changelog` constructor, so changelogs managed with Changesets no longer need an `Unreleased` section ([#134](https://github.com/MetaMask/release-tools/pull/134))
-
 ## [7.1.0]
 
 ### Added
@@ -43,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This package is now ESM-only, but can still be used in CommonJS projects via `require(esm)` in modern Node.js versions (22+), or dynamic imports in older Node.js versions.
 - This package was migrated from [`MetaMask/auto-changelog`](https://github.com/MetaMask/auto-changelog). See [the original changelog](https://github.com/MetaMask/auto-changelog/blob/v6.2.1/CHANGELOG.md) for changes prior to the migration.
 
-[Unreleased]: https://github.com/MetaMask/release-tools/compare/@metamask/auto-changelog@7.1.0...HEAD
 [7.1.0]: https://github.com/MetaMask/release-tools/compare/@metamask/auto-changelog@7.0.1...@metamask/auto-changelog@7.1.0
 [7.0.1]: https://github.com/MetaMask/release-tools/compare/@metamask/auto-changelog@7.0.0...@metamask/auto-changelog@7.0.1
 [7.0.0]: https://github.com/MetaMask/release-tools/releases/tag/@metamask/auto-changelog@7.0.0

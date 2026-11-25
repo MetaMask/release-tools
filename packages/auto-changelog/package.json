@@ -38,7 +38,6 @@
     "build:clean": "yarn build:only-clean && yarn build",
     "build:docs": "typedoc",
     "build:only-clean": "rimraf './dist' './tsconfig.build.tsbuildinfo'",
-    "changelog:update": "../../scripts/update-changelog.sh @metamask/auto-changelog",
     "changelog:validate": "../../scripts/validate-changelog.sh @metamask/auto-changelog",
     "since-latest-release": "../../scripts/since-latest-release.sh",
     "test": "vitest",

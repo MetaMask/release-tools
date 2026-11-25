@@ -167,8 +167,8 @@ module.exports = defineConfig({
         // No non-root packages may have a "prepack" script.
         workspace.unset('scripts.prepack');
 
-        // All non-root package must have valid "changelog:update" and
-        // "changelog:validate" scripts.
+        // All non-root packages must have a valid "changelog:validate" script
+        // and must not have a "changelog:update" script.
         expectCorrectWorkspaceChangelogScripts(workspace);
 
         // All non-root packages must have a valid "since-latest-release" script.
@@ -581,45 +581,26 @@ function expectCorrectWorkspaceExports(workspace) {
 }
 
 /**
- * Expect that the workspace has "changelog:update" and "changelog:validate"
- * scripts, and that these package scripts call a common script by passing the
- * name of the package as the first argument.
+ * Expect that the workspace has a "changelog:validate" script that calls
+ * `../../scripts/validate-changelog.sh` by passing the name of the package as
+ * the first argument, and does not have a "changelog:update" script.
  *
  * @param {Workspace} workspace - The workspace to check.
  */
 function expectCorrectWorkspaceChangelogScripts(workspace) {
-  /**
-   * @type {Record<string, { expectedStartString: string, script: string, match: RegExpMatchArray | null }>}
-   */
-  const scripts = ['update', 'validate'].reduce((obj, variant) => {
-    const expectedStartString = `../../scripts/${variant}-changelog.sh ${workspace.manifest.name}`;
-    /** @type {string} */
-    const script = workspace.manifest.scripts[`changelog:${variant}`] ?? '';
-    const match = script.match(new RegExp(`^${expectedStartString}(.*)$`, 'u'));
-    return { ...obj, [variant]: { expectedStartString, script, match } };
-  }, {});
+  workspace.unset('scripts.changelog:update');
 
-  if (
-    scripts.update.match &&
-    scripts.validate.match &&
-    scripts.update.match[1] !== scripts.validate.match[1]
-  ) {
+  const expectedStartString = `../../scripts/validate-changelog.sh ${workspace.manifest.name}`;
+  /** @type {string} */
+  const script = workspace.manifest.scripts['changelog:validate'] ?? '';
+  const match = script.match(new RegExp(`^${expectedStartString}(.*)$`, 'u'));
+
+  expectWorkspaceField(workspace, 'scripts.changelog:validate');
+
+  if (script !== '' && !match) {
     workspace.error(
-      'Expected package\'s "changelog:validate" and "changelog:update" scripts to pass the same arguments to their underlying scripts',
+      `Expected package's "changelog:validate" script to be or start with "${expectedStartString}", but it was "${script}".`,
     );
-  }
-
-  for (const [
-    variant,
-    { expectedStartString, script, match },
-  ] of Object.entries(scripts)) {
-    expectWorkspaceField(workspace, `scripts.changelog:${variant}`);
-
-    if (script !== '' && !match) {
-      workspace.error(
-        `Expected package's "changelog:${variant}" script to be or start with "${expectedStartString}", but it was "${script}".`,
-      );
-    }
   }
 }
 
