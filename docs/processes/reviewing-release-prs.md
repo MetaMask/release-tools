@@ -10,11 +10,11 @@ This document shows you how to do that.
 - For all packages being published:
   - [ ] Does the new version string sufficiently communicate the impact of changes?
   - [ ] Are there any changelog entries that do not need to be listed?
-  - [ ] Are there any changelog entries that are placed in the wrong category (including "Unreleased")?
+  - [ ] Are there any changelog entries that are placed in the wrong category?
   - [ ] Do all changelog entries explain the changes in a clear and straightforward manner and detail exact changes to the package's interface?
   - [ ] Do all change entries include a link to the pull requests where that change was made?
   - [ ] Are there any changes since the package's previous release that are not reflected in the changelog?
-  - [ ] Have there been any changes merged to `main` while the release PR has been open that have not been added to a changelog?
+  - [ ] Have there been any changes merged to `main` while the release PR has been open that have not been included in the release?
   - [ ] Are there any bumps to workspace dependencies made within the release PR that have not been captured in the changelog?
 
 ## 1. Review packages being published
@@ -158,13 +158,12 @@ notify the creator of the release PR, offering a suggestion as necessary.
 
 ## 6. Add missing changelog entries
 
-Finally, look over the changelogs one more time to ensure that they aren't missing anything. There are three ways that entries could get omitted:
+Finally, look over the changelogs one more time to ensure that they aren't missing anything. There are two common ways that entries could get omitted:
 
-1. Although the `create-release-branch` tool helps to autopopulate changelog entries, it does not remove the human element entirely, and it is possible that the creator of the release PR may have inadvertently removed some entries before pushing up the branch.
+1. Although `create-release-branch` generates changelog entries from `.changeset/*.md` files (including workspace dependency bumps), a PR might have landed without a changeset or the release PR author might have edited entries manually.
 2. While a release PR is open, pull requests may be merged to `main` which make more changes to packages that are already planned for release.
-3. Finally, if the version of a package in the monorepo is updated, the manifests of any dependents of that package will automatically be updated so that they match the same version. This is unusual because bumps to dependencies usually happen _before_ a release PR, but is essential to document these bumps in the changelogs.
 
-Therefore, review the [changes committed since the previous release](#review-changes) and look for changed versions of workspace dependencies. If any are missing from changelogs, notify the creator of the release PR so that they can add them, offering a suggestion as appropriate.
+Therefore, review the [changes committed since the previous release](#b-review-commits) and confirm every consumer-facing change and workspace dependency bump is reflected in the changelogs. If anything is missing, notify the creator of the release PR so they can add it.
 
 ## 7. Approve the release
 

@@ -33,14 +33,13 @@ Before merging a PR that introduces breaking changes, it is important to ensure 
 
 ### 1. Document breaking changes
 
-To inform other maintainers now and in the future, make sure that breaking changes are documented in the changelog:
+To inform other maintainers now and in the future, document breaking changes in a changeset file with a `major` bump (run `yarn changeset`):
 
-1. Be explicit in your changelog entries about which classes, functions, types, etc. are affected.
-2. Prefix entries with `**BREAKING:**`.
-3. If relevant, provide details on how consuming code can adapt to the changes safely.
-4. Move entries for breaking changes above all other kinds of changes within the same section.
+1. Be explicit in your changeset summary about which classes, functions, types, etc. are affected.
+2. If relevant, provide details on how consuming code can adapt to the changes safely using nested bullets.
+3. Do not prefix the entry with `**BREAKING:**` manually; `@metamask/changesets-changelog` adds it automatically for `major` bumps when generating `CHANGELOG.md`.
 
-For example:
+For example, in the generated `CHANGELOG.md`, breaking changes appear like this:
 
 ```markdown
 ### Changed
