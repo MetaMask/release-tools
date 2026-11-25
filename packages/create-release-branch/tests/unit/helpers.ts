@@ -38,13 +38,7 @@ type Unrequire<Type, Keys extends keyof Type> = Omit<Type, Keys> & {
 };
 
 type MockPackageOverrides = Omit<
-  Unrequire<
-    Package,
-    | 'directoryPath'
-    | 'manifestPath'
-    | 'changelogPath'
-    | 'hasChangesSinceLatestRelease'
-  >,
+  Unrequire<Package, 'directoryPath' | 'manifestPath' | 'changelogPath'>,
   'unvalidatedManifest' | 'validatedManifest'
 > & {
   validatedManifest?: Omit<
@@ -68,7 +62,6 @@ export function buildMockProject(overrides: Partial<Project> = {}): Project {
     repositoryUrl: 'https://repo.url',
     rootPackage: buildMockPackage('root'),
     workspacePackages: {},
-    packagesUsingRootTag: [],
     isMonorepo: false,
     releaseVersion: {
       ordinaryNumber: 1,
@@ -125,7 +118,6 @@ export function buildMockPackage(
     directoryPath = `/path/to/packages/${name}`,
     manifestPath = path.join(directoryPath, 'package.json'),
     changelogPath = path.join(directoryPath, 'CHANGELOG.md'),
-    hasChangesSinceLatestRelease = false,
   } = overrides;
 
   return {
@@ -139,7 +131,6 @@ export function buildMockPackage(
     }),
     manifestPath,
     changelogPath,
-    hasChangesSinceLatestRelease,
   };
 }
 

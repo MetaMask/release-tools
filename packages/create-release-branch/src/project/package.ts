@@ -6,13 +6,10 @@ import {
 } from '@metamask/auto-changelog';
 import { assertExhaustive } from '@metamask/utils';
 import path from 'path';
-import { format } from 'util';
 
-import { hasChangesInDirectorySinceGitTag } from '../core/repo.js';
 import type { Formatter } from '../core/types.js';
 import { readFile, writeFile, writeJsonFile } from '../utils/fs.js';
 import { isErrorWithCode } from '../utils/misc-utils.js';
-import { SemVer } from '../utils/semver.js';
 import {
   readPackageManifest,
   UnvalidatedPackageManifest,
@@ -29,7 +26,8 @@ const CHANGELOG_FILE_NAME = 'CHANGELOG.md';
  * @property directoryPath - The path to the directory where the package is
  * located.
  * @property manifestPath - The path to the manifest file.
- * @property manifest - The data extracted from the manifest.
+ * @property unvalidatedManifest - The raw data extracted from the manifest.
+ * @property validatedManifest - The validated data extracted from the manifest.
  * @property changelogPath - The path to the changelog file (which may or may
  * not exist).
  */
@@ -39,7 +37,6 @@ export type Package = {
   unvalidatedManifest: UnvalidatedPackageManifest;
   validatedManifest: ValidatedPackageManifest;
   changelogPath: string;
-  hasChangesSinceLatestRelease: boolean;
 };
 
 /**
@@ -62,86 +59,18 @@ export type PackageReleasePlan = {
 export type ChangelogUpdateResult = 'updated' | 'no-changelog' | 'no-updates';
 
 /**
- * Generates the possible Git tag name for the root package of a monorepo. The
- * only tag name in use at this time is "v" + the package version.
+ * Collects information about a package located at the given directory.
  *
- * @param packageVersion - The version of the package.
- * @returns An array of possible release tag names.
- */
-function generateMonorepoRootPackageReleaseTagName(
-  packageVersion: string,
-): string {
-  return `v${packageVersion}`;
-}
-
-/**
- * Generates a possible Git tag name for the workspace package of a monorepo.
- * Accounts for changes to `action-publish-release`, which going forward will
- * generate tags for workspace packages in `PACKAGE_NAME@MAJOR.MINOR.PATCH`.
- *
- * @param packageName - The name of the package.
- * @param packageVersion - The version of the package.
- * @returns An array of possible release tag names.
- */
-function generateMonorepoWorkspacePackageReleaseTagName(
-  packageName: string,
-  packageVersion: string,
-): string {
-  return `${packageName}@${packageVersion}`;
-}
-
-/**
- * Collects information about the root package of a monorepo.
- *
- * @param args - The arguments to this function.
- * @param args.packageDirectoryPath - The path to a package within a project.
- * @param args.projectDirectoryPath - The path to the project directory.
- * @param args.projectTagNames - The tag names across the whole project.
+ * @param packageDirectoryPath - The path to the package directory.
  * @returns Information about the package.
  */
-export async function readMonorepoRootPackage({
-  packageDirectoryPath,
-  projectDirectoryPath,
-  projectTagNames,
-}: {
-  packageDirectoryPath: string;
-  projectDirectoryPath: string;
-  projectTagNames: string[];
-}): Promise<Package> {
+export async function readPackage(
+  packageDirectoryPath: string,
+): Promise<Package> {
   const manifestPath = path.join(packageDirectoryPath, MANIFEST_FILE_NAME);
   const changelogPath = path.join(packageDirectoryPath, CHANGELOG_FILE_NAME);
   const { unvalidated: unvalidatedManifest, validated: validatedManifest } =
     await readPackageManifest(manifestPath);
-  const expectedTagNameForLatestRelease =
-    generateMonorepoRootPackageReleaseTagName(
-      validatedManifest.version.toString(),
-    );
-  const matchingTagNameForLatestRelease = projectTagNames.find(
-    (tagName) => tagName === expectedTagNameForLatestRelease,
-  );
-
-  if (
-    projectTagNames.length > 0 &&
-    matchingTagNameForLatestRelease === undefined
-  ) {
-    throw new Error(
-      format(
-        'The package %s has no Git tag for its current version %s (expected %s), so this tool is unable to determine whether it should be included in this release. You will need to create a tag for this package in order to proceed.',
-        validatedManifest.name,
-        validatedManifest.version,
-        `"${expectedTagNameForLatestRelease}"`,
-      ),
-    );
-  }
-
-  const hasChangesSinceLatestRelease =
-    matchingTagNameForLatestRelease === undefined
-      ? true
-      : await hasChangesInDirectorySinceGitTag(
-          projectDirectoryPath,
-          packageDirectoryPath,
-          expectedTagNameForLatestRelease,
-        );
 
   return {
     directoryPath: packageDirectoryPath,
@@ -149,97 +78,6 @@ export async function readMonorepoRootPackage({
     validatedManifest,
     unvalidatedManifest,
     changelogPath,
-    hasChangesSinceLatestRelease,
-  };
-}
-
-/**
- * Collects information about a workspace package within a monorepo.
- *
- * @param args - The arguments to this function.
- * @param args.packageDirectoryPath - The path to a package within a project.
- * @param args.rootPackageName - The name of the root package within the
- * monorepo to which this package belongs.
- * @param args.rootPackageVersion - The version of the root package within the
- * monorepo to which this package belongs.
- * @param args.projectDirectoryPath - The path to the project directory.
- * @param args.projectTagNames - The tag names across the whole project.
- * @returns Information about the package, and whether the package has no tag
- * for its current version, so its changes are found from the tag of the root
- * package.
- */
-export async function readMonorepoWorkspacePackage({
-  packageDirectoryPath,
-  rootPackageName,
-  rootPackageVersion,
-  projectDirectoryPath,
-  projectTagNames,
-}: {
-  packageDirectoryPath: string;
-  rootPackageName: string;
-  rootPackageVersion: SemVer;
-  projectDirectoryPath: string;
-  projectTagNames: string[];
-}): Promise<Package & { usesRootTag: boolean }> {
-  const manifestPath = path.join(packageDirectoryPath, MANIFEST_FILE_NAME);
-  const changelogPath = path.join(packageDirectoryPath, CHANGELOG_FILE_NAME);
-  const { unvalidated: unvalidatedManifest, validated: validatedManifest } =
-    await readPackageManifest(manifestPath);
-  const expectedTagNameForWorkspacePackageLatestRelease =
-    generateMonorepoWorkspacePackageReleaseTagName(
-      validatedManifest.name,
-      validatedManifest.version.toString(),
-    );
-  const expectedTagNameForRootPackageLatestRelease =
-    generateMonorepoRootPackageReleaseTagName(rootPackageVersion.toString());
-  const matchingTagNameForWorkspacePackageLatestRelease = projectTagNames.find(
-    (tagName) => tagName === expectedTagNameForWorkspacePackageLatestRelease,
-  );
-  const matchingTagNameForRootPackageLatestRelease = projectTagNames.find(
-    (tagName) => tagName === expectedTagNameForRootPackageLatestRelease,
-  );
-  const matchingTagNameForLatestRelease =
-    matchingTagNameForWorkspacePackageLatestRelease ??
-    matchingTagNameForRootPackageLatestRelease;
-
-  if (
-    projectTagNames.length > 0 &&
-    matchingTagNameForLatestRelease === undefined
-  ) {
-    throw new Error(
-      format(
-        'The current release of workspace package %s, %s, has no corresponding Git tag %s, and the current release of root package %s, %s, has no tag %s. Hence, this tool is unable to know whether the workspace package changed and should be included in this release. You will need to create tags for both of these packages in order to proceed.',
-        validatedManifest.name,
-        validatedManifest.version,
-        `"${expectedTagNameForWorkspacePackageLatestRelease}"`,
-        rootPackageName,
-        rootPackageVersion,
-        `"${expectedTagNameForRootPackageLatestRelease}"`,
-      ),
-    );
-  }
-
-  const usesRootTag =
-    matchingTagNameForWorkspacePackageLatestRelease === undefined &&
-    matchingTagNameForRootPackageLatestRelease !== undefined;
-
-  const hasChangesSinceLatestRelease =
-    matchingTagNameForLatestRelease === undefined
-      ? true
-      : await hasChangesInDirectorySinceGitTag(
-          projectDirectoryPath,
-          packageDirectoryPath,
-          matchingTagNameForLatestRelease,
-        );
-
-  return {
-    directoryPath: packageDirectoryPath,
-    manifestPath,
-    validatedManifest,
-    unvalidatedManifest,
-    changelogPath,
-    hasChangesSinceLatestRelease,
-    usesRootTag,
   };
 }
 

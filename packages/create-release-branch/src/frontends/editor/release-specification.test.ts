@@ -13,6 +13,7 @@ import { checkChoices } from '../../core/release-steps.js';
 import type { VersionSpecifiers } from '../../core/types.js';
 import { listLegacyCandidates } from '../../modes/legacy/candidates.js';
 import { createLegacyMode } from '../../modes/legacy/legacy-mode.js';
+import * as packageChangesModule from '../../modes/legacy/package-changes.js';
 import type { Project } from '../../project/project.js';
 import * as miscUtils from '../../utils/misc-utils.js';
 import {
@@ -22,6 +23,7 @@ import {
   validateReleaseSpecification as validateReleaseSpecificationWithCheck,
 } from './release-specification.js';
 
+vi.mock('../../modes/legacy/package-changes');
 vi.mock('../../utils/misc-utils', async () => {
   return {
     ...(await vi.importActual('../../utils/misc-utils')),
@@ -35,12 +37,20 @@ vi.mock('../../utils/misc-utils', async () => {
  *
  * @param project - Information about the whole project.
  * @param releaseSpecificationPath - The path to the release spec file.
+ * @param changedPackageNames - The names of workspace packages with changes.
  * @returns The version specifier for each package to release, and the path.
  */
 async function validateReleaseSpecification(
   project: Project,
   releaseSpecificationPath: string,
+  changedPackageNames: ReadonlySet<string> = new Set(
+    Object.keys(project.workspacePackages),
+  ),
 ): Promise<{ packages: VersionSpecifiers; path: string }> {
+  vi.spyOn(packageChangesModule, 'findLegacyPackageChanges').mockResolvedValue({
+    changedPackageNames,
+    packagesUsingRootTag: [],
+  });
   const mode = createLegacyMode({
     project,
     defaultBranch: 'main',
@@ -59,21 +69,15 @@ describe('release-specification', () => {
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: false,
-          }),
-          c: buildMockPackage('c', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
+          c: buildMockPackage('c'),
         },
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
         modeName: 'legacy',
-        candidates: listLegacyCandidates(project),
+        candidates: listLegacyCandidates(project, new Set(['a', 'c'])),
         isEditorAvailable: true,
       });
 
@@ -118,19 +122,15 @@ packages:
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: false,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: false,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
         },
       });
 
       await expect(
         generateReleaseSpecificationTemplateForMonorepo({
           modeName: 'legacy',
-          candidates: listLegacyCandidates(project),
+          candidates: listLegacyCandidates(project, new Set()),
           isEditorAvailable: false,
         }),
       ).rejects.toThrow(
@@ -142,18 +142,14 @@ packages:
       const project = buildMockProject({
         rootPackage: buildMockPackage('monorepo'),
         workspacePackages: {
-          a: buildMockPackage('a', {
-            hasChangesSinceLatestRelease: true,
-          }),
-          b: buildMockPackage('b', {
-            hasChangesSinceLatestRelease: true,
-          }),
+          a: buildMockPackage('a'),
+          b: buildMockPackage('b'),
         },
       });
 
       const template = await generateReleaseSpecificationTemplateForMonorepo({
         modeName: 'legacy',
-        candidates: listLegacyCandidates(project),
+        candidates: listLegacyCandidates(project, new Set(['a', 'b'])),
         isEditorAvailable: false,
       });
 
@@ -801,11 +797,8 @@ packages:
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '1.0.0',
@@ -848,11 +841,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 peerDependencies: {
                   a: '1.0.0',
@@ -895,11 +885,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '2.1.4',
@@ -942,11 +929,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 peerDependencies: {
                   a: '2.1.4',
@@ -989,11 +973,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '1.0.0',
@@ -1037,11 +1018,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 peerDependencies: {
                   a: '1.0.0',
@@ -1085,11 +1063,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '2.1.4',
@@ -1133,11 +1108,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 peerDependencies: {
                   a: '2.1.4',
@@ -1181,11 +1153,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '1.0.0',
@@ -1228,11 +1197,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 dependencies: {
                   a: '1.0.0',
@@ -1275,11 +1241,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '2.1.4',
@@ -1322,11 +1285,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 dependencies: {
                   a: '2.1.4',
@@ -1369,11 +1329,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '1.0.0',
@@ -1417,11 +1374,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 dependencies: {
                   a: '1.0.0',
@@ -1465,11 +1419,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '2.1.4',
@@ -1513,11 +1464,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
               validatedManifest: {
                 dependencies: {
                   a: '2.1.4',
@@ -1561,11 +1509,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '1.0.0',
@@ -1606,11 +1551,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   a: '2.1.4',
@@ -1651,11 +1593,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '1.0.0',
@@ -1696,11 +1635,8 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', '2.1.4', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            a: buildMockPackage('a', '2.1.4', {}),
             b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   a: '2.1.4',
@@ -1742,16 +1678,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -1789,16 +1722,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -1836,16 +1766,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -1884,16 +1811,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -1932,16 +1856,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -1977,16 +1898,13 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   b: '1.0.0',
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: true,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -2022,7 +1940,6 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 dependencies: {
                   b: '1.0.0',
@@ -2030,9 +1947,7 @@ ${releaseSpecificationPath}
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
-            }),
+            b: buildMockPackage('b', {}),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -2051,6 +1966,7 @@ ${releaseSpecificationPath}
         const releaseSpecification = await validateReleaseSpecification(
           project,
           releaseSpecificationPath,
+          new Set(['a']),
         );
 
         expect(releaseSpecification).toStrictEqual({
@@ -2067,7 +1983,6 @@ ${releaseSpecificationPath}
         const project = buildMockProject({
           workspacePackages: {
             a: buildMockPackage('a', {
-              hasChangesSinceLatestRelease: true,
               validatedManifest: {
                 peerDependencies: {
                   b: '1.0.0',
@@ -2075,9 +1990,7 @@ ${releaseSpecificationPath}
                 },
               },
             }),
-            b: buildMockPackage('b', {
-              hasChangesSinceLatestRelease: false,
-            }),
+            b: buildMockPackage('b'),
           },
         });
         const releaseSpecificationPath = path.join(
@@ -2096,6 +2009,7 @@ ${releaseSpecificationPath}
         const releaseSpecification = await validateReleaseSpecification(
           project,
           releaseSpecificationPath,
+          new Set(['a']),
         );
 
         expect(releaseSpecification).toStrictEqual({
@@ -2111,12 +2025,12 @@ ${releaseSpecificationPath}
       await withSandbox(async (sandbox) => {
         const project = buildMockProject({
           workspacePackages: {
-            a: buildMockPackage('a', { hasChangesSinceLatestRelease: true }),
+            a: buildMockPackage('a'),
           },
         });
         const template = await generateReleaseSpecificationTemplateForMonorepo({
           modeName: 'legacy',
-          candidates: listLegacyCandidates(project),
+          candidates: listLegacyCandidates(project, new Set(['a'])),
           isEditorAvailable: true,
         });
         const releaseSpecificationPath = path.join(

@@ -1,4 +1,5 @@
 import type { FrontEnd, ReleaseContext } from './front-end.js';
+import { printNotices } from './notices.js';
 
 /**
  * Runs the release with the given front end if the project is a monorepo.
@@ -19,16 +20,8 @@ export async function runRelease(
       `${project.rootPackage.validatedManifest.name} · monorepo · ${mode.name} mode`,
     );
 
-    const { packagesUsingRootTag } = project;
-    if (packagesUsingRootTag.length > 0) {
-      const rootTag = `v${project.rootPackage.validatedManifest.version.toString()}`;
-      output.warnList(
-        packagesUsingRootTag.length === 1
-          ? `1 package has no tag for its current version, so changes are compared against the root tag ${rootTag}:`
-          : `${packagesUsingRootTag.length} packages have no tag for their current version, so changes are compared against the root tag ${rootTag}:`,
-        packagesUsingRootTag,
-      );
-    }
+    const notices = (await mode.initialize?.()) ?? [];
+    printNotices(output, notices);
 
     await frontEnd.run(context);
   } else {
