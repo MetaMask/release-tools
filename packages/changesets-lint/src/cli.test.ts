@@ -29,6 +29,22 @@ describe('cli', () => {
   });
 
   it.each([
+    [['check-packages'], 'origin/main'],
+    [['check-packages', '--since', 'main'], 'main'],
+  ])('runs the check-packages command for %j', async (args, expectedSince) => {
+    await cli([...argv, ...args], mockedCommands);
+
+    expect(handler).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        _: ['check-packages'],
+        $0: 'changesets-lint',
+        since: expectedSince,
+      }),
+    );
+    expect(exit).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ['--unknown', 'unknown'],
     ['-h', 'h'],
   ])('reports the unsupported option %s and exits', async (argument, name) => {
