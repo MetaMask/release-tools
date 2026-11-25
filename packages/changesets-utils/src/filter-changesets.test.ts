@@ -39,6 +39,51 @@ describe('filterChangesets', () => {
     expect(filterChangesets([changeset], ['@scope/two'])).toStrictEqual([]);
   });
 
+  it('keeps the none releases of a kept changeset', () => {
+    const changeset: NewChangesetWithCommit = {
+      id: 'entry-one',
+      summary: 'Summary',
+      releases: [
+        { name: '@scope/one', type: 'minor' },
+        { name: '@scope/two', type: 'none' },
+        { name: '@scope/three', type: 'patch' },
+      ],
+    };
+
+    expect(filterChangesets([changeset], ['@scope/one'])).toStrictEqual([
+      {
+        ...changeset,
+        releases: [
+          { name: '@scope/one', type: 'minor' },
+          { name: '@scope/two', type: 'none' },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps a changeset with only none releases', () => {
+    const changeset: NewChangesetWithCommit = {
+      id: 'entry-one',
+      summary: 'Summary',
+      releases: [{ name: '@scope/one', type: 'none' }],
+    };
+
+    expect(filterChangesets([changeset], [])).toStrictEqual([changeset]);
+  });
+
+  it('drops a changeset without selected releases, with its none releases', () => {
+    const changeset: NewChangesetWithCommit = {
+      id: 'entry-one',
+      summary: 'Summary',
+      releases: [
+        { name: '@scope/one', type: 'major' },
+        { name: '@scope/two', type: 'none' },
+      ],
+    };
+
+    expect(filterChangesets([changeset], ['@scope/three'])).toStrictEqual([]);
+  });
+
   it('preserves metadata and clones returned objects', () => {
     const changeset: NewChangesetWithCommit = {
       id: 'entry-one',
