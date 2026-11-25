@@ -9,10 +9,13 @@ import { parseChangesetSummary } from '@metamask/changesets-utils';
 import { getChangelogOptions } from './options.js';
 import { getPullRequestLink } from './resolve-pull-request.js';
 
+const TRAILING_PR_LINK_PATTERN =
+  /\(\[#\d+\]\([^)\s]+\)(?:,\s*\[#\d+\]\([^)\s]+\))*\)\.?$/u;
+
 /**
- * Formats one categorized changeset as a Markdown changelog line. The line
- * has no pull request link if the commit of the changeset has no pull request
- * number in its subject.
+ * Formats one categorized changeset as a Markdown changelog line. Appends a
+ * pull request link from the commit subject unless the summary already ends
+ * with a pull request link or the commit subject has no pull request number.
  *
  * @param changeset - The changeset to format.
  * @param type - The release's version bump type.
@@ -26,8 +29,10 @@ export const getReleaseLine: GetReleaseLine = async (
 ) => {
   const { description } = parseChangesetSummary(changeset.summary);
   const { repository, cwd } = getChangelogOptions(changelogOpts);
-  const pullRequestLink = await getPullRequestLink(changeset, repository, cwd);
   const [firstLine, ...remainingLines] = description.split('\n');
+  const pullRequestLink = TRAILING_PR_LINK_PATTERN.test(firstLine)
+    ? undefined
+    : await getPullRequestLink(changeset, repository, cwd);
   const breakingPrefix = type === 'major' ? '**BREAKING:** ' : '';
   const linkSuffix =
     pullRequestLink === undefined ? '' : ` (${pullRequestLink})`;

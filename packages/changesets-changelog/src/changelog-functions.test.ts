@@ -67,6 +67,22 @@ describe('getReleaseLine', () => {
       '- Add a feature\n  - Preserve this detail',
     );
   });
+
+  it.each([
+    '## Added\n\n- Add a feature ([#99](https://github.com/MetaMask/core/pull/99))\n  - Preserve this detail',
+    '## Added\n\n- Add a feature ([#76](https://github.com/MetaMask/core/pull/76), [#99](https://github.com/MetaMask/core/pull/99))\n  - Preserve this detail',
+    '## Added\n\n- Add a feature ([#99](https://github.com/MetaMask/core/pull/99)).\n  - Preserve this detail',
+  ])(
+    'preserves an existing trailing pull request link without appending another',
+    async (summary) => {
+      mockedGetPullRequestLink.mockClear();
+
+      expect(
+        await getReleaseLine({ ...changeset, summary }, 'minor', options),
+      ).toBe(summary.replace('## Added\n\n', ''));
+      expect(mockedGetPullRequestLink).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('categorizeReleaseLine', () => {
